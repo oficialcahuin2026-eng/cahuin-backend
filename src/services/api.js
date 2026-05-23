@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Tu IP local directa
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.13:5000/api';
+const BASE_URL = 'https://cahuin-backend-1.onrender.com/api';
 
 const api = axios.create({ 
   baseURL: BASE_URL,

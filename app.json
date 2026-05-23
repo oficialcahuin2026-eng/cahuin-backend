@@ -14,8 +14,18 @@
       "bundleIdentifier": "cl.cahuin.app"
     },
     "android": {
-      "adaptiveIcon": { "backgroundColor": "#C0392B" },
+      "adaptiveIcon": {
+        "backgroundColor": "#C0392B"
+      },
       "package": "cl.cahuin.app"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "590fdbce-bdba-4d11-ae89-fa596b09567e"
+      }
+    },
+    "plugins": [
+      "expo-asset"
+    ]
   }
 }
