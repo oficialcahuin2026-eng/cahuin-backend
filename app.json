@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "Cahuín",
+    "slug": "cahuin",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#C0392B"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "cl.cahuin.app"
+    },
+    "android": {
+      "adaptiveIcon": { "backgroundColor": "#C0392B" },
+      "package": "cl.cahuin.app"
+    }
+  }
+}
