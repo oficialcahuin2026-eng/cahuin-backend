@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import * as Linking from 'expo-linking';
+import React, { useState, useRef } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -61,9 +62,15 @@ export default function OnboardingScreen() {
   const [telefono, setTelefono] = useState('');
   const [region, setRegion] = useState(usuario?.region && usuario.region !== 'Por definir' ? usuario.region : '');
   const [ciudad, setCiudad] = useState(usuario?.ciudad && usuario.ciudad !== 'Por definir' ? usuario.ciudad : '');
+  
   const [dia, setDia] = useState('');
   const [mes, setMes] = useState('');
   const [anio, setAno] = useState('');
+
+  // 🌟 Referencias para saltar automáticamente entre las cajas de fecha
+  const mesRef = useRef(null);
+  const anioRef = useRef(null);
+
   const [genero, setGenero] = useState('');
   const [orientacion, setOrientacion] = useState('');
   const [preferencia, setPreferencia] = useState('');
@@ -254,11 +261,45 @@ export default function OnboardingScreen() {
                   {titleWithAccent('Cuándo estás de ', 'cumple?')}
                   <Text style={styles.subtitle}>Calcularemos tu edad real automáticamente.</Text>
                   <View style={styles.dateRow}>
-                    <CahuinTextField style={styles.dateField} inputStyle={styles.dateFieldInput} placeholder="DD" keyboardType="number-pad" maxLength={2} value={dia} onChangeText={setDia} />
+                    <TextInput 
+                      style={styles.dateInput} 
+                      placeholder="DD" 
+                      placeholderTextColor="#6B7280"
+                      keyboardType="number-pad" 
+                      maxLength={2} 
+                      value={dia} 
+                      onChangeText={(text) => {
+                        const val = text.replace(/\D/g, '');
+                        setDia(val);
+                        if (val.length === 2) mesRef.current?.focus(); // 🌟 Auto-salto a Mes
+                      }} 
+                    />
                     <Text style={styles.slash}>/</Text>
-                    <CahuinTextField style={styles.dateField} inputStyle={styles.dateFieldInput} placeholder="MM" keyboardType="number-pad" maxLength={2} value={mes} onChangeText={setMes} />
+                    <TextInput 
+                      ref={mesRef}
+                      style={styles.dateInput} 
+                      placeholder="MM" 
+                      placeholderTextColor="#6B7280"
+                      keyboardType="number-pad" 
+                      maxLength={2} 
+                      value={mes} 
+                      onChangeText={(text) => {
+                        const val = text.replace(/\D/g, '');
+                        setMes(val);
+                        if (val.length === 2) anioRef.current?.focus(); // 🌟 Auto-salto a Año
+                      }} 
+                    />
                     <Text style={styles.slash}>/</Text>
-                    <CahuinTextField style={[styles.dateField, { width: 112 }]} inputStyle={styles.dateFieldInput} placeholder="YYYY" keyboardType="number-pad" maxLength={4} value={anio} onChangeText={setAno} />
+                    <TextInput 
+                      ref={anioRef}
+                      style={[styles.dateInput, { width: 112 }]} 
+                      placeholder="AAAA" 
+                      placeholderTextColor="#6B7280"
+                      keyboardType="number-pad" 
+                      maxLength={4} 
+                      value={anio} 
+                      onChangeText={(text) => setAno(text.replace(/\D/g, ''))} 
+                    />
                   </View>
                 </View>
               )}
@@ -336,8 +377,6 @@ const styles = StyleSheet.create({
   chipText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
   dateRow: { flexDirection: 'row', gap: 10, justifyContent: 'center', alignItems: 'center', marginTop: 24 },
   dateInput: { width: 78, minHeight: 74, borderRadius: 20, backgroundColor: 'rgba(10,12,18,0.72)', borderWidth: 1.5, borderColor: '#F0444F', color: '#FFF', textAlign: 'center', fontSize: 22, fontWeight: '900' },
-  dateField: { width: 78, borderRadius: 22 },
-  dateFieldInput: { textAlign: 'center', fontSize: 20, fontWeight: '900' },
   slash: { color: '#6B7280', fontSize: 30 },
   continueButton: { marginTop: 36, marginBottom: 20, borderRadius: 32, overflow: 'hidden', ...SHADOWS.medium },
   continueGradient: { height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },

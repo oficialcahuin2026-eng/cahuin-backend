@@ -27,6 +27,59 @@ const obtenerEdadValida = (fechaNacimiento, edad) => {
   return edadFinal;
 };
 
+// 🌟 ESTA ES LA VERSIÓN CORREGIDA PARA CLERK (Con el token)
+exports.syncClerk = async (req, res) => {
+  try {
+    const { clerkId, email, nombre, fotoUrl } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: 'Email requerido para sincronizar' });
+    }
+
+    // Buscamos si el usuario ya existe por su correo
+    let usuario = await User.findOne({ email: email.toLowerCase() });
+
+    if (!usuario) {
+      // Si es un usuario nuevo, lo creamos
+      usuario = await User.create({
+        nombre: nombre || 'Cahuinero',
+        email: email.toLowerCase(),
+        password: 'ClerkPassword123!', 
+        foto: fotoUrl || '',
+        fotos: fotoUrl ? [fotoUrl] : [],
+        telefono: '',
+        fechaNacimiento: null,
+        ciudad: 'Por definir',
+        region: 'Por definir',
+        genero: 'Otro',
+        preferencia: 'Todxs',
+        edad: 18,
+        aceptaTerminos: true,
+      });
+    } else if (!usuario.foto && fotoUrl) {
+      // Si el usuario ya existía pero no tenía foto, le ponemos la de Google/Facebook
+      usuario.foto = fotoUrl;
+      usuario.fotos = [fotoUrl];
+      await usuario.save();
+    }
+
+    // 🌟 LA MAGIA ESTÁ AQUÍ: Generamos el token local que Cahuín entiende
+    const tokenLocal = generarToken(usuario._id);
+
+    // Lo enviamos de vuelta a la app móvil
+    res.status(200).json({ 
+        usuario: sanitizarUsuario(usuario),
+        token: tokenLocal 
+    });
+  } catch (error) {
+    console.error("Error en syncClerk:", error);
+    res.status(500).json({ message: 'Error al sincronizar con la base de datos' });
+  }
+};
+
+
+// ----- RUTAS ANTIGUAS (Las dejamos por compatibilidad temporal) -----
+
 const googleAudiences = () => [
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_WEB_CLIENT_ID,

@@ -12,40 +12,37 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
-import * as Facebook from 'expo-auth-session/providers/facebook';
-import { useAuth } from '../context/AuthContext';
+
+// 🌟 Importaciones nuevas de Clerk (y Linking para el retorno)
+import * as Linking from 'expo-linking';
+import { useSignIn, useOAuth } from '@clerk/clerk-expo';
+
 import CahuinTextField from '../components/CahuinTextField';
 import CahuinModal from '../components/CahuinModal';
 import { FONTS, RADIUS, SHADOWS, SPACING } from '../utils/theme';
 
+// Requisito de Clerk y Expo para que las ventanas de login externo funcionen
 WebBrowser.maybeCompleteAuthSession();
 
-const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || '';
-const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '';
-const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';
-const FACEBOOK_APP_ID = process.env.EXPO_PUBLIC_FACEBOOK_APP_ID || '';
-const GOOGLE_CLIENT_FALLBACK = 'missing-google-client-id.apps.googleusercontent.com';
-const FACEBOOK_CLIENT_FALLBACK = '000000000000000';
-
 export default function LoginScreen({ navigation }) {
-  const { login, loginGoogle, loginFacebook } = useAuth();
+  // 🌟 Hooks de Clerk para manejar la sesión
+  const { signIn, setActive, isLoaded } = useSignIn();
+  const { startOAuthFlow: startGoogleOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
+  const { startOAuthFlow: startFacebookOAuthFlow } = useOAuth({ strategy: 'oauth_facebook' });
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [cargando, setCargando] = useState(false);
   const [cargandoSocial, setCargandoSocial] = useState(null);
   const [modalInfo, setModalInfo] = useState(null);
 
-  const [, googleResponse, promptGoogle] = Google.useAuthRequest({
-    androidClientId: GOOGLE_ANDROID_CLIENT_ID || GOOGLE_CLIENT_FALLBACK,
-    iosClientId: GOOGLE_IOS_CLIENT_ID || GOOGLE_CLIENT_FALLBACK,
-    webClientId: GOOGLE_WEB_CLIENT_ID || GOOGLE_CLIENT_FALLBACK,
-    selectAccount: true,
-  });
-
-  const [, facebookResponse, promptFacebook] = Facebook.useAuthRequest({
-    clientId: FACEBOOK_APP_ID || FACEBOOK_CLIENT_FALLBACK,
-  });
+  // Calienta el navegador en segundo plano (Recomendado por Clerk para que abra más rápido en Android)
+  useEffect(() => {
+    void WebBrowser.warmUpAsync();
+    return () => {
+      void WebBrowser.coolDownAsync();
+    };
+  }, []);
 
   const showModal = (title, message, accent = '#F0444F') => {
     setModalInfo({ title, message, emoji: '!', accent, tone: 'danger' });
@@ -63,41 +60,9 @@ export default function LoginScreen({ navigation }) {
     }
   };
 
-  useEffect(() => {
-    const idToken = googleResponse?.params?.id_token || googleResponse?.authentication?.idToken;
-    if (googleResponse?.type !== 'success' || !idToken) return;
-
-    (async () => {
-      setCargandoSocial('Google');
-      try {
-        const data = await loginGoogle(idToken);
-        revisarOnboarding(data);
-      } catch (error) {
-        showModal('Google', error.message || 'No pudimos iniciar sesión con Google.');
-      } finally {
-        setCargandoSocial(null);
-      }
-    })();
-  }, [googleResponse]);
-
-  useEffect(() => {
-    const accessToken = facebookResponse?.authentication?.accessToken || facebookResponse?.params?.access_token;
-    if (facebookResponse?.type !== 'success' || !accessToken) return;
-
-    (async () => {
-      setCargandoSocial('Facebook');
-      try {
-        const data = await loginFacebook(accessToken);
-        revisarOnboarding(data);
-      } catch (error) {
-        showModal('Facebook', error.message || 'No pudimos iniciar sesión con Facebook.', '#1877F2');
-      } finally {
-        setCargandoSocial(null);
-      }
-    })();
-  }, [facebookResponse]);
-
   const handleLogin = async () => {
+    if (!isLoaded) return;
+    
     if (!email.trim() || !password) {
       showModal('Faltan datos', 'Ingresa tu correo y contraseña.');
       return;
@@ -105,30 +70,55 @@ export default function LoginScreen({ navigation }) {
 
     setCargando(true);
     try {
-      const userData = await login({ email: email.trim().toLowerCase(), password });
-      revisarOnboarding(userData);
+      // 🌟 Iniciamos sesión con Clerk
+      const completeSignIn = await signIn.create({
+        identifier: email.trim().toLowerCase(),
+        password,
+      });
+
+      if (completeSignIn.status === 'complete') {
+        // Guardamos la sesión activa en el celular
+        await setActive({ session: completeSignIn.createdSessionId });
+        
+        // Pasamos un objeto vacío por ahora para forzar que los usuarios nuevos vayan al Onboarding.
+        // Más adelante puedes reemplazar esto con los datos que traigas de tu MongoDB.
+        revisarOnboarding({});
+      }
     } catch (error) {
-      showModal('Error', error.message || 'Correo o contraseña incorrectos.');
+      // Clerk devuelve los errores en un array 'errors'
+      showModal('Error', error.errors?.[0]?.message || 'Correo o contraseña incorrectos.');
     } finally {
       setCargando(false);
     }
   };
 
   const loginSocial = async (red) => {
-    if (red === 'Google') {
-      if (!GOOGLE_ANDROID_CLIENT_ID && !GOOGLE_IOS_CLIENT_ID && !GOOGLE_WEB_CLIENT_ID) {
-        showModal('Google', 'Falta configurar los client IDs de Google antes de publicar.');
-        return;
-      }
-      await promptGoogle();
-      return;
-    }
+    setCargandoSocial(red);
+    try {
+      // 🌟 Elegimos el flujo correcto según el botón presionado
+      const startOAuthFlow = red === 'Google' ? startGoogleOAuthFlow : startFacebookOAuthFlow;
+      
+      // 🌟 Aquí está el "Boleto de retorno" para que vuelva a Cahuín después de Google/Facebook
+      const { createdSessionId, setActive: setOAuthActive } = await startOAuthFlow({
+        redirectUrl: Linking.createURL('/'),
+      });
 
-    if (!FACEBOOK_APP_ID) {
-      showModal('Facebook', 'Falta configurar el App ID de Facebook antes de publicar.', '#1877F2');
-      return;
+      if (createdSessionId) {
+        // Activamos la sesión con Clerk
+        await setOAuthActive({ session: createdSessionId });
+        
+        // Redirigimos al onboarding (igual que en el inicio de sesión por correo)
+        revisarOnboarding({});
+      }
+    } catch (error) {
+      showModal(
+        red, 
+        error.errors?.[0]?.message || `No pudimos iniciar sesión con ${red}.`, 
+        red === 'Facebook' ? '#1877F2' : '#F0444F'
+      );
+    } finally {
+      setCargandoSocial(null);
     }
-    await promptFacebook();
   };
 
   return (
@@ -258,7 +248,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justify: 'center',
     gap: 10,
   },
   socialText: { color: '#FFF', fontSize: 15, fontWeight: '900' },

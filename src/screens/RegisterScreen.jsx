@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -14,21 +14,17 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
-import * as Facebook from 'expo-auth-session/providers/facebook';
+
+// 🌟 Importaciones de Clerk y el Boleto de Retorno (Linking)
+import * as Linking from 'expo-linking';
+import { useOAuth } from '@clerk/clerk-expo';
+
 import { useAuth } from '../context/AuthContext';
 import CahuinModal from '../components/CahuinModal';
 import CahuinTextField from '../components/CahuinTextField';
 import { FONTS, RADIUS, SHADOWS, SPACING } from '../utils/theme';
 
 WebBrowser.maybeCompleteAuthSession();
-
-const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || '';
-const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '';
-const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';
-const FACEBOOK_APP_ID = process.env.EXPO_PUBLIC_FACEBOOK_APP_ID || '';
-const GOOGLE_CLIENT_FALLBACK = 'missing-google-client-id.apps.googleusercontent.com';
-const FACEBOOK_CLIENT_FALLBACK = '000000000000000';
 
 const onlyNumbers = (text) => text.replace(/\D/g, '');
 
@@ -59,27 +55,31 @@ const buildBirthDate = (day, month, year) => {
 };
 
 export default function RegisterScreen({ navigation }) {
-  const { register, loginGoogle, loginFacebook } = useAuth();
+  const { register } = useAuth();
+  
+  const { startOAuthFlow: startGoogleOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
+  const { startOAuthFlow: startFacebookOAuthFlow } = useOAuth({ strategy: 'oauth_facebook' });
+
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [dia, setDia] = useState('');
   const [mes, setMes] = useState('');
   const [anio, setAnio] = useState('');
+  
+  const mesRef = useRef(null);
+  const anioRef = useRef(null);
+
   const [cargando, setCargando] = useState(false);
   const [cargandoSocial, setCargandoSocial] = useState(null);
   const [modal, setModal] = useState(null);
 
-  const [, googleResponse, promptGoogle] = Google.useAuthRequest({
-    androidClientId: GOOGLE_ANDROID_CLIENT_ID || GOOGLE_CLIENT_FALLBACK,
-    iosClientId: GOOGLE_IOS_CLIENT_ID || GOOGLE_CLIENT_FALLBACK,
-    webClientId: GOOGLE_WEB_CLIENT_ID || GOOGLE_CLIENT_FALLBACK,
-    selectAccount: true,
-  });
-
-  const [, facebookResponse, promptFacebook] = Facebook.useAuthRequest({
-    clientId: FACEBOOK_APP_ID || FACEBOOK_CLIENT_FALLBACK,
-  });
+  useEffect(() => {
+    void WebBrowser.warmUpAsync();
+    return () => {
+      void WebBrowser.coolDownAsync();
+    };
+  }, []);
 
   const avisar = (title, message) => setModal({ title, message, emoji: '!' });
 
@@ -89,40 +89,6 @@ export default function RegisterScreen({ navigation }) {
       navigation.navigate('OnboardingScreen');
     }
   };
-
-  useEffect(() => {
-    const idToken = googleResponse?.params?.id_token || googleResponse?.authentication?.idToken;
-    if (googleResponse?.type !== 'success' || !idToken) return;
-
-    (async () => {
-      setCargandoSocial('Google');
-      try {
-        const data = await loginGoogle(idToken);
-        revisarOnboarding(data);
-      } catch (error) {
-        avisar('Google', error.message || 'No pudimos continuar con Google.');
-      } finally {
-        setCargandoSocial(null);
-      }
-    })();
-  }, [googleResponse]);
-
-  useEffect(() => {
-    const accessToken = facebookResponse?.authentication?.accessToken || facebookResponse?.params?.access_token;
-    if (facebookResponse?.type !== 'success' || !accessToken) return;
-
-    (async () => {
-      setCargandoSocial('Facebook');
-      try {
-        const data = await loginFacebook(accessToken);
-        revisarOnboarding(data);
-      } catch (error) {
-        avisar('Facebook', error.message || 'No pudimos continuar con Facebook.');
-      } finally {
-        setCargandoSocial(null);
-      }
-    })();
-  }, [facebookResponse]);
 
   const handleRegistro = async () => {
     if (!nombre.trim() || !email.trim() || !password) {
@@ -172,20 +138,24 @@ export default function RegisterScreen({ navigation }) {
   };
 
   const loginSocial = async (red) => {
-    if (red === 'Google') {
-      if (!GOOGLE_ANDROID_CLIENT_ID && !GOOGLE_IOS_CLIENT_ID && !GOOGLE_WEB_CLIENT_ID) {
-        avisar('Google', 'Falta configurar los client IDs de Google antes de publicar.');
-        return;
-      }
-      await promptGoogle();
-      return;
-    }
+    setCargandoSocial(red);
+    try {
+      const startOAuthFlow = red === 'Google' ? startGoogleOAuthFlow : startFacebookOAuthFlow;
+      
+      // 🌟 Aquí está el "Boleto de retorno" para que vuelva a Cahuín
+      const { createdSessionId, setActive } = await startOAuthFlow({
+        redirectUrl: Linking.createURL('/'),
+      });
 
-    if (!FACEBOOK_APP_ID) {
-      avisar('Facebook', 'Falta configurar el App ID de Facebook antes de publicar.');
-      return;
+      if (createdSessionId) {
+        await setActive({ session: createdSessionId });
+        revisarOnboarding({});
+      }
+    } catch (error) {
+      avisar(red, error.errors?.[0]?.message || `No pudimos registrarte con ${red}.`);
+    } finally {
+      setCargandoSocial(null);
     }
-    await promptFacebook();
   };
 
   return (
@@ -212,9 +182,35 @@ export default function RegisterScreen({ navigation }) {
                 <View style={styles.birthBlock}>
                   <Text style={styles.birthLabel}>Fecha de nacimiento</Text>
                   <View style={styles.birthRow}>
-                    <BirthInput placeholder="DD" maxLength={2} value={dia} onChangeText={(text) => setDia(onlyNumbers(text))} />
-                    <BirthInput placeholder="MM" maxLength={2} value={mes} onChangeText={(text) => setMes(onlyNumbers(text))} />
-                    <BirthInput placeholder="AAAA" maxLength={4} value={anio} onChangeText={(text) => setAnio(onlyNumbers(text))} style={styles.yearInput} />
+                    <BirthInput 
+                      placeholder="DD" 
+                      maxLength={2} 
+                      value={dia} 
+                      onChangeText={(text) => {
+                        const val = onlyNumbers(text);
+                        setDia(val);
+                        if (val.length === 2) mesRef.current?.focus(); 
+                      }} 
+                    />
+                    <BirthInput 
+                      ref={mesRef} 
+                      placeholder="MM" 
+                      maxLength={2} 
+                      value={mes} 
+                      onChangeText={(text) => {
+                        const val = onlyNumbers(text);
+                        setMes(val);
+                        if (val.length === 2) anioRef.current?.focus(); 
+                      }} 
+                    />
+                    <BirthInput 
+                      ref={anioRef} 
+                      placeholder="AAAA" 
+                      maxLength={4} 
+                      value={anio} 
+                      onChangeText={(text) => setAnio(onlyNumbers(text))} 
+                      style={styles.yearInput} 
+                    />
                   </View>
                 </View>
 
@@ -261,10 +257,11 @@ function Field({ icon, ...props }) {
   return <CahuinTextField icon={icon} {...props} />;
 }
 
-function BirthInput({ style, ...props }) {
+const BirthInput = React.forwardRef(({ style, ...props }, ref) => {
   return (
     <View style={[styles.birthInputWrap, style]}>
       <TextInput
+        ref={ref}
         {...props}
         keyboardType="number-pad"
         placeholderTextColor="#8B95A7"
@@ -275,7 +272,7 @@ function BirthInput({ style, ...props }) {
       />
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   gradient: { flex: 1 },

@@ -1,110 +1,92 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { authService, userService } from '../services/api';
-import { useTheme } from './ThemeContext';
+import { useAuth as useClerkAuth, useUser } from '@clerk/clerk-expo';
+import { api } from '../services/api';
 
-const AuthContext = createContext(null);
+const AuthContext = createContext();
 
-function AuthProviderInner({ children }) {
-  const { setRegion } = useTheme();
+export const AuthProvider = ({ children }) => {
   const [usuario, setUsuario] = useState(null);
+  const [token, setToken] = useState(null);
   const [cargando, setCargando] = useState(true);
 
-  const setUsuarioConRegion = (u) => {
-    setUsuario(u);
-    if (u?.region) setRegion(u.region);
+  const { isSignedIn, isLoaded, signOut: clerkSignOut } = useClerkAuth();
+  const { user: clerkUser } = useUser();
+
+  const sincronizarConBackend = async () => {
+    try {
+      if (isSignedIn && clerkUser) {
+        
+        const response = await api.post('/auth/sync-clerk', {
+          clerkId: clerkUser.id,
+          email: clerkUser.primaryEmailAddress?.emailAddress,
+          nombre: clerkUser.fullName || clerkUser.firstName || 'Cahuinero',
+          fotoUrl: clerkUser.imageUrl
+        });
+
+        const userData = response.data.usuario;
+        const localToken = response.data.token; // 🌟 Capturamos el token del servidor
+
+        setUsuario(userData);
+        setToken(localToken);
+        
+        // 🌟 Lo guardamos con el nombre EXACTO que busca api.js (@cahuin_token)
+        await AsyncStorage.setItem('@cahuin_token', localToken);
+        await AsyncStorage.setItem('usuario', JSON.stringify(userData));
+        
+      } else {
+        setUsuario(null);
+        setToken(null);
+        await AsyncStorage.removeItem('@cahuin_token');
+        await AsyncStorage.removeItem('usuario');
+      }
+    } catch (error) {
+      console.error("Error sincronizando con el backend:", error);
+    } finally {
+      setCargando(false);
+    }
   };
 
   useEffect(() => {
-    (async () => {
-      try {
-        const token = await AsyncStorage.getItem('@cahuin_token');
-        if (token) {
-          const data = await userService.getMiPerfil();
-          if (data.usuario) {
-            setUsuarioConRegion(data.usuario);
-          } else {
-            await AsyncStorage.removeItem('@cahuin_token');
-          }
-        }
-      } catch {
-        await AsyncStorage.removeItem('@cahuin_token');
-      } finally {
-        setCargando(false);
-      }
-    })();
-  }, []);
+    if (isLoaded) {
+      sincronizarConBackend();
+    }
+  }, [isLoaded, isSignedIn, clerkUser]);
 
-  const login = async (emailOrCredenciales, password) => {
-    const credenciales = typeof emailOrCredenciales === 'object'
-      ? emailOrCredenciales
-      : { email: emailOrCredenciales, password };
-    const data = await authService.login(credenciales);
-    await AsyncStorage.setItem('@cahuin_token', data.token);
-    const perfilCompleto = await userService.getMiPerfil();
-    setUsuarioConRegion(perfilCompleto.usuario);
-    return data;
+  const login = async (datos) => {
+    return await sincronizarConBackend();
   };
 
-  const loginGoogle = async (idToken) => {
-    const data = await authService.loginGoogle(idToken);
-    await AsyncStorage.setItem('@cahuin_token', data.token);
-    const perfilCompleto = await userService.getMiPerfil();
-    setUsuarioConRegion(perfilCompleto.usuario);
-    return data;
-  };
-
-  const loginFacebook = async (accessToken) => {
-    const data = await authService.loginFacebook(accessToken);
-    await AsyncStorage.setItem('@cahuin_token', data.token);
-    const perfilCompleto = await userService.getMiPerfil();
-    setUsuarioConRegion(perfilCompleto.usuario);
-    return data;
-  };
-
-  const loginTelefono = async (telefono) => {
-    const data = await authService.loginTelefono(telefono);
-    await AsyncStorage.setItem('@cahuin_token', data.token);
-    const perfilCompleto = await userService.getMiPerfil();
-    setUsuarioConRegion(perfilCompleto.usuario);
-    return data;
-  };
-
-  const register = async (formData) => {
-    const data = await authService.register(formData);
-    await AsyncStorage.setItem('@cahuin_token', data.token);
-    const perfilCompleto = await userService.getMiPerfil();
-    setUsuarioConRegion(perfilCompleto.usuario);
-    return data;
+  const register = async (datos) => {
+    return await sincronizarConBackend();
   };
 
   const logout = async () => {
-    await AsyncStorage.removeItem('@cahuin_token');
-    setUsuario(null);
-    setRegion('default');
+    try {
+      setCargando(true);
+      await clerkSignOut();
+      setUsuario(null);
+      setToken(null);
+      await AsyncStorage.removeItem('@cahuin_token');
+      await AsyncStorage.removeItem('usuario');
+    } catch (error) {
+      console.error('Error cerrando sesión:', error);
+    } finally {
+      setCargando(false);
+    }
   };
 
-  const actualizarUsuario = (updates) => {
-    const nuevo = updates._id ? updates : { ...usuario, ...updates };
-    setUsuarioConRegion(nuevo);
+  const actualizarUsuario = async (nuevosDatos) => {
+    const actualizado = { ...usuario, ...nuevosDatos };
+    setUsuario(actualizado);
+    await AsyncStorage.setItem('usuario', JSON.stringify(actualizado));
   };
 
   return (
-    <AuthContext.Provider value={{
-      usuario, cargando, login, loginGoogle, loginFacebook, loginTelefono, register, logout, actualizarUsuario,
-      esPremium: usuario?.isPremium || (usuario?.premiumHasta && new Date(usuario.premiumHasta) > new Date()),
-    }}>
+    <AuthContext.Provider value={{ usuario, token, cargando, login, register, logout, actualizarUsuario, setCargando }}>
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function AuthProvider({ children }) {
-  return <AuthProviderInner>{children}</AuthProviderInner>;
-}
-
-export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth debe usarse dentro de AuthProvider');
-  return ctx;
 };
+
+export const useAuth = () => useContext(AuthContext);

@@ -1,277 +1,190 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
   View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+  Platform,
+  Alert
 } from 'react-native';
-import Purchases from 'react-native-purchases';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
-import { premiumService } from '../services/api';
-import { FONTS, SHADOWS, SPACING } from '../utils/theme';
+import { Ionicons } from '@expo/vector-icons';
+import Purchases from 'react-native-purchases';
+import { FONTS, SPACING, RADIUS, SHADOWS } from '../utils/theme';
+import CahuinModal from '../components/CahuinModal';
 
-const REVENUECAT_ANDROID_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY || '';
-const REVENUECAT_IOS_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY || '';
-
-const PLANS = [
-  {
-    id: 'premium_plus_month',
-    tier: 'plus',
-    name: 'Cahuín Plus',
-    price: '$4.590',
-    color: '#F0444F',
-    icon: 'flame',
-    cahuines: 700,
-    tagline: 'Para partir fuerte sin pagar de más.',
-    features: [
-      'Likes ilimitados',
-      'Rewind si pasaste a alguien por error',
-      'Modo viajero nacional',
-      '700 Cahuines incluidos',
-    ],
-  },
-  {
-    id: 'premium_gold_month',
-    tier: 'gold',
-    name: 'Cahuín Gold',
-    price: '$7.490',
-    color: '#F6B73C',
-    icon: 'crown',
-    cahuines: 1500,
-    tagline: 'El plan para ver quién ya quiere cahuinear contigo.',
-    features: [
-      'Todo lo de Plus',
-      'Descubre quién te dio like',
-      'Top Picks de tu región',
-      '1 Boost gratis al mes',
-      '1500 Cahuines incluidos',
-    ],
-  },
-  {
-    id: 'premium_platinum_month',
-    tier: 'platinum',
-    name: 'Cahuín Platinum',
-    price: '$11.450',
-    color: '#A1A1AA',
-    icon: 'diamond-stone',
-    cahuines: 3000,
-    tagline: 'Más prioridad, más control, más visibilidad.',
-    features: [
-      'Todo lo de Gold',
-      'Likes prioritarios',
-      '3 Super Likes por semana',
-      'Modo incógnito',
-      '3000 Cahuines incluidos',
-    ],
-  },
-];
-
-const COIN_PACKS = [
-  { id: 'cahuines_1000', amount: 1000, label: '1.000', price: '$1.990', tag: 'Starter' },
-  { id: 'cahuines_3000', amount: 3000, label: '3.000', price: '$4.990', tag: 'Popular' },
-  { id: 'cahuines_7000', amount: 7000, label: '7.000', price: '$9.990', tag: 'Full' },
-  { id: 'cahuines_15000', amount: 15000, label: '15.000', price: '$17.990', tag: 'Mejor valor' },
-];
+// 🌟 Aquí está la corrección: Usamos EXPO_PUBLIC... para leer la llave correcta
+const API_KEY = Platform.OS === 'ios' 
+  ? process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY 
+  : process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY;
 
 export default function PremiumScreen({ navigation }) {
-  const { usuario, actualizarUsuario } = useAuth();
-  const { COLORS } = useTheme();
-  const styles = getStyles(COLORS);
-  const [tabActiva, setTabActiva] = useState('planes');
-  const [comprandoId, setComprandoId] = useState(null);
-  const [offerings, setOfferings] = useState(null);
+  const [packages, setPackages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [purchasing, setPurchasing] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
 
   useEffect(() => {
-    (async () => {
+    const setupRevenueCat = async () => {
       try {
-        const apiKey = Platform.OS === 'ios' ? REVENUECAT_IOS_API_KEY : REVENUECAT_ANDROID_API_KEY;
-        if (!apiKey) return;
-        Purchases.configure({ apiKey, appUserID: usuario?._id });
-        const data = await Purchases.getOfferings();
-        setOfferings(data);
-      } catch (error) {
-        console.warn('RevenueCat no disponible:', error?.message);
+        if (!API_KEY) {
+          console.log("Falta la API Key de RevenueCat en el archivo .env");
+          setLoading(false);
+          return;
+        }
+
+        Purchases.configure({ apiKey: API_KEY });
+        const offerings = await Purchases.getOfferings();
+        
+        if (offerings.current !== null && offerings.current.availablePackages.length !== 0) {
+          setPackages(offerings.current.availablePackages);
+        }
+      } catch (e) {
+        console.error("Error cargando RevenueCat:", e);
+      } finally {
+        setLoading(false);
       }
-    })();
-  }, [usuario?._id]);
+    };
 
-  const buscarPackage = (productoId) => {
-    const disponibles = offerings?.current?.availablePackages || [];
-    return disponibles.find((pack) => pack.product?.identifier === productoId || pack.identifier === productoId);
-  };
+    setupRevenueCat();
+  }, []);
 
-  const comprarProducto = async (producto, tipo) => {
-    const apiKey = Platform.OS === 'ios' ? REVENUECAT_IOS_API_KEY : REVENUECAT_ANDROID_API_KEY;
-    if (!apiKey) {
-      Alert.alert('Google Play', 'Falta configurar RevenueCat/Google Play Billing antes de publicar esta compra.');
-      return;
-    }
-
-    const paquete = buscarPackage(producto.id);
-    if (!paquete) {
-      Alert.alert('Google Play', `No encontramos el producto ${producto.id}. Revisa que esté creado en Google Play y RevenueCat.`);
-      return;
-    }
-
-    setComprandoId(producto.id);
+  const purchasePackage = async (pack) => {
+    setPurchasing(true);
     try {
-      await Purchases.purchasePackage(paquete);
-      const res = tipo === 'plan'
-        ? await premiumService.suscribir(producto.id)
-        : await premiumService.comprarMonedas(producto.amount);
-      if (res?.usuario) actualizarUsuario(res.usuario);
-      Alert.alert('Listo', tipo === 'plan' ? `Activamos ${producto.name}.` : `Agregamos ${producto.label} Cahuines a tu cuenta.`);
-    } catch (error) {
-      if (!error.userCancelled) {
-        Alert.alert('Compra no completada', error.message || 'Google Play no pudo completar la compra.');
+      const { customerInfo } = await Purchases.purchasePackage(pack);
+      if (typeof customerInfo.entitlements.active['Premium'] !== "undefined") {
+        setModalMessage("¡Bienvenido a Cahuín Premium! Disfruta de todos tus beneficios.");
+        setModalVisible(true);
+      }
+    } catch (e) {
+      if (!e.userCancelled) {
+        setModalMessage("Hubo un error al procesar tu compra. Inténtalo de nuevo.");
+        setModalVisible(true);
       }
     } finally {
-      setComprandoId(null);
+      setPurchasing(false);
     }
   };
 
+  const planAnual = packages.find(p => p.packageType === 'ANNUAL');
+  const planMensual = packages.find(p => p.packageType === 'MONTHLY');
+
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="close" size={28} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <View style={styles.balancePill}>
-          <Ionicons name="flame" size={18} color={COLORS.primario} />
-          <Text style={styles.balanceText}>{usuario?.cahuines || 0}</Text>
-        </View>
-      </View>
-
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        <LinearGradient colors={['#0B1020', '#182033']} style={styles.heroCard}>
-          <View style={styles.heroGlow} />
-          <Text style={styles.heroKicker}>Cahuín Premium</Text>
-          <Text style={styles.heroTitle}>Más matches, más control, más cahuín.</Text>
-          <Text style={styles.heroText}>
-            Compra segura con Google Play. Tu plan y tus Cahuines quedan asociados a la misma cuenta que usas en la web.
-          </Text>
-        </LinearGradient>
-
-        <View style={styles.tabs}>
-          <TouchableOpacity style={[styles.tab, tabActiva === 'planes' && styles.tabActive]} onPress={() => setTabActiva('planes')}>
-            <Text style={[styles.tabText, tabActiva === 'planes' && styles.tabTextActive]}>Planes</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.tab, tabActiva === 'cahuines' && styles.tabActive]} onPress={() => setTabActiva('cahuines')}>
-            <Text style={[styles.tabText, tabActiva === 'cahuines' && styles.tabTextActive]}>Cahuines</Text>
+    <LinearGradient colors={['#05070D', '#120B12', '#09070B']} style={styles.container}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="close" size={28} color="#FFF" />
           </TouchableOpacity>
         </View>
 
-        {tabActiva === 'planes' ? (
-          <View style={styles.section}>
-            {PLANS.map((plan, index) => (
-              <View key={plan.id} style={[styles.planCard, index === 1 && styles.planFeatured]}>
-                <View style={styles.planHeader}>
-                  <View style={[styles.planIcon, { backgroundColor: `${plan.color}22` }]}>
-                    <MaterialCommunityIcons name={plan.icon} size={28} color={plan.color} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.planNameRow}>
-                      <Text style={styles.planName}>{plan.name}</Text>
-                      {index === 1 ? <Text style={styles.bestBadge}>Más pedido</Text> : null}
-                    </View>
-                    <Text style={styles.planTagline}>{plan.tagline}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.priceRow}>
-                  <Text style={styles.planPrice}>{plan.price}</Text>
-                  <Text style={styles.planPeriod}>/ mes</Text>
-                  <View style={styles.coinPill}>
-                    <Ionicons name="flame" size={14} color={COLORS.primario} />
-                    <Text style={styles.coinText}>{plan.cahuines} incluidos</Text>
-                  </View>
-                </View>
-
-                <View style={styles.features}>
-                  {plan.features.map((feature) => (
-                    <View key={feature} style={styles.featureRow}>
-                      <Ionicons name="checkmark" size={22} color={plan.color} />
-                      <Text style={styles.featureText}>{feature}</Text>
-                    </View>
-                  ))}
-                </View>
-
-                <TouchableOpacity style={[styles.buyButton, { backgroundColor: plan.color }]} onPress={() => comprarProducto(plan, 'plan')} disabled={comprandoId === plan.id}>
-                  {comprandoId === plan.id ? <ActivityIndicator color="#FFF" /> : <Text style={styles.buyButtonText}>Comprar con Google Play</Text>}
-                </TouchableOpacity>
-              </View>
-            ))}
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <View style={styles.crownContainer}>
+            <LinearGradient colors={['#FFD700', '#FFA500']} style={styles.crownGlow}>
+              <Ionicons name="star" size={50} color="#FFF" />
+            </LinearGradient>
           </View>
-        ) : (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Recarga Cahuines</Text>
-            <Text style={styles.sectionSub}>Para Boosts, Rewind, Ruleta a Ciegas, regalos y futuras dinámicas.</Text>
-            <View style={styles.coinGrid}>
-              {COIN_PACKS.map((pack) => (
-                <TouchableOpacity key={pack.id} style={styles.coinCard} onPress={() => comprarProducto(pack, 'coins')} disabled={comprandoId === pack.id}>
-                  <Text style={styles.coinTag}>{pack.tag}</Text>
-                  {comprandoId === pack.id ? <ActivityIndicator color={COLORS.primario} /> : <Ionicons name="flame" size={30} color={COLORS.primario} />}
-                  <Text style={styles.coinAmount}>{pack.label}</Text>
-                  <Text style={styles.coinPrice}>{pack.price}</Text>
+
+          <Text style={styles.title}>Cahuín <Text style={styles.goldText}>Premium</Text></Text>
+          <Text style={styles.subtitle}>Desbloquea todo el poder de la app y sube tus posibilidades de conectar.</Text>
+
+          <View style={styles.features}>
+            <Feature icon="flame" title="Boost Semanal" desc="Sé el primero en el radar durante 30 minutos." />
+            <Feature icon="eye" title="¿Quién te vio?" desc="Descubre quién visitó tu perfil." />
+            <Feature icon="infinite" title="Swipes Ilimitados" desc="Desliza todo lo que quieras sin límites." />
+            <Feature icon="beer" title="Filtros Avanzados" desc="Encuentra personas con tus mismos gustos." />
+          </View>
+
+          {loading ? (
+            <ActivityIndicator size="large" color="#FFD700" style={{ marginTop: 40 }} />
+          ) : (
+            <View style={styles.plansContainer}>
+              {planMensual && (
+                <TouchableOpacity 
+                  style={styles.planCard} 
+                  onPress={() => purchasePackage(planMensual)}
+                  disabled={purchasing}
+                >
+                  <Text style={styles.planName}>Mensual</Text>
+                  <Text style={styles.planPrice}>{planMensual.product.priceString}</Text>
+                  <Text style={styles.planDesc}>Cancela cuando quieras</Text>
                 </TouchableOpacity>
-              ))}
+              )}
+
+              {planAnual && (
+                <TouchableOpacity 
+                  style={[styles.planCard, styles.planCardBest]} 
+                  onPress={() => purchasePackage(planAnual)}
+                  disabled={purchasing}
+                >
+                  <View style={styles.bestBadge}><Text style={styles.bestBadgeText}>MEJOR VALOR</Text></View>
+                  <Text style={[styles.planName, { color: '#000' }]}>Anual</Text>
+                  <Text style={[styles.planPrice, { color: '#000' }]}>{planAnual.product.priceString}</Text>
+                  <Text style={[styles.planDesc, { color: '#444' }]}>Ahorra un 50%</Text>
+                </TouchableOpacity>
+              )}
             </View>
-          </View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+          )}
+
+          {purchasing && <ActivityIndicator color="#FFF" style={{ marginTop: 20 }} />}
+        </ScrollView>
+      </SafeAreaView>
+
+      <CahuinModal
+        visible={modalVisible}
+        title={modalMessage.includes('error') ? 'Oops' : '¡Felicidades!'}
+        message={modalMessage}
+        emoji={modalMessage.includes('error') ? '😢' : '🎉'}
+        onClose={() => {
+          setModalVisible(false);
+          if (!modalMessage.includes('error')) navigation.goBack();
+        }}
+      />
+    </LinearGradient>
   );
 }
 
-const getStyles = (COLORS) => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.bg },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14 },
-  closeButton: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.tarjeta, borderWidth: 1, borderColor: COLORS.border },
-  balancePill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.tarjeta, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 22, ...SHADOWS.light },
-  balanceText: { color: COLORS.textPrimary, fontWeight: '900', fontSize: 16 },
-  scroll: { padding: SPACING[5], paddingBottom: 120 },
-  heroCard: { borderRadius: 32, padding: SPACING[5], overflow: 'hidden', ...SHADOWS.dark },
-  heroGlow: { position: 'absolute', right: -50, top: -60, width: 170, height: 170, borderRadius: 85, backgroundColor: 'rgba(240,68,79,0.35)' },
-  heroKicker: { color: '#FFB5B9', fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 },
-  heroTitle: { color: '#FFF', fontSize: 32, fontWeight: '900', lineHeight: 36, marginTop: 12, fontFamily: FONTS.display },
-  heroText: { color: '#CBD5E1', fontSize: 16, lineHeight: 24, marginTop: 12 },
-  tabs: { flexDirection: 'row', backgroundColor: COLORS.tarjeta, borderWidth: 1, borderColor: COLORS.border, borderRadius: 24, padding: 5, marginTop: SPACING[5], marginBottom: SPACING[4] },
-  tab: { flex: 1, minHeight: 48, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  tabActive: { backgroundColor: COLORS.textPrimary },
-  tabText: { color: COLORS.textMuted, fontWeight: '900' },
-  tabTextActive: { color: COLORS.bg },
-  section: { gap: SPACING[4] },
-  sectionTitle: { color: COLORS.textPrimary, fontSize: 26, fontWeight: '900', fontFamily: FONTS.display },
-  sectionSub: { color: COLORS.textMuted, fontSize: 15, lineHeight: 22 },
-  planCard: { backgroundColor: COLORS.tarjeta, borderWidth: 1, borderColor: COLORS.border, borderRadius: 28, padding: SPACING[4], ...SHADOWS.light },
-  planFeatured: { borderColor: 'rgba(246,183,60,0.55)' },
-  planHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING[3] },
-  planIcon: { width: 58, height: 58, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  planNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  planName: { color: COLORS.textPrimary, fontSize: 22, fontWeight: '900', fontFamily: FONTS.display },
-  bestBadge: { color: '#92400E', backgroundColor: '#FEF3C7', borderRadius: 99, paddingHorizontal: 10, paddingVertical: 4, overflow: 'hidden', fontSize: 11, fontWeight: '900' },
-  planTagline: { color: COLORS.textMuted, fontSize: 14, marginTop: 4, lineHeight: 19 },
-  priceRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: SPACING[4] },
-  planPrice: { color: COLORS.textPrimary, fontSize: 28, fontWeight: '900' },
-  planPeriod: { color: COLORS.textMuted, fontSize: 14, fontWeight: '800' },
-  coinPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: COLORS.softRed, borderRadius: 99, paddingHorizontal: 10, paddingVertical: 7 },
-  coinText: { color: COLORS.primario, fontWeight: '900', fontSize: 12 },
-  features: { marginTop: SPACING[4], gap: 10 },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  featureText: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '800', flex: 1 },
-  buyButton: { minHeight: 54, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginTop: SPACING[4], ...SHADOWS.medium },
-  buyButtonText: { color: '#FFF', fontSize: 16, fontWeight: '900' },
-  coinGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING[3] },
-  coinCard: { width: '47%', minHeight: 156, backgroundColor: COLORS.tarjeta, borderWidth: 1, borderColor: COLORS.border, borderRadius: 26, padding: SPACING[4], alignItems: 'center', justifyContent: 'center', ...SHADOWS.light },
-  coinTag: { position: 'absolute', top: 12, left: 12, color: COLORS.primario, backgroundColor: COLORS.softRed, borderRadius: 99, paddingHorizontal: 9, paddingVertical: 4, overflow: 'hidden', fontSize: 11, fontWeight: '900' },
-  coinAmount: { color: COLORS.textPrimary, fontSize: 26, fontWeight: '900', marginTop: 8 },
-  coinPrice: { color: COLORS.textMuted, fontSize: 14, fontWeight: '900', marginTop: 4 },
+function Feature({ icon, title, desc }) {
+  return (
+    <View style={styles.featureRow}>
+      <View style={styles.iconBox}>
+        <Ionicons name={icon} size={22} color="#FFD700" />
+      </View>
+      <View style={styles.featureTexts}>
+        <Text style={styles.featureTitle}>{title}</Text>
+        <Text style={styles.featureDesc}>{desc}</Text>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  header: { flexDirection: 'row', justifyContent: 'flex-end', padding: SPACING[4] },
+  backButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
+  scroll: { padding: SPACING[5], paddingBottom: 60 },
+  crownContainer: { alignItems: 'center', marginBottom: 20 },
+  crownGlow: { width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center', ...SHADOWS.large },
+  title: { fontSize: 36, fontFamily: FONTS.display, color: '#FFF', textAlign: 'center', marginBottom: 10 },
+  goldText: { color: '#FFD700' },
+  subtitle: { fontSize: 16, color: '#A0AEC0', textAlign: 'center', marginBottom: 40, paddingHorizontal: 20 },
+  features: { gap: 20, marginBottom: 40 },
+  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 15 },
+  iconBox: { width: 48, height: 48, borderRadius: 16, backgroundColor: 'rgba(255, 215, 0, 0.1)', justifyContent: 'center', alignItems: 'center' },
+  featureTexts: { flex: 1 },
+  featureTitle: { color: '#FFF', fontSize: 17, fontWeight: '700', marginBottom: 4 },
+  featureDesc: { color: '#A0AEC0', fontSize: 14 },
+  plansContainer: { flexDirection: 'row', gap: 15 },
+  planCard: { flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20, padding: 20, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  planCardBest: { backgroundColor: '#FFD700', borderColor: '#FFD700' },
+  bestBadge: { position: 'absolute', top: -12, backgroundColor: '#F0444F', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
+  bestBadgeText: { color: '#FFF', fontSize: 10, fontWeight: '900' },
+  planName: { color: '#FFF', fontSize: 18, fontWeight: '800', marginBottom: 10 },
+  planPrice: { color: '#FFF', fontSize: 24, fontWeight: '900', fontFamily: FONTS.display, marginBottom: 5 },
+  planDesc: { color: '#A0AEC0', fontSize: 12, textAlign: 'center' }
 });
