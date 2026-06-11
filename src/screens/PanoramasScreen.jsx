@@ -1,299 +1,608 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, FlatList, TouchableOpacity, ActivityIndicator, Modal, TextInput, Alert, Linking } from 'react-native';
+﻿import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  Linking,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONTS, SPACING, SIZES, SHADOWS, RADIUS } from '../utils/theme';
-import { panoramaService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { matchService, mensajeService, panoramaService } from '../services/api';
+import CahuinModal from '../components/CahuinModal';
+import CahuinTextField from '../components/CahuinTextField';
+import {
+  BottomSheetHandle,
+  EmptyState,
+  GradientButton,
+  ScreenScaffold,
+  SegmentedControl,
+  SoftCard,
+  SoftIcon,
+} from '../components/CahuinUI';
+import { FONTS, SHADOWS, SPACING } from '../utils/theme';
 
-// Datos de prueba con REGIONES asignadas
-const EVENTOS_OFICIALES = [
-  {
-    _id: 'oficial_1',
-    titulo: 'Concierto Rock Chileno',
-    descripcion: 'Tremenda tocata con bandas locales y tributos. No te quedes fuera.',
-    lugar: 'Estadio Germán Becker',
-    region: 'La Araucanía', // 👈 Etiqueta regional
-    fecha: new Date(Date.now() + 86400000 * 2).toISOString(),
-    hora: '21:00',
-    categoria: 'Música',
-    emoji: '🎸',
-    esOficial: true
-  },
-  {
-    _id: 'oficial_2',
-    titulo: 'Carnaval Andino Con la Fuerza del Sol',
-    descripcion: 'Uno de los carnavales más grandes de Sudamérica, lleno de colores y bailes.',
-    lugar: 'Circuito Histórico',
-    region: 'Arica y Parinacota', // 👈 Evento solo para el norte
-    fecha: new Date(Date.now() + 86400000 * 5).toISOString(),
-    hora: '12:00',
-    categoria: 'Cultura',
-    emoji: '🎭',
-    esOficial: true
-  }
+const emptyPanoramas = require('../assets/illustrations/empty-panoramas.png');
+
+const REGIONES_CHILE = [
+  'Arica y Parinacota', 'Tarapacá', 'Antofagasta', 'Atacama', 'Coquimbo',
+  'Valparaíso', 'Metropolitana', "O'Higgins", 'Maule', 'Ñuble',
+  'Bío Bío', 'Araucanía', 'Los Ríos', 'Los Lagos', 'Aysén', 'Magallanes',
 ];
 
+const fallbackEventImages = [
+  'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?q=80&w=900',
+  'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=900',
+  'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=900',
+];
+
+const soloVigentes = (items = []) => {
+  const inicio = new Date();
+  inicio.setHours(0, 0, 0, 0);
+  return items.filter((item) => !item.fecha || new Date(item.fecha) >= inicio);
+};
+
 export default function PanoramasScreen() {
+  const { COLORS } = useTheme();
   const { usuario } = useAuth();
+  const styles = getStyles(COLORS);
+
+  const [tabActiva, setTabActiva] = useState('eventos');
   const [panoramas, setPanoramas] = useState([]);
   const [cargando, setCargando] = useState(true);
-  const [refrescando, setRefrescando] = useState(false);
-  const [tabActivo, setTabActivo] = useState('comunidad'); 
-  
-  const [modalVisible, setModalVisible] = useState(false);
-  const [titulo, setTitulo] = useState('');
-  const [descripcion, setDescripcion] = useState('');
-  const [lugar, setLugar] = useState('');
-  const [fechaInput, setFechaInput] = useState(''); 
-  const [horaInput, setHoraInput] = useState('');   
-  const [creando, setCreando] = useState(false);
+  const [misMatchesReales, setMisMatchesReales] = useState([]);
+  const [regionOficial, setRegionOficial] = useState(usuario?.region || 'Metropolitana');
+  const [modalExplorador, setModalExplorador] = useState(false);
+  const [modalCrear, setModalCrear] = useState(false);
+  const [nuevoPano, setNuevoPano] = useState({ titulo: '', descripcion: '', lugar: '', fecha: new Date() });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [eventoActivo, setEventoActivo] = useState(null);
+  const [eventoParaInvitar, setEventoParaInvitar] = useState(null);
+  const [enviandoInvitacion, setEnviandoInvitacion] = useState(false);
+  const [modalInfo, setModalInfo] = useState(null);
 
-  // Definimos la región del usuario (si no tiene, por defecto asume La Araucanía para no mostrar pantalla vacía en pruebas)
-  const miRegion = usuario?.region || 'La Araucanía';
+  const avisar = (title, message, emoji = '🌶️', extra = {}) => setModalInfo({ title, message, emoji, ...extra });
 
   useEffect(() => {
-    cargarPanoramas();
-  }, [tabActivo]);
+    cargarTodo();
+  }, [usuario?.viaje?.ciudadDestino, regionOficial]);
 
-  const cargarPanoramas = async () => {
+  const cargarTodo = async () => {
     try {
-      if (tabActivo === 'oficiales') {
-        // 🌟 FILTRO REGIONAL Y DE FECHA: Solo eventos que no hayan pasado y que sean de MI REGIÓN
-        const eventosVigentes = EVENTOS_OFICIALES.filter(
-          evt => new Date(evt.fecha) >= new Date() && evt.region === miRegion
-        );
-        setPanoramas(eventosVigentes);
-      } else {
-        // 🌟 PANORAMAS DE LA COMUNIDAD: El backend ahora debe buscar por 'region' y no por 'ciudad'
-        const data = await panoramaService.listar({ region: miRegion });
-        const eventosVigentes = (data.panoramas || []).filter(evt => new Date(evt.fecha) >= new Date());
-        setPanoramas(eventosVigentes);
-      }
+      setCargando(true);
+      const regionLocal = usuario?.viaje?.ciudadDestino || usuario?.ciudad || usuario?.region || 'Metropolitana';
+      const resComunidad = await panoramaService.listar({ region: regionLocal });
+      const resOficiales = await panoramaService.listar({ region: regionOficial });
+      const resMatches = await matchService.getMisMatches();
+
+      setPanoramas([
+        ...soloVigentes(resComunidad.panoramas || []).filter((p) => !p.esOficial),
+        ...soloVigentes(resOficiales.panoramas || []).filter((p) => p.esOficial),
+      ]);
+      setMisMatchesReales(resMatches.matches || []);
     } catch (error) {
-      console.log("Error cargando panoramas:", error);
+      console.log(error);
     } finally {
       setCargando(false);
-      setRefrescando(false);
     }
-  };
-
-  const handleRefresh = () => {
-    setRefrescando(true);
-    cargarPanoramas();
-  };
-
-  const abrirGoogleMaps = (destino) => {
-    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(destino)}`;
-    Linking.openURL(url).catch(err => Alert.alert("Error", "No se pudo abrir el mapa."));
   };
 
   const handleCrearPanorama = async () => {
-    if (!titulo || !descripcion || !lugar || !fechaInput || !horaInput) {
-      Alert.alert("Oye ✋", "Faltan datos po'. Llena la fecha y la hora para que la gente sepa cuándo llegar.");
+    if (!nuevoPano.titulo || !nuevoPano.lugar) {
+      avisar('Ey', 'Ponle un titulo y un lugar.', '📍', { accent: COLORS.primario });
       return;
     }
 
-    setCreando(true);
     try {
-      const [dia, mes, anio] = fechaInput.split('/');
-      const [hora, min] = horaInput.split(':');
-      const fechaArmada = new Date(`${anio}-${mes}-${dia}T${hora}:${min}:00`);
-
+      setCargando(true);
       await panoramaService.crear({
-        titulo,
-        descripcion,
-        lugar,
-        region: miRegion, // 👈 Se guarda asociado a la región entera
-        fecha: fechaArmada.toISOString(),
+        ...nuevoPano,
+        descripcion: nuevoPano.descripcion || nuevoPano.titulo,
+        region: usuario?.viaje?.ciudadDestino || usuario?.region || 'Metropolitana',
+        maxPersonas: 10,
         categoria: 'Comunidad',
-        emoji: '🙌',
-        maxPersonas: 15
+        emoji: '📍',
       });
-
-      Alert.alert("¡Espectacular! 🌶️", "Tu panorama ya está publicado para toda tu región.");
-      setModalVisible(false);
-      setTitulo(''); setDescripcion(''); setLugar(''); setFechaInput(''); setHoraInput('');
-      cargarPanoramas(); 
-    } catch (error) {
-      Alert.alert("Error", error.message || "No se pudo armar el cahuín.");
+      setModalCrear(false);
+      setNuevoPano({ titulo: '', descripcion: '', lugar: '', fecha: new Date() });
+      avisar('Listo', 'Panorama publicado en la comunidad.', '📍', { accent: COLORS.primario });
+      cargarTodo();
+    } catch {
+      avisar('Error', 'No pudimos publicarlo. Verifica tu conexión.', '🌶️', { tone: 'danger' });
     } finally {
-      setCreando(false);
+      setCargando(false);
     }
   };
 
-  const renderPanorama = ({ item }) => {
-    const fechaFormateada = new Date(item.fecha).toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'short' });
-    const horaVisual = item.hora || new Date(item.fecha).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+  const handleUnirse = async (id) => {
+    try {
+      const data = await panoramaService.unirse(id);
+      const participantes = data.panorama?.participantes || [];
+      const nombres = participantes.map((p) => p?.nombre).filter(Boolean).slice(0, 4).join(', ');
+      avisar(
+        'Te anotaste',
+        nombres
+          ? `El creador ya puede ver que te sumaste. Grupo actual: ${nombres}.`
+          : data.message || 'El creador ya puede ver que te sumaste.',
+        '🙌',
+        { accent: COLORS.primario }
+      );
+      cargarTodo();
+    } catch (error) {
+      avisar('Oops', error.message || 'No se pudo.', '🌶️', { tone: 'danger' });
+    }
+  };
+
+  const abrirMapa = (direccion, ciudadFiltro) => {
+    const ubicacionFinal = `${direccion}, ${ciudadFiltro}, Chile`;
+    const url = Platform.OS === 'ios'
+      ? `http://maps.apple.com/?q=${encodeURIComponent(ubicacionFinal)}`
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ubicacionFinal)}`;
+    Linking.openURL(url).catch(() => avisar('Error', 'No pudimos abrir el mapa.', '🗺️', { tone: 'danger' }));
+  };
+
+  const fechaCorta = (fecha) => new Date(fecha).toLocaleDateString('es-CL', {
+    day: 'numeric',
+    month: 'numeric',
+    year: 'numeric',
+  });
+
+  const abrirInvitaciones = (evento) => {
+    setEventoActivo(null);
+    setEventoParaInvitar(evento);
+  };
+
+  const enviarInvitacion = async (match) => {
+    if (!eventoParaInvitar || enviandoInvitacion) return;
+    setEnviandoInvitacion(true);
+
+    const textoInvitacion = `Te invito a este panorama: ${eventoParaInvitar.titulo} en ${eventoParaInvitar.lugar}, el ${fechaCorta(eventoParaInvitar.fecha)}. ¿Lo vemos?`;
+
+    try {
+      await mensajeService.enviar(match.roomId, textoInvitacion);
+      avisar('Invitación enviada', `Le mandaste este panorama a ${match.usuario?.nombre || 'tu match'}.`, '💌', { accent: COLORS.primario });
+      setEventoParaInvitar(null);
+    } catch (error) {
+      avisar('Oops', error.message || 'No pudimos enviar la invitación.', '🌶️', { tone: 'danger' });
+    } finally {
+      setEnviandoInvitacion(false);
+    }
+  };
+
+  const onChangeFecha = (event, selectedDate) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (selectedDate) setNuevoPano({ ...nuevoPano, fecha: selectedDate });
+  };
+
+  const onChangeHora = (event, selectedTime) => {
+    setShowTimePicker(Platform.OS === 'ios');
+    if (selectedTime) {
+      const nuevaFecha = new Date(nuevoPano.fecha);
+      nuevaFecha.setHours(selectedTime.getHours());
+      nuevaFecha.setMinutes(selectedTime.getMinutes());
+      setNuevoPano({ ...nuevoPano, fecha: nuevaFecha });
+    }
+  };
+
+  const panoramasOficiales = panoramas.filter((p) => p.esOficial);
+  const panoramasComunidad = panoramas.filter((p) => !p.esOficial);
+  const listaActual = tabActiva === 'eventos' ? panoramasOficiales : panoramasComunidad;
+
+  const renderOfficialCard = (item, index, featured = false) => {
+    const imageUri = item.imagen || fallbackEventImages[index % fallbackEventImages.length];
+
+    if (!featured) {
+      return (
+        <TouchableOpacity key={item._id || index} activeOpacity={0.9} onPress={() => setEventoActivo(item)}>
+          <SoftCard COLORS={COLORS} style={styles.eventRow}>
+            <Image source={{ uri: imageUri }} style={styles.eventThumb} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.eventTitle} numberOfLines={1}>{item.titulo}</Text>
+              <Text style={styles.eventDesc} numberOfLines={1}>{item.descripcion}</Text>
+              <View style={styles.metaRow}>
+                <Ionicons name="location" size={15} color={COLORS.primario} />
+                <Text style={styles.eventMeta} numberOfLines={1}>{item.lugar} · {fechaCorta(item.fecha)}</Text>
+              </View>
+            </View>
+            <View style={styles.chevronCircle}><Ionicons name="chevron-forward" size={22} color={COLORS.primario} /></View>
+          </SoftCard>
+        </TouchableOpacity>
+      );
+    }
 
     return (
-      <View style={[styles.card, item.esOficial ? styles.cardOficial : SHADOWS.medium]}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>{item.titulo}</Text>
-          <View style={styles.categoriaBadge}>
-            <Text style={styles.categoriaText}>{item.emoji} {item.categoria}</Text>
+      <TouchableOpacity key={item._id || index} activeOpacity={0.92} onPress={() => setEventoActivo(item)}>
+        <SoftCard COLORS={COLORS} style={styles.featuredCard}>
+          <View style={styles.featuredTop}>
+            <Image source={{ uri: imageUri }} style={styles.featuredImage} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.featuredTitle}>{item.titulo}</Text>
+              <Text style={styles.featuredDesc}>{item.descripcion}</Text>
+              <TouchableOpacity onPress={() => abrirMapa(item.lugar, regionOficial)}>
+                <View style={styles.metaRow}>
+                  <Ionicons name="location" size={16} color={COLORS.primario} />
+                  <Text style={styles.featuredMeta}>{item.lugar} · {fechaCorta(item.fecha)}</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
 
-        <Text style={styles.cardDesc}>{item.descripcion}</Text>
-
-        <View style={styles.infoGrid}>
-          <View style={styles.infoRow}>
-            <Ionicons name="calendar" size={18} color={COLORS.primario} />
-            <Text style={styles.infoText}>{fechaFormateada}</Text>
+          <View style={styles.inviteBox}>
+            <SoftIcon name="people" size={56} rounded={28} bg={COLORS.softRed} color={COLORS.primario} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.inviteTitle}>Invitar amigos</Text>
+              <Text style={styles.inviteText}>Comparte este evento con tus cahuines.</Text>
+            </View>
+            <GradientButton icon="send" style={styles.inviteButton} onPress={() => abrirInvitaciones(item)}>
+              Invitar
+            </GradientButton>
           </View>
-          <View style={styles.infoRow}>
-            <Ionicons name="time" size={18} color={COLORS.primario} />
-            <Text style={styles.infoText}>{horaVisual} hrs</Text>
-          </View>
-        </View>
-
-        <View style={styles.ubicacionRow}>
-          <View style={styles.infoRowLocal}>
-            <Ionicons name="location" size={18} color={COLORS.acento} />
-            <Text style={styles.infoTextLocal} numberOfLines={1}>{item.lugar}</Text>
-          </View>
-          <TouchableOpacity style={styles.btnMapa} onPress={() => abrirGoogleMaps(item.lugar)}>
-            <Ionicons name="map" size={16} color="white" />
-            <Text style={styles.btnMapaTexto}>Ver Mapa</Text>
-          </TouchableOpacity>
-        </View>
-
-        {!item.esOficial && (
-          <TouchableOpacity style={styles.btnUnirse} onPress={() => Alert.alert("¡Anotado!", "Le avisaremos al organizador.")}>
-            <Text style={styles.btnUnirseText}>¡Me anoto! ☝️</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+        </SoftCard>
+      </TouchableOpacity>
     );
   };
 
-  return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Cartelera 🗺️</Text>
-        <Text style={styles.headerSubtitle}>Mostrando eventos en {miRegion}</Text>
-        
-        <View style={styles.tabContainer}>
-          <TouchableOpacity 
-            style={[styles.tabBoton, tabActivo === 'comunidad' && styles.tabBotonActivo]}
-            onPress={() => setTabActivo('comunidad')}
-          >
-            <Text style={[styles.tabTexto, tabActivo === 'comunidad' && styles.tabTextoActivo]}>Comunidad</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tabBoton, tabActivo === 'oficiales' && styles.tabBotonActivo]}
-            onPress={() => setTabActivo('oficiales')}
-          >
-            <Text style={[styles.tabTexto, tabActivo === 'oficiales' && styles.tabTextoActivo]}>Oficiales 🎟️</Text>
-          </TouchableOpacity>
+  const renderCommunityCard = (item, index) => (
+    <SoftCard key={item._id || index} COLORS={COLORS} style={styles.communityCard}>
+      <SoftIcon name="location" size={58} rounded={20} bg={COLORS.softAmber} color={COLORS.primario} />
+      <View style={{ flex: 1 }}>
+        <Text style={styles.eventTitle}>{item.titulo}</Text>
+        <Text style={styles.eventDesc}>{item.descripcion}</Text>
+        <TouchableOpacity onPress={() => abrirMapa(item.lugar, usuario?.viaje?.ciudadDestino || usuario?.region)}>
+          <View style={styles.metaRow}>
+            <Ionicons name="location" size={15} color={COLORS.primario} />
+            <Text style={styles.eventMeta}>{item.lugar} · {fechaCorta(item.fecha)}</Text>
+          </View>
+        </TouchableOpacity>
+        <View style={styles.groupHint}>
+          <Ionicons name="people" size={14} color={COLORS.primario} />
+          <Text style={styles.groupHintText}>{item.participantes?.length || 0} anotados · el creador ve la lista</Text>
         </View>
       </View>
+      <TouchableOpacity style={styles.joinButton} onPress={() => handleUnirse(item._id)}>
+        <Text style={styles.joinButtonText}>Me anoto</Text>
+      </TouchableOpacity>
+    </SoftCard>
+  );
 
-      {cargando ? (
-        <View style={styles.center}><ActivityIndicator size="large" color={COLORS.primario} /></View>
-      ) : panoramas.length === 0 ? (
-        <View style={styles.center}>
-          <Text style={styles.emptyEmoji}>🏜️</Text>
-          <Text style={styles.emptyTitle}>Nada por aquí</Text>
-          <Text style={styles.emptyText}>No hay eventos próximos en tu región.</Text>
+  return (
+    <ScreenScaffold COLORS={COLORS}>
+      <SegmentedControl
+        COLORS={COLORS}
+        value={tabActiva}
+        onChange={setTabActiva}
+        options={[
+          { value: 'eventos', label: 'Eventos Oficiales', icon: 'ticket' },
+          { value: 'comunidad', label: 'Comunidad', icon: 'people', dark: true },
+        ]}
+      />
+
+      {tabActiva === 'eventos' ? (
+        <View style={styles.sectionHeader}>
+          <View style={styles.regionTitleRow}>
+            <Ionicons name="location" size={28} color={COLORS.primario} />
+            <Text style={styles.sectionTitle} numberOfLines={1} adjustsFontSizeToFit>{regionOficial}</Text>
+          </View>
+          <TouchableOpacity style={styles.darkPill} onPress={() => setModalExplorador(true)}>
+            <Ionicons name="map" size={18} color="#FFF" />
+            <Text style={styles.darkPillText}>Ver más regiones</Text>
+          </TouchableOpacity>
         </View>
       ) : (
-        <FlatList
-          data={panoramas}
-          keyExtractor={(item) => item._id}
-          renderItem={renderPanorama}
-          contentContainerStyle={styles.lista}
-          refreshing={refrescando}
-          onRefresh={handleRefresh}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Panoramas Locales</Text>
+          <TouchableOpacity style={styles.darkPill} onPress={() => setModalCrear(true)}>
+            <Ionicons name="add" size={22} color="#FFF" />
+            <Text style={styles.darkPillText}>Crear Panorama</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {cargando ? (
+        <ActivityIndicator size="large" color={COLORS.primario} style={{ marginTop: 80 }} />
+      ) : listaActual.length === 0 ? (
+        <EmptyState
+          COLORS={COLORS}
+          image={emptyPanoramas}
+          title={tabActiva === 'eventos' ? 'No hay eventos todavía' : 'No hay panoramas todavía'}
+          subtitle={tabActiva === 'eventos'
+            ? 'Prueba otra región o vuelve más tarde para descubrir carteleras nuevas.'
+            : 'Los mejores panoramas nacen de la comunidad. Inventa uno tú y ayuda a otros a descubrirlo.'}
+          action={tabActiva === 'comunidad' ? (
+            <GradientButton icon="add" style={{ width: '100%', marginTop: 28 }} onPress={() => setModalCrear(true)}>
+              Crear Panorama
+            </GradientButton>
+          ) : null}
         />
+      ) : (
+        <>
+          {tabActiva === 'eventos'
+            ? listaActual.map((item, index) => renderOfficialCard(item, index, index === 0))
+            : listaActual.map(renderCommunityCard)}
+        </>
       )}
 
-      {tabActivo === 'comunidad' && (
-        <TouchableOpacity style={[styles.fab, SHADOWS.dark]} onPress={() => setModalVisible(true)}>
-          <Ionicons name="add" size={32} color="white" />
-        </TouchableOpacity>
-      )}
-
-      <Modal visible={modalVisible} animationType="slide" transparent={true}>
+      <Modal visible={!!eventoActivo} animationType="slide" transparent>
         <View style={styles.modalFondo}>
-          <View style={[styles.modalCard, SHADOWS['2xl']]}>
-            <Text style={styles.modalTitle}>Armar un Panorama 🍻</Text>
-            
-            <TextInput style={styles.input} placeholder="¿Qué haremos? (Ej: Asado)" value={titulo} onChangeText={setTitulo} />
-            <TextInput style={[styles.input, { height: 60 }]} placeholder="Detalles (qué llevar...)" value={descripcion} onChangeText={setDescripcion} multiline />
-            <TextInput style={styles.input} placeholder="Lugar (Ej: Parque Isla Cautín)" value={lugar} onChangeText={setLugar} />
-            
-            <View style={styles.fechasRow}>
-              <TextInput style={[styles.input, styles.inputMitad]} placeholder="Día (DD/MM/AAAA)" value={fechaInput} onChangeText={setFechaInput} keyboardType="numeric" />
-              <TextInput style={[styles.input, styles.inputMitad]} placeholder="Hora (Ej: 20:30)" value={horaInput} onChangeText={setHoraInput} />
+          <View style={styles.modalCard}>
+            <BottomSheetHandle />
+            <View style={styles.modalTitleRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modalTituloGrande}>{eventoActivo?.titulo}</Text>
+                <Text style={styles.modalSubSmall}>{eventoActivo?.descripcion}</Text>
+              </View>
+              <TouchableOpacity style={styles.closeButton} onPress={() => setEventoActivo(null)}>
+                <Ionicons name="close" size={28} color={COLORS.textPrimary} />
+              </TouchableOpacity>
             </View>
 
-            <View style={styles.modalBotones}>
-              <TouchableOpacity style={styles.btnCancelar} onPress={() => setModalVisible(false)} disabled={creando}>
-                <Text style={styles.btnCancelarText}>Cancelar</Text>
+            <View style={styles.detailRow}>
+              <Ionicons name="location" size={22} color={COLORS.primario} />
+              <Text style={styles.detailText}>{eventoActivo?.lugar}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Ionicons name="calendar" size={22} color={COLORS.primario} />
+              <Text style={styles.detailText}>{eventoActivo ? fechaCorta(eventoActivo.fecha) : ''}</Text>
+            </View>
+
+            <View style={styles.actionRow}>
+              <TouchableOpacity style={styles.secondaryAction} onPress={() => abrirMapa(eventoActivo?.lugar, regionOficial)}>
+                <Ionicons name="map" size={20} color={COLORS.textPrimary} />
+                <Text style={styles.secondaryActionText}>Abrir mapa</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.btnGuardar} onPress={handleCrearPanorama} disabled={creando}>
-                {creando ? <ActivityIndicator color="white" /> : <Text style={styles.btnGuardarText}>Publicar</Text>}
-              </TouchableOpacity>
+              <GradientButton icon="send" style={styles.primaryAction} onPress={() => abrirInvitaciones(eventoActivo)}>
+                Invitar
+              </GradientButton>
             </View>
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+
+      <Modal visible={!!eventoParaInvitar} animationType="slide" transparent>
+        <View style={styles.modalFondo}>
+          <View style={[styles.modalCard, { maxHeight: '76%' }]}>
+            <BottomSheetHandle />
+            <View style={styles.modalTitleRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modalTitulo}>Invitar a un Cahuín</Text>
+                <Text style={styles.modalSubSmall}>{eventoParaInvitar?.titulo}</Text>
+              </View>
+              <TouchableOpacity style={styles.closeButton} onPress={() => setEventoParaInvitar(null)}>
+                <Ionicons name="close" size={28} color={COLORS.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            {misMatchesReales.length === 0 ? (
+              <View style={styles.emptyInvite}>
+                <Text style={styles.emptyInviteTitle}>Aun no hay chats para invitar.</Text>
+                <Text style={styles.emptyInviteText}>Cuando tengas matches, aparecerán aquí para mandarles panoramas directo al chat.</Text>
+              </View>
+            ) : (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {misMatchesReales.map((match) => (
+                  <TouchableOpacity
+                    key={match.roomId}
+                    style={styles.matchInviteRow}
+                    activeOpacity={0.88}
+                    disabled={enviandoInvitacion}
+                    onPress={() => enviarInvitacion(match)}
+                  >
+                    <Image source={{ uri: match.usuario?.foto || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200' }} style={styles.matchAvatar} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.matchName}>{match.usuario?.nombre || 'Match'}</Text>
+                      <Text style={styles.matchHint}>Enviar invitación al chat</Text>
+                    </View>
+                    <Ionicons name="send" size={20} color={COLORS.primario} />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={modalExplorador} animationType="slide" transparent>
+        <View style={styles.modalFondo}>
+          <View style={[styles.modalCard, { maxHeight: '82%' }]}>
+            <BottomSheetHandle />
+            <View style={styles.modalTitleRow}>
+              <View style={styles.modalTitleLeft}>
+                <Ionicons name="map" size={30} color={COLORS.navy} />
+                <Text style={styles.modalTitulo}>Explorar Chile</Text>
+              </View>
+              <TouchableOpacity style={styles.closeButton} onPress={() => setModalExplorador(false)}>
+                <Ionicons name="close" size={28} color={COLORS.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalSub}>Revisa la cartelera oficial de cualquier parte del país para planear un pique e invitar a tus matches.</Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {REGIONES_CHILE.map((reg) => {
+                const active = regionOficial === reg;
+                return (
+                  <TouchableOpacity
+                    key={reg}
+                    style={[styles.regionButton, active && styles.regionButtonActive]}
+                    onPress={() => { setRegionOficial(reg); setModalExplorador(false); }}
+                  >
+                    <Text style={[styles.regionButtonText, active && { fontWeight: '900' }]}>{reg}</Text>
+                    {active ? <View style={styles.regionCheck}><Ionicons name="checkmark" size={18} color="#FFF" /></View> : null}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={modalCrear} animationType="slide" transparent>
+        <View style={styles.modalFondo}>
+          <View style={styles.modalCard}>
+            <BottomSheetHandle />
+            <View style={styles.modalTitleRow}>
+              <Text style={styles.modalTituloGrande}>Armar un Panorama</Text>
+              <TouchableOpacity style={styles.closeButton} onPress={() => setModalCrear(false)}>
+                <Ionicons name="close" size={28} color={COLORS.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.inputLabelRow}>
+              <SoftIcon name="sparkles" color="#8B5CF6" bg={COLORS.softPurple} size={42} rounded={12} iconSize={22} />
+              <Text style={styles.label}>¿Qué van a hacer?</Text>
+            </View>
+            <CahuinTextField icon="sparkles-outline" placeholder="Ej: Juntarse a tomar unas chelas" value={nuevoPano.titulo} onChangeText={(t) => setNuevoPano({ ...nuevoPano, titulo: t })} />
+
+            <View style={styles.inputLabelRow}>
+              <SoftIcon name="location" color="#72B84A" bg={COLORS.softGreen} size={42} rounded={12} iconSize={22} />
+              <Text style={styles.label}>¿Dónde es?</Text>
+            </View>
+            <CahuinTextField icon="location-outline" placeholder="Ej: Bar X, Centro" value={nuevoPano.lugar} onChangeText={(l) => setNuevoPano({ ...nuevoPano, lugar: l })} />
+
+            <View style={styles.dateRow}>
+              <TouchableOpacity style={styles.dateBox} onPress={() => setShowDatePicker(true)}>
+                <SoftIcon name="calendar" color="#FF6B45" bg={COLORS.softRed} size={42} rounded={12} iconSize={22} />
+                <View>
+                  <Text style={styles.dateLabel}>Fecha</Text>
+                  <Text style={styles.dateValue}>{nuevoPano.fecha.toLocaleDateString()}</Text>
+                </View>
+                <Ionicons name="chevron-down" size={18} color={COLORS.textMuted} style={{ marginLeft: 'auto' }} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.dateBox} onPress={() => setShowTimePicker(true)}>
+                <SoftIcon name="time" color="#4F6FEA" bg="#EEF2FF" size={42} rounded={12} iconSize={22} />
+                <View>
+                  <Text style={styles.dateLabel}>Hora</Text>
+                  <Text style={styles.dateValue}>{nuevoPano.fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+                </View>
+                <Ionicons name="chevron-down" size={18} color={COLORS.textMuted} style={{ marginLeft: 'auto' }} />
+              </TouchableOpacity>
+            </View>
+
+            {showDatePicker ? <DateTimePicker value={nuevoPano.fecha} mode="date" display="default" minimumDate={new Date()} onChange={onChangeFecha} /> : null}
+            {showTimePicker ? <DateTimePicker value={nuevoPano.fecha} mode="time" display="default" onChange={onChangeHora} /> : null}
+
+            <GradientButton icon="sparkles" style={{ marginTop: 26 }} onPress={handleCrearPanorama}>
+              Publicar Panorama
+            </GradientButton>
+          </View>
+        </View>
+      </Modal>
+      <CahuinModal
+        visible={!!modalInfo}
+        title={modalInfo?.title}
+        message={modalInfo?.message}
+        emoji={modalInfo?.emoji}
+        actions={modalInfo?.actions || []}
+        accent={modalInfo?.accent}
+        tone={modalInfo?.tone}
+        details={modalInfo?.details}
+        onClose={() => setModalInfo(null)}
+      />
+    </ScreenScaffold>
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.bg },
-  header: { padding: SPACING[5], backgroundColor: COLORS.tarjeta, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  headerTitle: { fontSize: 26, fontFamily: FONTS.display, color: COLORS.textPrimary, fontWeight: 'bold' },
-  headerSubtitle: { fontSize: 14, color: COLORS.textMuted, marginBottom: SPACING[3], marginTop: 2 },
-  
-  tabContainer: { flexDirection: 'row', backgroundColor: COLORS.fondo, borderRadius: RADIUS.lg, padding: 4 },
-  tabBoton: { flex: 1, paddingVertical: SPACING[2], alignItems: 'center', borderRadius: RADIUS.md },
-  tabBotonActivo: { backgroundColor: COLORS.tarjeta, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 1 },
-  tabTexto: { fontSize: 15, fontWeight: 'bold', color: COLORS.gris },
-  tabTextoActivo: { color: COLORS.primario },
-
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING[6] },
-  lista: { padding: SPACING[4], paddingBottom: 100 },
-  
-  card: { backgroundColor: COLORS.tarjeta, borderRadius: RADIUS.xl, padding: SPACING[5], marginBottom: SPACING[4] },
-  cardOficial: { backgroundColor: '#FFFDF0', borderRadius: RADIUS.xl, padding: SPACING[5], marginBottom: SPACING[4], borderWidth: 1, borderColor: '#FFE082' },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: SPACING[2] },
-  cardTitle: { fontSize: 20, fontFamily: FONTS.display, color: COLORS.textPrimary, flex: 1, fontWeight: 'bold' },
-  categoriaBadge: { backgroundColor: '#E0F7FA', paddingHorizontal: SPACING[2], paddingVertical: SPACING[1], borderRadius: RADIUS.md, marginLeft: SPACING[2] },
-  categoriaText: { fontSize: 12, color: COLORS.acento, fontWeight: 'bold' },
-  cardDesc: { fontSize: 15, color: COLORS.textMuted, marginBottom: SPACING[4], lineHeight: 22 },
-  
-  infoGrid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING[3], backgroundColor: COLORS.fondo, padding: SPACING[3], borderRadius: RADIUS.md },
-  infoRow: { flexDirection: 'row', alignItems: 'center' },
-  infoText: { fontSize: 14, color: COLORS.textPrimary, marginLeft: SPACING[2], fontWeight: 'bold' },
-  
-  ubicacionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: SPACING[2] },
-  infoRowLocal: { flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 10 },
-  infoTextLocal: { fontSize: 14, color: COLORS.textMuted, marginLeft: SPACING[2] },
-  btnMapa: { backgroundColor: '#4285F4', flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING[3], paddingVertical: SPACING[2], borderRadius: RADIUS.lg },
-  btnMapaTexto: { color: 'white', fontWeight: 'bold', fontSize: 13, marginLeft: 5 },
-
-  btnUnirse: { backgroundColor: COLORS.like, paddingVertical: SPACING[3], borderRadius: RADIUS.lg, alignItems: 'center', marginTop: SPACING[4] },
-  btnUnirseText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
-
-  emptyEmoji: { fontSize: 60, marginBottom: SPACING[2] },
-  emptyTitle: { fontSize: 22, fontWeight: 'bold', color: COLORS.textPrimary, marginBottom: SPACING[2] },
-  emptyText: { fontSize: 16, color: COLORS.textMuted, textAlign: 'center' },
-
-  fab: { position: 'absolute', bottom: 30, right: 30, backgroundColor: COLORS.primario, width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center', elevation: 8 },
-
-  modalFondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: SPACING[4] },
-  modalCard: { backgroundColor: COLORS.tarjeta, width: '100%', borderRadius: RADIUS.xl, padding: SPACING[5] },
-  modalTitle: { fontSize: 22, fontWeight: 'bold', color: COLORS.textPrimary, marginBottom: SPACING[5] },
-  input: { backgroundColor: COLORS.fondo, borderWidth: 1, borderColor: '#ddd', borderRadius: RADIUS.md, padding: SPACING[3], fontSize: 15, marginBottom: SPACING[3] },
-  fechasRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  inputMitad: { width: '48%' },
-  modalBotones: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: SPACING[2] },
-  btnCancelar: { paddingVertical: SPACING[3], paddingHorizontal: SPACING[4] },
-  btnCancelarText: { color: COLORS.gris, fontSize: 16, fontWeight: 'bold' },
-  btnGuardar: { backgroundColor: COLORS.primario, paddingVertical: SPACING[3], paddingHorizontal: SPACING[5], borderRadius: RADIUS.lg, marginLeft: SPACING[2] },
-  btnGuardarText: { color: 'white', fontSize: 16, fontWeight: 'bold' }
+const getStyles = (COLORS) => StyleSheet.create({
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING[5],
+    gap: SPACING[3],
+    flexWrap: 'wrap',
+  },
+  regionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 160 },
+  sectionTitle: {
+    color: COLORS.textPrimary,
+    fontSize: 26,
+    fontWeight: '900',
+    fontFamily: FONTS.display,
+    letterSpacing: 0,
+    flexShrink: 1,
+  },
+  darkPill: {
+    backgroundColor: '#182033',
+    borderRadius: 28,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    ...SHADOWS.light,
+  },
+  darkPillText: { color: '#FFF', fontWeight: '900', fontSize: 14 },
+  featuredCard: { marginBottom: SPACING[4], padding: SPACING[4] },
+  featuredTop: { flexDirection: 'row', gap: SPACING[4] },
+  featuredImage: { width: 138, height: 138, borderRadius: 22, backgroundColor: COLORS.softRed },
+  featuredTitle: { color: COLORS.textPrimary, fontSize: 23, lineHeight: 28, fontWeight: '900', fontFamily: FONTS.display },
+  featuredDesc: { color: COLORS.textMuted, fontSize: 16, lineHeight: 22, marginTop: 8 },
+  featuredMeta: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '700', flex: 1 },
+  inviteBox: {
+    marginTop: SPACING[4],
+    padding: SPACING[4],
+    borderRadius: 22,
+    backgroundColor: COLORS.softRed,
+    borderWidth: 1,
+    borderColor: 'rgba(240,68,79,0.12)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING[3],
+  },
+  inviteTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '900' },
+  inviteText: { color: COLORS.textMuted, fontSize: 14, lineHeight: 20, marginTop: 3 },
+  inviteButton: { width: 108, borderRadius: 20 },
+  eventRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING[4], marginBottom: SPACING[3], padding: SPACING[3] },
+  eventThumb: { width: 82, height: 82, borderRadius: 18, backgroundColor: COLORS.softRed },
+  eventTitle: { color: COLORS.textPrimary, fontSize: 20, fontWeight: '900', fontFamily: FONTS.display },
+  eventDesc: { color: COLORS.textMuted, fontSize: 15, marginTop: 5 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 9, flexShrink: 1 },
+  eventMeta: { color: COLORS.textMuted, fontSize: 13, fontWeight: '700', flex: 1 },
+  groupHint: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 },
+  groupHintText: { color: COLORS.textMuted, fontSize: 12, fontWeight: '700' },
+  chevronCircle: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(240,68,79,0.18)' },
+  communityCard: { flexDirection: 'row', alignItems: 'center', gap: SPACING[3], marginBottom: SPACING[3] },
+  joinButton: { borderRadius: 99, borderWidth: 1, borderColor: COLORS.primario, paddingHorizontal: 14, paddingVertical: 10 },
+  joinButtonText: { color: COLORS.primario, fontWeight: '900', fontSize: 13 },
+  modalFondo: { flex: 1, backgroundColor: 'rgba(17,24,39,0.58)', justifyContent: 'flex-end' },
+  modalCard: { backgroundColor: COLORS.tarjeta, borderTopLeftRadius: 34, borderTopRightRadius: 34, padding: 24, maxHeight: '88%' },
+  modalTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  modalTitleLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  modalTitulo: { color: COLORS.textPrimary, fontSize: 26, fontWeight: '900', fontFamily: FONTS.display },
+  modalTituloGrande: { color: COLORS.textPrimary, fontSize: 30, fontWeight: '900', fontFamily: FONTS.display, flex: 1 },
+  closeButton: { width: 54, height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
+  modalSub: { color: COLORS.textMuted, fontSize: 16, lineHeight: 23, marginBottom: SPACING[5] },
+  modalSubSmall: { color: COLORS.textMuted, fontSize: 15, lineHeight: 22, marginTop: 8 },
+  detailRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: SPACING[3] },
+  detailText: { color: COLORS.textPrimary, flex: 1, fontSize: 16, lineHeight: 22, fontWeight: '700' },
+  actionRow: { flexDirection: 'row', gap: SPACING[3], marginTop: SPACING[5] },
+  secondaryAction: { flex: 1, minHeight: 56, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, backgroundColor: COLORS.fondo },
+  secondaryActionText: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '900' },
+  primaryAction: { flex: 1 },
+  emptyInvite: { borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, padding: SPACING[5], backgroundColor: COLORS.fondo },
+  emptyInviteTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '900', marginBottom: 6 },
+  emptyInviteText: { color: COLORS.textMuted, fontSize: 15, lineHeight: 22 },
+  matchInviteRow: { minHeight: 72, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, padding: SPACING[3], marginBottom: SPACING[3], flexDirection: 'row', alignItems: 'center', gap: SPACING[3], backgroundColor: COLORS.fondo },
+  matchAvatar: { width: 48, height: 48, borderRadius: 18, backgroundColor: COLORS.softRed },
+  matchName: { color: COLORS.textPrimary, fontSize: 17, fontWeight: '900' },
+  matchHint: { color: COLORS.textMuted, fontSize: 13, marginTop: 3 },
+  regionButton: { minHeight: 64, borderRadius: 17, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: SPACING[4], alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING[3] },
+  regionButtonActive: { backgroundColor: COLORS.softRed, borderColor: COLORS.primario },
+  regionButtonText: { color: COLORS.textPrimary, fontSize: 18 },
+  regionCheck: { width: 34, height: 34, borderRadius: 17, backgroundColor: COLORS.navy, alignItems: 'center', justifyContent: 'center' },
+  inputLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: SPACING[4], marginBottom: SPACING[2] },
+  label: { color: COLORS.textPrimary, fontSize: 17, fontWeight: '900' },
+  input: { minHeight: 64, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: SPACING[4], color: COLORS.textPrimary, fontSize: 16, backgroundColor: COLORS.tarjeta },
+  dateRow: { flexDirection: 'row', gap: SPACING[3], marginTop: SPACING[5] },
+  dateBox: { flex: 1, minHeight: 76, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, padding: SPACING[3], flexDirection: 'row', alignItems: 'center', gap: 10 },
+  dateLabel: { color: COLORS.textMuted, fontSize: 14 },
+  dateValue: { color: COLORS.textPrimary, fontSize: 17, fontWeight: '900', marginTop: 2 },
 });
+
+

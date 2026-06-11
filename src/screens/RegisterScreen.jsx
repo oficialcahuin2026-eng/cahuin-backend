@@ -1,158 +1,319 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, ActivityIndicator, Alert, ScrollView, KeyboardAvoidingView, Platform, Modal, FlatList, Linking } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import * as Facebook from 'expo-auth-session/providers/facebook';
 import { useAuth } from '../context/AuthContext';
-import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../utils/theme';
+import CahuinModal from '../components/CahuinModal';
+import CahuinTextField from '../components/CahuinTextField';
+import { FONTS, RADIUS, SHADOWS, SPACING } from '../utils/theme';
 
-const CHILE_DATA = {
-  "Arica y Parinacota": ["Arica", "Putre", "Camarones"], "Tarapacá": ["Iquique", "Alto Hospicio", "Pozo Almonte"], "Antofagasta": ["Antofagasta", "Calama", "Tocopilla", "San Pedro de Atacama"], "Atacama": ["Copiapó", "Vallenar", "Caldera", "Chañaral"], "Coquimbo": ["La Serena", "Coquimbo", "Ovalle", "Vicuña"], "Valparaíso": ["Valparaíso", "Viña del Mar", "Quilpué", "San Antonio", "Los Andes"], "Metropolitana": ["Santiago", "Puente Alto", "Maipú", "Providencia", "Las Condes", "San Bernardo"], "O'Higgins": ["Rancagua", "Machalí", "San Fernando", "Pichilemu"], "Maule": ["Talca", "Curicó", "Linares", "Constitución"], "Ñuble": ["Chillán", "San Carlos", "Bulnes"], "Biobío": ["Concepción", "Talcahuano", "Los Ángeles", "Coronel", "Lota"], "La Araucanía": ["Temuco", "Padre Las Casas", "Villarrica", "Pucón", "Angol", "Victoria"], "Los Ríos": ["Valdivia", "La Unión", "Panguipulli"], "Los Lagos": ["Puerto Montt", "Osorno", "Castro", "Puerto Varas"], "Aysén": ["Coyhaique", "Puerto Aysén", "Chile Chico"], "Magallanes": ["Punta Arenas", "Puerto Natales", "Porvenir"]
+WebBrowser.maybeCompleteAuthSession();
+
+const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || '';
+const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '';
+const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';
+const FACEBOOK_APP_ID = process.env.EXPO_PUBLIC_FACEBOOK_APP_ID || '';
+const GOOGLE_CLIENT_FALLBACK = 'missing-google-client-id.apps.googleusercontent.com';
+const FACEBOOK_CLIENT_FALLBACK = '000000000000000';
+
+const onlyNumbers = (text) => text.replace(/\D/g, '');
+
+const calculateAge = (date) => {
+  const today = new Date();
+  let age = today.getFullYear() - date.getFullYear();
+  const monthDiff = today.getMonth() - date.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) age -= 1;
+  return age;
+};
+
+const buildBirthDate = (day, month, year) => {
+  const d = Number(day);
+  const m = Number(month);
+  const y = Number(year);
+
+  if (day.length < 1 || month.length < 1 || year.length !== 4) return null;
+  if (!Number.isInteger(d) || !Number.isInteger(m) || !Number.isInteger(y)) return null;
+  if (y < 1900 || m < 1 || m > 12 || d < 1 || d > 31) return null;
+
+  const date = new Date(y, m - 1, d);
+  const isExactDate =
+    date.getFullYear() === y &&
+    date.getMonth() === m - 1 &&
+    date.getDate() === d;
+
+  return isExactDate ? date : null;
 };
 
 export default function RegisterScreen({ navigation }) {
-  const { register } = useAuth();
-  const [cargando, setCargando] = useState(false);
-  
+  const { register, loginGoogle, loginFacebook } = useAuth();
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [edad, setEdad] = useState('');
-  const [region, setRegion] = useState('');
-  const [ciudad, setCiudad] = useState('');
-  const [genero, setGenero] = useState('');
-  const [preferencia, setPreferencia] = useState('');
-  const [aceptaTerminos, setAceptaTerminos] = useState(false);
+  const [dia, setDia] = useState('');
+  const [mes, setMes] = useState('');
+  const [anio, setAnio] = useState('');
+  const [cargando, setCargando] = useState(false);
+  const [cargandoSocial, setCargandoSocial] = useState(null);
+  const [modal, setModal] = useState(null);
 
-  const [modalRegion, setModalRegion] = useState(false);
-  const [modalCiudad, setModalCiudad] = useState(false);
+  const [, googleResponse, promptGoogle] = Google.useAuthRequest({
+    androidClientId: GOOGLE_ANDROID_CLIENT_ID || GOOGLE_CLIENT_FALLBACK,
+    iosClientId: GOOGLE_IOS_CLIENT_ID || GOOGLE_CLIENT_FALLBACK,
+    webClientId: GOOGLE_WEB_CLIENT_ID || GOOGLE_CLIENT_FALLBACK,
+    selectAccount: true,
+  });
 
-  const handleRegister = async () => {
-    if (!nombre || !email || !password || !ciudad || !region || !genero || !preferencia || !edad) {
-      Alert.alert('Oye ✋', 'Llena todos los datos para armar bien tu perfil.'); return;
+  const [, facebookResponse, promptFacebook] = Facebook.useAuthRequest({
+    clientId: FACEBOOK_APP_ID || FACEBOOK_CLIENT_FALLBACK,
+  });
+
+  const avisar = (title, message) => setModal({ title, message, emoji: '!' });
+
+  const revisarOnboarding = (data) => {
+    const usuarioFinal = data?.usuario || data;
+    if (!usuarioFinal?.fechaNacimiento || !usuarioFinal?.telefono || !usuarioFinal?.ciudad || usuarioFinal?.ciudad === 'Por definir') {
+      navigation.navigate('OnboardingScreen');
     }
-    if (parseInt(edad) < 18) {
-      Alert.alert('Epa 🛑', 'Debes ser mayor de 18 años para usar esta aplicación.'); return;
+  };
+
+  useEffect(() => {
+    const idToken = googleResponse?.params?.id_token || googleResponse?.authentication?.idToken;
+    if (googleResponse?.type !== 'success' || !idToken) return;
+
+    (async () => {
+      setCargandoSocial('Google');
+      try {
+        const data = await loginGoogle(idToken);
+        revisarOnboarding(data);
+      } catch (error) {
+        avisar('Google', error.message || 'No pudimos continuar con Google.');
+      } finally {
+        setCargandoSocial(null);
+      }
+    })();
+  }, [googleResponse]);
+
+  useEffect(() => {
+    const accessToken = facebookResponse?.authentication?.accessToken || facebookResponse?.params?.access_token;
+    if (facebookResponse?.type !== 'success' || !accessToken) return;
+
+    (async () => {
+      setCargandoSocial('Facebook');
+      try {
+        const data = await loginFacebook(accessToken);
+        revisarOnboarding(data);
+      } catch (error) {
+        avisar('Facebook', error.message || 'No pudimos continuar con Facebook.');
+      } finally {
+        setCargandoSocial(null);
+      }
+    })();
+  }, [facebookResponse]);
+
+  const handleRegistro = async () => {
+    if (!nombre.trim() || !email.trim() || !password) {
+      avisar('Faltan datos', 'Completa tu nombre, correo, contraseña y fecha de nacimiento.');
+      return;
     }
-    if (!aceptaTerminos) {
-      Alert.alert('Aviso Legal ⚖️', 'Debes aceptar los Términos y Condiciones para registrarte.'); return;
+
+    if (password.length < 6) {
+      avisar('Contraseña corta', 'La contraseña debe tener al menos 6 caracteres.');
+      return;
     }
+
+    const fecha = buildBirthDate(dia, mes, anio);
+    if (!fecha) {
+      avisar('Fecha inválida', 'Revisa el día, mes y año de nacimiento.');
+      return;
+    }
+
+    const edad = calculateAge(fecha);
+    if (edad < 18) {
+      avisar('Solo mayores de 18', 'Cahuín es para personas mayores de edad.');
+      return;
+    }
+
+    const fechaNacimiento = `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
 
     setCargando(true);
     try {
-      await register({ nombre, email, password, ciudad, region, genero, preferencia, edad: parseInt(edad), aceptaTerminos });
-    } catch (error) { Alert.alert('Error', error.message || 'No se pudo crear la cuenta'); } finally { setCargando(false); }
+      await register({
+        nombre: nombre.trim(),
+        email: email.trim().toLowerCase(),
+        password,
+        fechaNacimiento,
+        ciudad: 'Por definir',
+        region: 'Por definir',
+        genero: 'Otro',
+        preferencia: 'Todxs',
+        edad,
+        aceptaTerminos: true,
+      });
+      navigation.navigate('OnboardingScreen');
+    } catch (error) {
+      avisar('Error', error.message || 'No se pudo crear la cuenta.');
+    } finally {
+      setCargando(false);
+    }
   };
 
-  const seleccionarRegion = (seleccion) => { setRegion(seleccion); setCiudad(''); setModalRegion(false); };
-  const BotonSeleccion = ({ label, activo, onPress }) => (
-    <TouchableOpacity style={[styles.btnSeleccion, activo && styles.btnSeleccionActivo]} onPress={onPress}>
-      <Text style={[styles.txtSeleccion, activo && styles.txtSeleccionActivo]}>{label}</Text>
-    </TouchableOpacity>
-  );
+  const loginSocial = async (red) => {
+    if (red === 'Google') {
+      if (!GOOGLE_ANDROID_CLIENT_ID && !GOOGLE_IOS_CLIENT_ID && !GOOGLE_WEB_CLIENT_ID) {
+        avisar('Google', 'Falta configurar los client IDs de Google antes de publicar.');
+        return;
+      }
+      await promptGoogle();
+      return;
+    }
+
+    if (!FACEBOOK_APP_ID) {
+      avisar('Facebook', 'Falta configurar el App ID de Facebook antes de publicar.');
+      return;
+    }
+    await promptFacebook();
+  };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.scroll}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Crear Cuenta 🌶️</Text>
-            <Text style={styles.subtitle}>Encuentra tu media naranja por todo Chile.</Text>
-          </View>
+    <>
+      <LinearGradient colors={['#05070D', '#120B12', '#09070B']} style={styles.gradient}>
+        <SafeAreaView style={styles.safe}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+              <View style={styles.glow} />
+              <View style={styles.header}>
+                <View style={styles.brandRow}>
+                  <Ionicons name="flame" size={24} color="#F0444F" />
+                  <Text style={styles.logo}>Cahuín</Text>
+                </View>
+                <Text style={styles.title}>Crear cuenta</Text>
+                <Text style={styles.subtitle}>Solo lo básico para empezar. Luego armaremos tu perfil completo.</Text>
+              </View>
 
-          <View style={styles.form}>
-            <Text style={styles.label}>Tus Datos Básicos</Text>
-            <TextInput style={styles.input} placeholder="Tu Nombre o Apodo" value={nombre} onChangeText={setNombre} />
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              <TextInput style={[styles.input, { flex: 2 }]} placeholder="Correo electrónico" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-              <TextInput style={[styles.input, { flex: 1 }]} placeholder="Edad" value={edad} onChangeText={setEdad} keyboardType="numeric" maxLength={2} />
-            </View>
-            <TextInput style={styles.input} placeholder="Contraseña secreta" value={password} onChangeText={setPassword} secureTextEntry />
+              <View style={styles.form}>
+                <Field icon="person-outline" placeholder="¿Cómo te llamas?" value={nombre} onChangeText={setNombre} />
+                <Field icon="mail-outline" placeholder="Tu mejor correo" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+                <Field icon="lock-closed-outline" placeholder="Contraseña mín. 6 letras" value={password} onChangeText={setPassword} secureTextEntry />
 
-            <Text style={styles.label}>¿De dónde eres?</Text>
-            <TouchableOpacity style={styles.selectorBtn} onPress={() => setModalRegion(true)}>
-              <Text style={region ? styles.selectorTextoActivo : styles.selectorTextoInactivo}>{region || "Elige tu Región"}</Text>
-              <Ionicons name="chevron-down" size={20} color={COLORS.gris} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.selectorBtn} onPress={() => region ? setModalCiudad(true) : Alert.alert("¡Epa!", "Elige la región primero.")}>
-              <Text style={ciudad ? styles.selectorTextoActivo : styles.selectorTextoInactivo}>{ciudad || "Elige tu Ciudad"}</Text>
-              <Ionicons name="chevron-down" size={20} color={COLORS.gris} />
-            </TouchableOpacity>
+                <View style={styles.birthBlock}>
+                  <Text style={styles.birthLabel}>Fecha de nacimiento</Text>
+                  <View style={styles.birthRow}>
+                    <BirthInput placeholder="DD" maxLength={2} value={dia} onChangeText={(text) => setDia(onlyNumbers(text))} />
+                    <BirthInput placeholder="MM" maxLength={2} value={mes} onChangeText={(text) => setMes(onlyNumbers(text))} />
+                    <BirthInput placeholder="AAAA" maxLength={4} value={anio} onChangeText={(text) => setAnio(onlyNumbers(text))} style={styles.yearInput} />
+                  </View>
+                </View>
 
-            <Text style={styles.label}>Yo soy:</Text>
-            <View style={styles.filaBotones}>
-              <BotonSeleccion label="Hombre" activo={genero === 'Hombre'} onPress={() => setGenero('Hombre')} />
-              <BotonSeleccion label="Mujer" activo={genero === 'Mujer'} onPress={() => setGenero('Mujer')} />
-              <BotonSeleccion label="Otro" activo={genero === 'Otro'} onPress={() => setGenero('Otro')} />
-            </View>
+                <TouchableOpacity onPress={handleRegistro} disabled={cargando} style={styles.primaryButton}>
+                  <LinearGradient colors={['#FF5A3C', '#F71374']} style={styles.primaryGradient}>
+                    {cargando ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryText}>Siguiente</Text>}
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
 
-            <Text style={styles.label}>Y busco conocer:</Text>
-            <View style={styles.filaBotones}>
-              <BotonSeleccion label="Hombres" activo={preferencia === 'Hombres'} onPress={() => setPreferencia('Hombres')} />
-              <BotonSeleccion label="Mujeres" activo={preferencia === 'Mujeres'} onPress={() => setPreferencia('Mujeres')} />
-              <BotonSeleccion label="Todos" activo={preferencia === 'Todos'} onPress={() => setPreferencia('Todos')} />
-            </View>
+              <View style={styles.dividerRow}>
+                <View style={styles.line} />
+                <Text style={styles.dividerText}>o regístrate rápido con</Text>
+                <View style={styles.line} />
+              </View>
 
-            {/* 🌟 CHECKBOX DE TÉRMINOS OBLIGATORIO */}
-            <TouchableOpacity style={styles.termsContainer} onPress={() => setAceptaTerminos(!aceptaTerminos)}>
-              <Ionicons name={aceptaTerminos ? "checkbox" : "square-outline"} size={24} color={aceptaTerminos ? COLORS.primario : COLORS.gris} />
-              <Text style={styles.termsText}>
-                Acepto los <Text style={styles.termsLink} onPress={() => Linking.openURL('https://www.google.com')}>Términos, Condiciones y Políticas de Privacidad</Text>
-              </Text>
-            </TouchableOpacity>
+              <View style={styles.socialRow}>
+                <TouchableOpacity style={[styles.socialButton, { backgroundColor: '#FFF' }]} onPress={() => loginSocial('Google')} disabled={!!cargandoSocial}>
+                  {cargandoSocial === 'Google' ? <ActivityIndicator color="#111827" /> : <Ionicons name="logo-google" size={22} color="#DB4437" />}
+                  <Text style={[styles.socialText, { color: '#111827' }]}>Google</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.socialButton, { backgroundColor: '#1877F2' }]} onPress={() => loginSocial('Facebook')} disabled={!!cargandoSocial}>
+                  {cargandoSocial === 'Facebook' ? <ActivityIndicator color="#FFF" /> : <Ionicons name="logo-facebook" size={22} color="#FFF" />}
+                  <Text style={styles.socialText}>Facebook</Text>
+                </TouchableOpacity>
+              </View>
 
-            <TouchableOpacity style={[styles.btnRegistrar, SHADOWS.medium]} onPress={handleRegister} disabled={cargando}>
-              {cargando ? <ActivityIndicator color="white" /> : <Text style={styles.btnRegistrarTexto}>¡Entrar al Cahuín!</Text>}
-            </TouchableOpacity>
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>¿Ya tienes cuenta? </Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                  <Text style={styles.footerLink}>Inicia sesión aquí</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </LinearGradient>
+      <CahuinModal visible={!!modal} title={modal?.title} message={modal?.message} emoji={modal?.emoji} onClose={() => setModal(null)} />
+    </>
+  );
+}
 
-            <TouchableOpacity style={styles.btnVolver} onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.btnVolverTexto}>¿Ya tienes cuenta? Inicia sesión aquí.</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+function Field({ icon, ...props }) {
+  return <CahuinTextField icon={icon} {...props} />;
+}
 
-      <Modal visible={modalRegion} animationType="slide" transparent={true}>
-        <View style={styles.modalFondo}><View style={styles.modalCard}><Text style={styles.modalTitle}>Elige tu Región</Text><FlatList data={Object.keys(CHILE_DATA)} keyExtractor={(item) => item} renderItem={({ item }) => ( <TouchableOpacity style={styles.modalOpcion} onPress={() => seleccionarRegion(item)}><Text style={styles.modalOpcionTexto}>{item}</Text></TouchableOpacity> )} /><TouchableOpacity style={styles.modalBtnCerrar} onPress={() => setModalRegion(false)}><Text style={styles.modalBtnCerrarTexto}>Cancelar</Text></TouchableOpacity></View></View>
-      </Modal>
-
-      <Modal visible={modalCiudad} animationType="slide" transparent={true}>
-        <View style={styles.modalFondo}><View style={styles.modalCard}><Text style={styles.modalTitle}>Elige tu Ciudad</Text><FlatList data={region ? CHILE_DATA[region] : []} keyExtractor={(item) => item} renderItem={({ item }) => ( <TouchableOpacity style={styles.modalOpcion} onPress={() => { setCiudad(item); setModalCiudad(false); }}><Text style={styles.modalOpcionTexto}>{item}</Text></TouchableOpacity> )} /><TouchableOpacity style={styles.modalBtnCerrar} onPress={() => setModalCiudad(false)}><Text style={styles.modalBtnCerrarTexto}>Cancelar</Text></TouchableOpacity></View></View>
-      </Modal>
-    </SafeAreaView>
+function BirthInput({ style, ...props }) {
+  return (
+    <View style={[styles.birthInputWrap, style]}>
+      <TextInput
+        {...props}
+        keyboardType="number-pad"
+        placeholderTextColor="#8B95A7"
+        selectionColor="#F0444F"
+        cursorColor="#F0444F"
+        textAlign="center"
+        style={styles.birthInput}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.bg },
-  scroll: { flexGrow: 1, padding: SPACING[5], justifyContent: 'center' },
-  header: { alignItems: 'center', marginBottom: SPACING[6], marginTop: SPACING[4] },
-  title: { fontSize: 32, fontFamily: FONTS.display, color: COLORS.primario, fontWeight: 'bold' },
-  subtitle: { fontSize: 16, color: COLORS.textMuted, marginTop: SPACING[2], textAlign: 'center' },
-  form: { backgroundColor: COLORS.tarjeta, padding: SPACING[5], borderRadius: RADIUS.xl, ...SHADOWS.light },
-  label: { fontSize: 15, fontWeight: 'bold', color: COLORS.textPrimary, marginTop: SPACING[3], marginBottom: SPACING[2] },
-  input: { backgroundColor: COLORS.fondo, borderWidth: 1, borderColor: '#eee', borderRadius: RADIUS.lg, padding: SPACING[3], fontSize: 16, marginBottom: SPACING[3] },
-  selectorBtn: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.fondo, borderWidth: 1, borderColor: '#eee', borderRadius: RADIUS.lg, padding: SPACING[3], marginBottom: SPACING[3] },
-  selectorTextoInactivo: { fontSize: 16, color: COLORS.gris },
-  selectorTextoActivo: { fontSize: 16, color: COLORS.textPrimary, fontWeight: '500' },
-  filaBotones: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING[4] },
-  btnSeleccion: { flex: 1, backgroundColor: COLORS.fondo, borderWidth: 1, borderColor: '#ddd', paddingVertical: SPACING[3], marginHorizontal: 2, borderRadius: RADIUS.md, alignItems: 'center' },
-  btnSeleccionActivo: { backgroundColor: COLORS.primario, borderColor: COLORS.primario },
-  txtSeleccion: { color: COLORS.gris, fontWeight: 'bold', fontSize: 14 },
-  txtSeleccionActivo: { color: 'white' },
-  
-  // Estilos de los Términos
-  termsContainer: { flexDirection: 'row', alignItems: 'center', marginTop: SPACING[2], marginBottom: SPACING[4], paddingRight: 20 },
-  termsText: { marginLeft: 10, fontSize: 13, color: COLORS.textPrimary, flexWrap: 'wrap' },
-  termsLink: { color: COLORS.primario, fontWeight: 'bold', textDecorationLine: 'underline' },
-
-  btnRegistrar: { backgroundColor: COLORS.primario, paddingVertical: SPACING[4], borderRadius: RADIUS.lg, alignItems: 'center' },
-  btnRegistrarTexto: { color: 'white', fontSize: 18, fontWeight: 'bold' },
-  btnVolver: { marginTop: SPACING[4], alignItems: 'center' },
-  btnVolverTexto: { color: COLORS.acento, fontSize: 15, fontWeight: 'bold' },
-  modalFondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: COLORS.tarjeta, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl, padding: SPACING[5], maxHeight: '70%' },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', color: COLORS.textPrimary, marginBottom: SPACING[4], textAlign: 'center' },
-  modalOpcion: { paddingVertical: SPACING[4], borderBottomWidth: 1, borderBottomColor: '#eee' },
-  modalOpcionTexto: { fontSize: 16, color: COLORS.textPrimary, textAlign: 'center' },
-  modalBtnCerrar: { marginTop: SPACING[5], paddingVertical: SPACING[3], backgroundColor: '#f0f0f0', borderRadius: RADIUS.lg, alignItems: 'center' },
-  modalBtnCerrarTexto: { color: COLORS.gris, fontSize: 16, fontWeight: 'bold' }
+  gradient: { flex: 1 },
+  safe: { flex: 1 },
+  container: { flex: 1 },
+  scrollContent: { flexGrow: 1, justifyContent: 'center', padding: SPACING[5] },
+  glow: { position: 'absolute', top: 60, right: -80, width: 250, height: 250, borderRadius: 125, backgroundColor: 'rgba(247,19,116,0.16)' },
+  header: { alignItems: 'center', marginBottom: 28 },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
+  logo: { fontSize: 25, fontWeight: '900', color: '#FFF', fontFamily: FONTS.display },
+  title: { fontSize: 32, fontWeight: '900', color: '#F0444F', fontFamily: FONTS.display, marginBottom: 8 },
+  subtitle: { fontSize: 15, color: '#8B95A7', textAlign: 'center', lineHeight: 22, paddingHorizontal: 18 },
+  form: { gap: 14 },
+  birthBlock: { gap: 8, width: '100%' },
+  birthLabel: { color: '#CBD5E1', fontWeight: '900', fontSize: 13 },
+  birthRow: { flexDirection: 'row', gap: 8, width: '100%' },
+  birthInputWrap: {
+    flex: 1,
+    minWidth: 0,
+    height: 58,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(240,68,79,0.34)',
+    backgroundColor: '#111827',
+    justifyContent: 'center',
+  },
+  yearInput: { flex: 1.45 },
+  birthInput: { flex: 1, color: '#FFF', fontSize: 17, fontWeight: '900', paddingHorizontal: 4 },
+  primaryButton: { marginTop: 8, borderRadius: 18, overflow: 'hidden', ...SHADOWS.medium },
+  primaryGradient: { height: 58, justifyContent: 'center', alignItems: 'center' },
+  primaryText: { color: '#FFF', fontSize: 17, fontWeight: '900' },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 24 },
+  line: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.12)' },
+  dividerText: { color: '#8B95A7', fontSize: 13 },
+  socialRow: { gap: 12 },
+  socialButton: { height: 52, borderRadius: RADIUS.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  socialText: { color: '#FFF', fontSize: 15, fontWeight: '900' },
+  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 34 },
+  footerText: { color: '#8B95A7', fontSize: 14 },
+  footerLink: { color: '#F71374', fontSize: 14, fontWeight: '900' },
 });

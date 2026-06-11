@@ -1,133 +1,172 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, Alert, TouchableOpacity, ActivityIndicator } from 'react-native';
-import Swiper from 'react-native-deck-swiper';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, FlatList, Image, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { matchService, userService } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { FONTS, SPACING, RADIUS, SHADOWS } from '../utils/theme';
 
-export default function MatchesScreen() {
-  const [perfiles, setPerfiles] = useState([]);
+export default function MatchesScreen({ navigation }) {
+  const { usuario, esPremium } = useAuth();
+  const { COLORS } = useTheme();
+  const styles = getStyles(COLORS);
+
+  const [matches, setMatches] = useState([]);
   const [cargando, setCargando] = useState(true);
-  const [swipes, setSwipes] = useState(0);
-  const [termino, setTermino] = useState(false);
-  const swiperRef = useRef(null);
-  
-  const isPremium = false; 
-  const LIMITE_GRATIS = 5;
-  
-  // Definimos la ciudad del usuario actual para el filtro
-  const miCiudad = "Temuco"; 
 
-  // LLAMADA A LA BASE DE DATOS REAL
-  useEffect(() => {
-    const cargarCahuineros = async () => {
-      try {
-        // ⚠️ RECUERDA: Cambia esta IP por la tuya exacta si cambia
-        const respuesta = await fetch(`http://192.168.1.13:5000/api/users?ciudad=${miCiudad}`);
-        const data = await respuesta.json();
-        
-        if (respuesta.ok) {
-          setPerfiles(data);
-        } else {
-          Alert.alert("Error", "No se pudieron cargar los perfiles");
-        }
-      } catch (error) {
-        console.log("❌ Error trayendo usuarios de la BD:", error);
-      } finally {
-        setCargando(false);
-      }
-    };
-
-    cargarCahuineros();
+  const cargarMatches = useCallback(async () => {
+    try {
+      const data = await matchService.getMisMatches();
+      setMatches(data.matches || []);
+    } catch (error) {
+      console.log('Error cargando matches:', error.message);
+    } finally {
+      setCargando(false);
+    }
   }, []);
 
-  const manejarDeslizamiento = (index) => {
-    if (!perfiles[index]) return;
+  useEffect(() => {
+    cargarMatches();
+    // Refresca cada 10 segundos para ver nuevos matches
+    const intervalo = setInterval(cargarMatches, 10000);
+    return () => clearInterval(intervalo);
+  }, [cargarMatches]);
 
-    const nuevosSwipes = swipes + 1;
-    setSwipes(nuevosSwipes);
-
-    if (!isPremium && nuevosSwipes >= LIMITE_GRATIS) {
-      Alert.alert(
-        "¡Límite alcanzado! 🛑",
-        "Ya gastaste tus pases gratuitos. Hazte Premium para seguir viendo cahuines.",
-        [{ text: "Quizás más tarde", style: "cancel" }]
-      );
+  const abrirChat = (match) => {
+    // Si aún ninguno respondió el rompehielo, mandar al rompehielo primero
+    if (!match.yaRespondi) {
+      navigation.navigate('Rompehielo', { matchId: match.roomId, usuario: match.usuario });
+    } else {
+      navigation.navigate('SalaChat', { 
+        matchId: match.roomId, 
+        usuario: match.usuario,
+        compatibilidad: match.compatibilidad,
+        elYaRespondio: match.elYaRespondio,
+      });
     }
   };
 
-  // Pantalla de carga mientras lee MongoDB
-  if (cargando) {
+  const confirmarEliminar = (matchId) => {
+    Alert.alert('¿Eliminar match?', 'Esta acción no se puede deshacer.', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Eliminar', style: 'destructive', onPress: async () => {
+        try {
+          await matchService.eliminar(matchId);
+          setMatches(prev => prev.filter(m => m.roomId !== matchId));
+        } catch (e) { Alert.alert('Error', 'No se pudo eliminar.'); }
+      }}
+    ]);
+  };
+
+  const renderMatch = ({ item }) => {
+    const otroUsuario = item.usuario;
+    if (!otroUsuario) return null;
+
+    const foto = otroUsuario.foto || otroUsuario.fotos?.[0] || 'https://via.placeholder.com/60';
+    const esRelampago = item.esRelampago;
+
     return (
-      <View style={styles.finContainer}>
-        <ActivityIndicator size="large" color="#FF5864" />
-        <Text style={{ marginTop: 10, color: '#888' }}>Buscando cahuineros cerca...</Text>
-      </View>
+      <TouchableOpacity style={styles.matchCard} onPress={() => abrirChat(item)} onLongPress={() => confirmarEliminar(item.roomId)}>
+        <View style={styles.avatarContainer}>
+          <Image source={{ uri: foto }} style={styles.avatar} />
+          {esRelampago ? (
+            <View style={styles.badgeRelampago}>
+              <Text style={{ fontSize: 10 }}>⚡</Text>
+            </View>
+          ) : null}
+          {!item.yaRespondi ? (
+            <View style={styles.badgeRompehielo}>
+              <Text style={{ fontSize: 10 }}>❓</Text>
+            </View>
+          ) : null}
+        </View>
+
+        <View style={styles.matchInfo}>
+          <View style={styles.nameLine}>
+            <Text style={styles.matchNombre}>{otroUsuario.nombre}, {otroUsuario.edad}</Text>
+            {item.rachaConversacion >= 2 ? (
+              <View style={styles.streakBadge}>
+                <Text style={styles.streakText}>🔥 {item.rachaConversacion}</Text>
+              </View>
+            ) : null}
+          </View>
+          <Text style={styles.matchCiudad}>{otroUsuario.ciudad}</Text>
+          {esRelampago && !item.salvado ? (
+            <Text style={styles.matchRelampago}>⚡ Match Relámpago</Text>
+          ) : null}
+          {!item.yaRespondi ? (
+            <Text style={styles.matchPendiente}>🎯 Responde el rompehielo</Text>
+          ) : !item.elYaRespondio ? (
+            <Text style={styles.matchEsperando}>⏳ Esperando respuesta...</Text>
+          ) : null}
+        </View>
+
+        <View style={styles.matchDerecha}>
+          <Text style={styles.compatibilidad}>{item.compatibilidad}%</Text>
+          <Text style={styles.compatibilidadLabel}>compat.</Text>
+          <Ionicons name="chevron-forward" size={16} color={COLORS.gris} style={{ marginTop: 4 }} />
+        </View>
+      </TouchableOpacity>
     );
+  };
+
+  if (cargando) {
+    return <View style={styles.centro}><ActivityIndicator size="large" color={COLORS.primario} /></View>;
   }
 
   return (
-    <View style={styles.container}>
-      {!termino && perfiles.length > 0 ? (
-        <View style={styles.swiperContainer}>
-          <Swiper
-            ref={swiperRef}
-            cards={perfiles}
-            renderCard={(card) => {
-              if (!card) return <View style={styles.card} />;
-              return (
-                <View style={styles.card}>
-                  {/* Si no tiene foto subida, muestra una silueta por defecto */}
-                  <Image 
-                    source={{ uri: card.foto || 'https://via.placeholder.com/400x400.png?text=Sin+Foto' }} 
-                    style={styles.foto} 
-                  />
-                  <View style={styles.infoContainer}>
-                    <Text style={styles.nombre}>{card.nombre}</Text>
-                    <Text style={styles.ciudad}><Ionicons name="location" size={16} /> {card.ciudad}</Text>
-                  </View>
-                </View>
-              );
-            }}
-            onSwipedLeft={(index) => manejarDeslizamiento(index)}
-            onSwipedRight={(index) => manejarDeslizamiento(index)}
-            onSwipedAll={() => setTermino(true)}
-            cardIndex={0}
-            backgroundColor={'transparent'}
-            stackSize={3}
-            disableLeftSwipe={!isPremium && swipes >= LIMITE_GRATIS}
-            disableRightSwipe={!isPremium && swipes >= LIMITE_GRATIS}
-          />
+    <SafeAreaView style={styles.safe}>
+      <View style={styles.header}>
+        <Text style={styles.titulo}>Tus Cahuines 🌶️</Text>
+        <View style={styles.contadorBadge}>
+          <Text style={styles.contadorTexto}>{matches.length}</Text>
+        </View>
+      </View>
+
+      {matches.length === 0 ? (
+        <View style={styles.centro}>
+          <Text style={{ fontSize: 60 }}>💔</Text>
+          <Text style={[styles.textoVacio, { marginTop: 12 }]}>Aún no tienes matches.</Text>
+          <Text style={{ color: COLORS.textMuted, marginTop: 8, textAlign: 'center', marginHorizontal: 40 }}>Sigue deslizando en el radar po'.</Text>
         </View>
       ) : (
-        <View style={styles.finContainer}>
-          <Text style={styles.finTexto}>¡No hay más personas en {miCiudad} por hoy!</Text>
-        </View>
+        <FlatList
+          data={matches}
+          keyExtractor={(item) => item.roomId?.toString()}
+          renderItem={renderMatch}
+          contentContainerStyle={{ padding: SPACING.md }}
+          showsVerticalScrollIndicator={false}
+          onRefresh={cargarMatches}
+          refreshing={cargando}
+        />
       )}
-
-      {/* BOTONES DE ACCIÓN */}
-      {!termino && perfiles.length > 0 && (
-        <View style={styles.botonesContainer}>
-          <TouchableOpacity style={[styles.boton, styles.botonPasar]} onPress={() => swiperRef.current.swipeLeft()}>
-            <Ionicons name="close" size={32} color="#FF5864" />
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.boton, styles.botonLike]} onPress={() => swiperRef.current.swipeRight()}>
-            <Ionicons name="heart" size={32} color="#4CCC93" />
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f0f0f0' },
-  swiperContainer: { flex: 1, marginTop: -30 },
-  card: { flex: 0.75, borderRadius: 15, backgroundColor: '#fff', elevation: 5, overflow: 'hidden' },
-  foto: { width: '100%', height: '100%' },
-  infoContainer: { position: 'absolute', bottom: 20, left: 20, backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 10 },
-  nombre: { fontSize: 26, color: 'white', fontWeight: 'bold' },
-  ciudad: { fontSize: 16, color: '#ddd', marginTop: 2 },
-  finContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  finTexto: { fontSize: 18, fontWeight: 'bold', color: '#555', textAlign: 'center', paddingHorizontal: 20 },
-  botonesContainer: { flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'center', paddingBottom: 30, position: 'absolute', bottom: 0, width: '100%' },
-  boton: { width: 60, height: 60, borderRadius: 30, backgroundColor: 'white', justifyContent: 'center', alignItems: 'center', elevation: 4 }
+const getStyles = (COLORS) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: COLORS.bg },
+  centro: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
+  titulo: { fontSize: 28, fontWeight: '800', color: COLORS.textPrimary },
+  contadorBadge: { backgroundColor: COLORS.primario, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3 },
+  contadorTexto: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
+  textoVacio: { color: COLORS.textPrimary, fontSize: 16, fontWeight: 'bold' },
+  matchCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.tarjeta, borderRadius: 16, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: COLORS.border },
+  avatarContainer: { position: 'relative', marginRight: 14 },
+  avatar: { width: 60, height: 60, borderRadius: 30 },
+  badgeRelampago: { position: 'absolute', bottom: -2, right: -2, backgroundColor: '#FFC107', borderRadius: 10, width: 20, height: 20, justifyContent: 'center', alignItems: 'center' },
+  badgeRompehielo: { position: 'absolute', top: -2, right: -2, backgroundColor: COLORS.primario, borderRadius: 10, width: 20, height: 20, justifyContent: 'center', alignItems: 'center' },
+  matchInfo: { flex: 1 },
+  nameLine: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
+  matchNombre: { fontSize: 16, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 2 },
+  streakBadge: { backgroundColor: COLORS.softAmber || 'rgba(245,158,11,0.14)', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 2 },
+  streakText: { color: '#F59E0B', fontSize: 12, fontWeight: '900' },
+  matchCiudad: { fontSize: 13, color: COLORS.textMuted, marginBottom: 3 },
+  matchRelampago: { fontSize: 12, color: '#FFC107', fontWeight: '500' },
+  matchPendiente: { fontSize: 12, color: COLORS.primario, fontWeight: '600' },
+  matchEsperando: { fontSize: 12, color: COLORS.textMuted },
+  matchDerecha: { alignItems: 'center' },
+  compatibilidad: { fontSize: 18, fontWeight: '800', color: COLORS.primario },
+  compatibilidadLabel: { fontSize: 10, color: COLORS.textMuted },
 });

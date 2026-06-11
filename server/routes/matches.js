@@ -1,22 +1,31 @@
-// server/routes/matches.js
 const express = require('express');
-const router = express.Router();
+const router  = express.Router();
 const matchController = require('../controllers/matchController');
-const { proteger } = require('../middleware/authMiddleware'); // Usamos tu Guardia de Seguridad
+const { proteger } = require('../middleware/authMiddleware');
 
-// 1. Protegemos TODAS las rutas de este archivo exigiendo el "Carnet VIP"
 router.use(proteger);
 
-// 2. Rutas para interactuar con los perfiles (Las que usa tu api.js actual)
-router.post('/like/:id', matchController.darLike);
+// Likes / dislikes
+router.post('/like/:id',      matchController.darLike);
 router.post('/superlike/:id', matchController.darSuperLike);
-router.post('/pass/:id', matchController.pasar);
+router.post('/pass/:id',      matchController.pasar);
+router.post('/',              matchController.darLikeODislike);
 
-// 3. Rutas para el listado de matches (Para tu futura pantalla de Chats)
-router.get('/', matchController.listarMisMatches);
-router.delete('/:id', matchController.eliminar);
+// Mis matches
+router.get('/',               matchController.listarMisMatches);
+router.delete('/:id',         matchController.eliminar);
 
-// 4. Ruta de compatibilidad (Por si alguna parte vieja de la app sigue usando la ruta base)
-router.post('/', matchController.darLikeODislike);
+// Rompehielo
+router.post('/:id/rompehielo', matchController.responderRompehielo);
+
+// ✅ Rutas con nombre fijo SIEMPRE antes de las rutas con :id
+// (si van después, Express interpreta "deshacer-dislike" como un :id)
+router.post('/deshacer-dislike',        matchController.deshacerUltimoDislike);
+router.post('/relampago/generar',       matchController.generarRelampago);
+router.post('/ruleta-ciega',            matchController.jugarRuletaCiega);       // ✅ NUEVO
+
+// Rutas con :id dinámico al final
+router.post('/relampago/:id/salvar',    matchController.salvarRelampago);
+router.post('/:id/revelarse',           matchController.revelarseEnRuleta);      // ✅ NUEVO
 
 module.exports = router;

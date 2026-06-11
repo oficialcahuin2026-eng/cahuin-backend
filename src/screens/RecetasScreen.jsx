@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, SIZES, SHADOWS, RADIUS } from '../utils/theme';
 import { recetaService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import CahuinTextField from '../components/CahuinTextField';
 
 export default function RecetasScreen() {
   const { usuario } = useAuth();
@@ -131,20 +132,21 @@ export default function RecetasScreen() {
           <View style={[styles.modalCard, SHADOWS['2xl']]}>
             <Text style={styles.modalTitle}>Compartir Receta 📝</Text>
             
-            <TextInput
-              style={styles.input}
+            <CahuinTextField
+              icon="restaurant-outline"
               placeholder="Nombre del plato (Ej: Charquicán)"
               value={titulo}
               onChangeText={setTitulo}
               maxLength={40}
             />
             
-            <TextInput
-              style={[styles.input, { height: 120, textAlignVertical: 'top' }]}
+            <CahuinTextField
+              icon="reader-outline"
               placeholder="Ingredientes y preparación..."
               value={descripcion}
               onChangeText={setDescripcion}
               multiline
+              variant="textarea"
             />
 
             <View style={styles.modalBotones}>

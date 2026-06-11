@@ -1,182 +1,345 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ActivityIndicator, Alert, Modal, FlatList, Image } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/api';
-import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../utils/theme';
+import CahuinModal from '../components/CahuinModal';
+import CahuinTextField from '../components/CahuinTextField';
+import { REGIONES_CHILE } from '../utils/chileLocations';
+import { FONTS, RADIUS, SHADOWS, SPACING } from '../utils/theme';
 
-// La misma base de datos de Chile para que no haya errores ortográficos
-const CHILE_DATA = {
-  "Arica y Parinacota": ["Arica", "Putre", "Camarones"],
-  "Tarapacá": ["Iquique", "Alto Hospicio", "Pozo Almonte"],
-  "Antofagasta": ["Antofagasta", "Calama", "Tocopilla", "San Pedro de Atacama"],
-  "Atacama": ["Copiapó", "Vallenar", "Caldera", "Chañaral"],
-  "Coquimbo": ["La Serena", "Coquimbo", "Ovalle", "Vicuña"],
-  "Valparaíso": ["Valparaíso", "Viña del Mar", "Quilpué", "San Antonio", "Los Andes"],
-  "Metropolitana": ["Santiago", "Puente Alto", "Maipú", "Providencia", "Las Condes", "San Bernardo"],
-  "O'Higgins": ["Rancagua", "Machalí", "San Fernando", "Pichilemu"],
-  "Maule": ["Talca", "Curicó", "Linares", "Constitución"],
-  "Ñuble": ["Chillán", "San Carlos", "Bulnes"],
-  "Biobío": ["Concepción", "Talcahuano", "Los Ángeles", "Coronel", "Lota"],
-  "La Araucanía": ["Temuco", "Padre Las Casas", "Villarrica", "Pucón", "Angol", "Victoria"],
-  "Los Ríos": ["Valdivia", "La Unión", "Panguipulli"],
-  "Los Lagos": ["Puerto Montt", "Osorno", "Castro", "Puerto Varas"],
-  "Aysén": ["Coyhaique", "Puerto Aysén", "Chile Chico"],
-  "Magallanes": ["Punta Arenas", "Puerto Natales", "Porvenir"]
+const DATOS = {
+  generos: ['Hombre', 'Mujer', 'Más allá del binario'],
+  orientacion: ['Heterosexual', 'Gay', 'Lesbiana', 'Bisexual', 'Asexual', 'Demisexual', 'Pansexual', 'Queer'],
+  preferencias: ['Hombres', 'Mujeres', 'Todxs'],
+  buscando: ['Pololeo serio', 'Estable, pero no me cierro', 'Un vacile / Nada serio', 'Hacer yuntas / Amigxs', 'Aún no cacho'],
+  distancias: [5, 10, 30, 50, 100],
+  beber: ['Cero alcohol', 'Su chelita piola', 'Solo en carretes', 'Me tomo el agua del florero'],
+  fumar: ['No le hago', 'Solo cuando tomo', 'Fumo harto', 'Puro Vaper', 'Fumo weed'],
+  mascotas: ['Dog Lover', 'Cat Lover', 'Amo a todos los bichos', 'No tengo, pero me encantan', 'Cero mascotas'],
+  interesesLista: ['Videojuegos', 'Anime / Manga', 'Música en vivo', 'Bares y Chelas', 'Naturaleza', 'Gym / Deporte', 'Cocinar', 'Astrología', 'Arte / Museos', 'Mascotas', 'Viajar', 'Fotografía', 'Cine y Series'],
+};
+
+const TOTAL_PASOS = 12;
+
+const calcularEdadOnboarding = (dia, mes, anio) => {
+  const fecha = new Date(Number(anio), Number(mes) - 1, Number(dia));
+  if (
+    Number.isNaN(fecha.getTime()) ||
+    fecha.getFullYear() !== Number(anio) ||
+    fecha.getMonth() !== Number(mes) - 1 ||
+    fecha.getDate() !== Number(dia)
+  ) return null;
+  const hoy = new Date();
+  let edad = hoy.getFullYear() - fecha.getFullYear();
+  const diffMes = hoy.getMonth() - fecha.getMonth();
+  if (diffMes < 0 || (diffMes === 0 && hoy.getDate() < fecha.getDate())) edad--;
+  return edad;
 };
 
 export default function OnboardingScreen() {
   const { usuario, actualizarUsuario } = useAuth();
+
+  const [paso, setPaso] = useState(1);
   const [cargando, setCargando] = useState(false);
-  
-  // Estados para lo que falta del perfil
-  const [region, setRegion] = useState('');
-  const [ciudad, setCiudad] = useState('');
+  const [nombre, setNombre] = useState(usuario?.nombre === 'Cahuinero' ? '' : usuario?.nombre || '');
+  const [fotoLocal, setFotoLocal] = useState(null);
+  const [telefono, setTelefono] = useState('');
+  const [region, setRegion] = useState(usuario?.region && usuario.region !== 'Por definir' ? usuario.region : '');
+  const [ciudad, setCiudad] = useState(usuario?.ciudad && usuario.ciudad !== 'Por definir' ? usuario.ciudad : '');
+  const [dia, setDia] = useState('');
+  const [mes, setMes] = useState('');
+  const [anio, setAno] = useState('');
   const [genero, setGenero] = useState('');
+  const [orientacion, setOrientacion] = useState('');
   const [preferencia, setPreferencia] = useState('');
+  const [queBuscas, setQueBuscas] = useState('');
+  const [distanciaMax, setDistanciaMax] = useState(50);
+  const [beber, setBeber] = useState('');
+  const [fumar, setFumar] = useState('');
+  const [mascotas, setMascotas] = useState('');
+  const [intereses, setIntereses] = useState([]);
+  const [modal, setModal] = useState(null);
 
-  const [modalRegion, setModalRegion] = useState(false);
-  const [modalCiudad, setModalCiudad] = useState(false);
+  const avisar = (title, message, emoji = '🌶️') => setModal({ title, message, emoji });
 
-  const handleCompletarPerfil = async () => {
-    if (!ciudad || !region || !genero || !preferencia) {
-      Alert.alert('Faltan datos 👀', 'Para mostrarte los mejores cahuines, necesitamos saber todo esto.');
-      return;
+  const tomarFoto = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [3, 4],
+      quality: 0.65,
+    });
+    if (!result.canceled) setFotoLocal(result.assets[0].uri);
+  };
+
+  const toggleInteres = (interes) => {
+    if (intereses.includes(interes)) {
+      setIntereses(intereses.filter((item) => item !== interes));
+    } else if (intereses.length < 5) {
+      setIntereses([...intereses, interes]);
+    } else {
+      avisar('Ey', 'Máximo 5 intereses para mantener el misterio.');
     }
+  };
 
+  const avanzar = () => {
+    if (paso === 1 && nombre.trim().length < 2) return avisar('Oops', 'Dinos cómo te llamas.');
+    if (paso === 2 && !fotoLocal) return avisar('Oops', 'Sube tu mejor foto.');
+    if (paso === 3 && telefono.length < 8) return avisar('Oops', 'Ingresa un celular válido.');
+    if (paso === 4 && (!region || !ciudad)) return avisar('Oops', 'Elige tu región y ciudad. Así el radar no te manda a Santiago.');
+    if (paso === 5) {
+      const edad = calcularEdadOnboarding(dia, mes, anio);
+      if (dia.length < 1 || mes.length < 1 || anio.length < 4 || edad === null) return avisar('Oops', 'Fecha incompleta o inválida.');
+      if (edad < 18) return avisar('Cahuín es 18+', 'Para cuidar a todos, solo pueden entrar personas mayores de edad.', '🔞');
+    }
+    if (paso === 6 && !genero) return avisar('Oops', 'Selecciona una opción.');
+    if (paso === 7 && !orientacion) return avisar('Oops', 'Selecciona tu orientación.');
+    if (paso === 8 && !preferencia) return avisar('Oops', 'Dinos a quién quieres ver.');
+    if (paso === 9 && !queBuscas) return avisar('Oops', 'Dinos qué buscas.');
+    if (paso === 10 && !distanciaMax) return avisar('Oops', 'Fija la distancia.');
+    if (paso === 11 && (!beber || !fumar || !mascotas)) return avisar('Oops', 'Faltan tus hábitos.');
+    setPaso(paso + 1);
+  };
+
+  const finalizar = async () => {
+    if (intereses.length === 0) return avisar('Ya casi...', 'Elige al menos 1 interés.');
+    const edad = calcularEdadOnboarding(dia, mes, anio);
+    if (edad === null || edad < 18) return avisar('Cahuín es 18+', 'No podemos crear perfiles de menores de edad.', '🔞');
     setCargando(true);
+
     try {
-      // Guardamos la información en la base de datos
-      const res = await userService.actualizar({ region, ciudad, genero, preferencia });
-      
-      // 🌟 MAGIA: Al actualizar el contexto global, la app detectará que 
-      // ya no dice "Por definir" y te teletransportará a la pantalla principal automáticamente.
-      if (actualizarUsuario) actualizarUsuario(res.usuario);
-      
+      const fechaNacimiento = `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+      const res = await userService.actualizar({
+        nombre,
+        telefono,
+        ciudad,
+        region,
+        fechaNacimiento,
+        genero,
+        orientacionSexual: orientacion,
+        preferencia,
+        queBuscas,
+        distanciaMax,
+        habitos: { beber, fumar, mascotas, ejercicio: 'Por definir' },
+        intereses,
+      });
+
+      if (fotoLocal) {
+        try {
+          const formData = new FormData();
+          formData.append('fotosExistentes', JSON.stringify([]));
+          formData.append('nuevasFotos', {
+            uri: Platform.OS === 'android' ? fotoLocal : fotoLocal.replace('file://', ''),
+            name: 'onboarding.jpg',
+            type: 'image/jpeg',
+          });
+          await userService.actualizarFotos(formData);
+        } catch {
+          console.log('Error subiendo imagen en Onboarding.');
+        }
+      }
+
+      actualizarUsuario(res.usuario);
     } catch (error) {
-      Alert.alert('Error', error.message || 'No se pudo guardar la información');
+      avisar('Error del servidor', error.message || 'El servidor rechazó los datos.');
+    } finally {
       setCargando(false);
     }
   };
 
-  const seleccionarRegion = (seleccion) => {
-    setRegion(seleccion);
-    setCiudad(''); 
-    setModalRegion(false);
-  };
+  const renderOptionList = (lista, estado, setEstado) => (
+    <View style={styles.optionsStack}>
+      {lista.map((opcion) => (
+        <TouchableOpacity key={opcion} style={[styles.optionRow, estado === opcion && styles.optionRowActive]} onPress={() => setEstado(opcion)}>
+          <Text style={[styles.optionText, estado === opcion && styles.optionTextActive]}>{opcion}</Text>
+          <Ionicons name={estado === opcion ? 'checkmark-circle' : 'ellipse-outline'} size={23} color={estado === opcion ? '#FFF' : '#6B7280'} />
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
 
-  const BotonSeleccion = ({ label, activo, onPress }) => (
-    <TouchableOpacity style={[styles.btnSeleccion, activo && styles.btnSeleccionActivo]} onPress={onPress}>
-      <Text style={[styles.txtSeleccion, activo && styles.txtSeleccionActivo]}>{label}</Text>
-    </TouchableOpacity>
+  const renderChips = (lista, estado, setEstado) => (
+    <View style={styles.chipsGrid}>
+      {lista.map((opcion) => (
+        <TouchableOpacity key={opcion} style={[styles.chip, estado === opcion && styles.chipActive]} onPress={() => setEstado(opcion)}>
+          <Text style={[styles.chipText, estado === opcion && styles.optionTextActive]}>{opcion}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+
+  const titleWithAccent = (before, accent, after = '') => (
+    <Text style={styles.title}>{before}<Text style={styles.titleAccent}>{accent}</Text>{after}</Text>
   );
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.container}>
-        
-        <View style={styles.header}>
-          <Image source={{ uri: usuario?.foto || 'https://via.placeholder.com/100' }} style={styles.fotoPerfil} />
-          <Text style={styles.title}>¡Hola {usuario?.nombre?.split(' ')[0]}! 👋</Text>
-          <Text style={styles.subtitle}>Como entraste con Google, nos faltan un par de datitos para armar tu perfil.</Text>
-        </View>
-
-        <View style={[styles.form, SHADOWS.medium]}>
-          <Text style={styles.label}>¿De dónde eres?</Text>
-          
-          <TouchableOpacity style={styles.selectorBtn} onPress={() => setModalRegion(true)}>
-            <Text style={region ? styles.selectorTextoActivo : styles.selectorTextoInactivo}>{region || "Elige tu Región"}</Text>
-            <Ionicons name="chevron-down" size={20} color={COLORS.gris} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.selectorBtn} onPress={() => region ? setModalCiudad(true) : Alert.alert("¡Epa!", "Elige la región primero.")}>
-            <Text style={ciudad ? styles.selectorTextoActivo : styles.selectorTextoInactivo}>{ciudad || "Elige tu Ciudad"}</Text>
-            <Ionicons name="chevron-down" size={20} color={COLORS.gris} />
-          </TouchableOpacity>
-
-          <Text style={styles.label}>Yo soy:</Text>
-          <View style={styles.filaBotones}>
-            <BotonSeleccion label="Hombre" activo={genero === 'Hombre'} onPress={() => setGenero('Hombre')} />
-            <BotonSeleccion label="Mujer" activo={genero === 'Mujer'} onPress={() => setGenero('Mujer')} />
-            <BotonSeleccion label="Otro" activo={genero === 'Otro'} onPress={() => setGenero('Otro')} />
-          </View>
-
-          <Text style={styles.label}>Y busco conocer:</Text>
-          <View style={styles.filaBotones}>
-            <BotonSeleccion label="Hombres" activo={preferencia === 'Hombres'} onPress={() => setPreferencia('Hombres')} />
-            <BotonSeleccion label="Mujeres" activo={preferencia === 'Mujeres'} onPress={() => setPreferencia('Mujeres')} />
-            <BotonSeleccion label="Todos" activo={preferencia === 'Todos'} onPress={() => setPreferencia('Todos')} />
-          </View>
-
-          <TouchableOpacity style={styles.btnGuardar} onPress={handleCompletarPerfil} disabled={cargando}>
-            {cargando ? <ActivityIndicator color="white" /> : <Text style={styles.btnGuardarTexto}>Listo, ¡A cahuinear! 🌶️</Text>}
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* --- MODAL DE REGIONES --- */}
-      <Modal visible={modalRegion} animationType="slide" transparent={true}>
-        <View style={styles.modalFondo}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Elige tu Región</Text>
-            <FlatList data={Object.keys(CHILE_DATA)} keyExtractor={(item) => item} renderItem={({ item }) => (
-                <TouchableOpacity style={styles.modalOpcion} onPress={() => seleccionarRegion(item)}>
-                  <Text style={styles.modalOpcionTexto}>{item}</Text>
+    <>
+    <LinearGradient colors={['#05070D', '#100B12', '#06070B']} style={styles.gradient}>
+      <SafeAreaView style={styles.safe}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+          <View style={styles.container}>
+            <View style={styles.topBar}>
+              {paso > 1 ? (
+                <TouchableOpacity style={styles.backButton} onPress={() => setPaso(paso - 1)}>
+                  <Ionicons name="arrow-back" size={24} color="#FFF" />
                 </TouchableOpacity>
-            )} />
-            <TouchableOpacity style={styles.modalBtnCerrar} onPress={() => setModalRegion(false)}><Text style={styles.modalBtnCerrarTexto}>Cancelar</Text></TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+              ) : <View style={styles.backSpacer} />}
+              <View style={styles.progressTrack}>
+                <LinearGradient colors={['#FF5A3C', '#F71374']} style={[styles.progressFill, { width: `${(paso / TOTAL_PASOS) * 100}%` }]} />
+              </View>
+            </View>
 
-      {/* --- MODAL DE CIUDADES --- */}
-      <Modal visible={modalCiudad} animationType="slide" transparent={true}>
-        <View style={styles.modalFondo}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Elige tu Ciudad</Text>
-            <FlatList data={region ? CHILE_DATA[region] : []} keyExtractor={(item) => item} renderItem={({ item }) => (
-                <TouchableOpacity style={styles.modalOpcion} onPress={() => { setCiudad(item); setModalCiudad(false); }}>
-                  <Text style={styles.modalOpcionTexto}>{item}</Text>
-                </TouchableOpacity>
-            )} />
-            <TouchableOpacity style={styles.modalBtnCerrar} onPress={() => setModalCiudad(false)}><Text style={styles.modalBtnCerrarTexto}>Cancelar</Text></TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scrollContent}>
+              {paso === 1 && (
+                <View>
+                  {titleWithAccent('Cómo te ', 'llamas?')}
+                  <Text style={styles.subtitle}>Así aparecerás en tu perfil. No podrás cambiarlo seguido.</Text>
+                  <CahuinTextField icon="person-outline" style={styles.bigInputModern} placeholder="Ej: Gonzalo" value={nombre} onChangeText={setNombre} autoFocus />
+                </View>
+              )}
 
-    </SafeAreaView>
+              {paso === 2 && (
+                <View>
+                  {titleWithAccent('Tu mejor ', 'ángulo')}
+                  <Text style={styles.subtitle}>Sube una foto clara. Si después verificas con selfie, ganas insignia.</Text>
+                  <TouchableOpacity style={styles.photoBox} onPress={tomarFoto}>
+                    {fotoLocal ? <Image source={{ uri: fotoLocal }} style={styles.photoPreview} /> : <Ionicons name="camera" size={42} color="#F0444F" />}
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {paso === 3 && (
+                <View>
+                  {titleWithAccent('Mi número ', 'es')}
+                  <Text style={styles.subtitle}>Solo lo guardaremos en tu perfil, sin códigos SMS molestos.</Text>
+                  <View style={styles.phoneRow}>
+                    <View style={[styles.bigInput, styles.prefixBox]}><Text style={styles.prefixText}>+56</Text></View>
+                    <CahuinTextField icon="call-outline" style={{ flex: 1 }} placeholder="9 1234 5678" keyboardType="phone-pad" value={telefono} onChangeText={setTelefono} />
+                  </View>
+                </View>
+              )}
+
+              {paso === 4 && (
+                <View>
+                  {titleWithAccent('De dónde ', 'eres?')}
+                  <Text style={styles.subtitle}>Esto define tu radar: Temuco, Villarrica, Arica, Pucón... no más Santiago por defecto.</Text>
+                  <Text style={styles.label}>Región</Text>
+                  {renderChips(Object.keys(REGIONES_CHILE), region, (reg) => { setRegion(reg); setCiudad(''); })}
+                  {region ? (
+                    <>
+                      <Text style={styles.label}>Ciudad</Text>
+                      {renderChips(REGIONES_CHILE[region], ciudad, setCiudad)}
+                    </>
+                  ) : null}
+                </View>
+              )}
+
+              {paso === 5 && (
+                <View>
+                  {titleWithAccent('Cuándo estás de ', 'cumple?')}
+                  <Text style={styles.subtitle}>Calcularemos tu edad real automáticamente.</Text>
+                  <View style={styles.dateRow}>
+                    <CahuinTextField style={styles.dateField} inputStyle={styles.dateFieldInput} placeholder="DD" keyboardType="number-pad" maxLength={2} value={dia} onChangeText={setDia} />
+                    <Text style={styles.slash}>/</Text>
+                    <CahuinTextField style={styles.dateField} inputStyle={styles.dateFieldInput} placeholder="MM" keyboardType="number-pad" maxLength={2} value={mes} onChangeText={setMes} />
+                    <Text style={styles.slash}>/</Text>
+                    <CahuinTextField style={[styles.dateField, { width: 112 }]} inputStyle={styles.dateFieldInput} placeholder="YYYY" keyboardType="number-pad" maxLength={4} value={anio} onChangeText={setAno} />
+                  </View>
+                </View>
+              )}
+
+              {paso === 6 && <View>{titleWithAccent('Cuál es tu ', 'género?')}{renderOptionList(DATOS.generos, genero, setGenero)}</View>}
+              {paso === 7 && <View>{titleWithAccent('Tu orientación ', 'sexual')}<Text style={styles.subtitle}>Para mostrarte a las personas correctas.</Text>{renderOptionList(DATOS.orientacion, orientacion, setOrientacion)}</View>}
+              {paso === 8 && <View>{titleWithAccent('A quién te interesa ', 'ver?')}<Text style={styles.subtitle}>El radar solo te mostrará a este grupo.</Text>{renderOptionList(DATOS.preferencias, preferencia, setPreferencia)}</View>}
+              {paso === 9 && <View>{titleWithAccent('Qué andai ', 'buscando?')}<Text style={styles.subtitle}>Sé sincerx, hay Cahuín para todxs.</Text>{renderOptionList(DATOS.buscando, queBuscas, setQueBuscas)}</View>}
+              {paso === 10 && <View>{titleWithAccent('A qué distancia ', 'apanas?')}<Text style={styles.subtitle}>¿A cuántos kilómetros te moverías?</Text>{renderChips(DATOS.distancias.map((km) => `${km} km`), `${distanciaMax} km`, (op) => setDistanciaMax(Number(op.replace(' km', ''))))}</View>}
+              {paso === 11 && <View>{titleWithAccent('Hablemos de ', 'hábitos')}<Text style={styles.label}>¿Tomas alcohol?</Text>{renderOptionList(DATOS.beber, beber, setBeber)}<Text style={styles.label}>¿Fumas?</Text>{renderOptionList(DATOS.fumar, fumar, setFumar)}<Text style={styles.label}>¿Mascotas?</Text>{renderOptionList(DATOS.mascotas, mascotas, setMascotas)}</View>}
+              {paso === 12 && (
+                <View>
+                  {titleWithAccent('Qué te ', 'gusta?')}
+                  <Text style={styles.subtitle}>Elige hasta 5 intereses para que tu perfil brille.</Text>
+                  <View style={styles.chipsGrid}>
+                    {DATOS.interesesLista.map((interes) => (
+                      <TouchableOpacity key={interes} style={[styles.chip, intereses.includes(interes) && styles.chipActive]} onPress={() => toggleInteres(interes)}>
+                        <Text style={[styles.chipText, intereses.includes(interes) && styles.optionTextActive]}>{interes}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              <TouchableOpacity style={styles.continueButton} onPress={paso === TOTAL_PASOS ? finalizar : avanzar} disabled={cargando}>
+                <LinearGradient colors={['#FF5A3C', '#F71374']} style={styles.continueGradient}>
+                  {cargando ? <ActivityIndicator color="#FFF" /> : <Text style={styles.continueText}>{paso === TOTAL_PASOS ? 'A Cahuinear' : 'Siguiente'}</Text>}
+                </LinearGradient>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </LinearGradient>
+    <CahuinModal
+      visible={!!modal}
+      title={modal?.title}
+      message={modal?.message}
+      emoji={modal?.emoji}
+      onClose={() => setModal(null)}
+    />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.bg },
-  container: { flex: 1, padding: SPACING[5], justifyContent: 'center' },
-  header: { alignItems: 'center', marginBottom: SPACING[6] },
-  fotoPerfil: { width: 80, height: 80, borderRadius: 40, marginBottom: SPACING[3], borderWidth: 2, borderColor: COLORS.primario },
-  title: { fontSize: 26, fontFamily: FONTS.display, color: COLORS.textPrimary, fontWeight: 'bold' },
-  subtitle: { fontSize: 15, color: COLORS.textMuted, marginTop: SPACING[2], textAlign: 'center', lineHeight: 22 },
-  
-  form: { backgroundColor: COLORS.tarjeta, padding: SPACING[5], borderRadius: RADIUS.xl },
-  label: { fontSize: 15, fontWeight: 'bold', color: COLORS.textPrimary, marginTop: SPACING[3], marginBottom: SPACING[2] },
-  
-  selectorBtn: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.fondo, borderWidth: 1, borderColor: '#eee', borderRadius: RADIUS.lg, padding: SPACING[3], marginBottom: SPACING[3] },
-  selectorTextoInactivo: { fontSize: 16, color: COLORS.gris },
-  selectorTextoActivo: { fontSize: 16, color: COLORS.textPrimary, fontWeight: '500' },
-
-  filaBotones: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING[4] },
-  btnSeleccion: { flex: 1, backgroundColor: COLORS.fondo, borderWidth: 1, borderColor: '#ddd', paddingVertical: SPACING[3], marginHorizontal: 2, borderRadius: RADIUS.md, alignItems: 'center' },
-  btnSeleccionActivo: { backgroundColor: COLORS.primario, borderColor: COLORS.primario },
-  txtSeleccion: { color: COLORS.gris, fontWeight: 'bold', fontSize: 14 },
-  txtSeleccionActivo: { color: 'white' },
-
-  btnGuardar: { backgroundColor: COLORS.primario, paddingVertical: SPACING[4], borderRadius: RADIUS.lg, alignItems: 'center', marginTop: SPACING[4] },
-  btnGuardarTexto: { color: 'white', fontSize: 18, fontWeight: 'bold' },
-
-  modalFondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: COLORS.tarjeta, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl, padding: SPACING[5], maxHeight: '70%' },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', color: COLORS.textPrimary, marginBottom: SPACING[4], textAlign: 'center' },
-  modalOpcion: { paddingVertical: SPACING[4], borderBottomWidth: 1, borderBottomColor: '#eee' },
-  modalOpcionTexto: { fontSize: 16, color: COLORS.textPrimary, textAlign: 'center' },
-  modalBtnCerrar: { marginTop: SPACING[5], paddingVertical: SPACING[3], backgroundColor: '#f0f0f0', borderRadius: RADIUS.lg, alignItems: 'center' },
-  modalBtnCerrarTexto: { color: COLORS.gris, fontSize: 16, fontWeight: 'bold' }
+  gradient: { flex: 1 },
+  safe: { flex: 1 },
+  container: { flex: 1, paddingHorizontal: SPACING[5] },
+  topBar: { flexDirection: 'row', alignItems: 'center', gap: 18, paddingTop: 10, marginBottom: 28 },
+  backButton: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.08)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
+  backSpacer: { width: 48 },
+  progressTrack: { flex: 1, height: 7, borderRadius: 8, backgroundColor: '#202735', overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 8 },
+  scrollContent: { paddingBottom: 34 },
+  title: { color: '#FFF', fontSize: 36, lineHeight: 43, fontWeight: '900', fontFamily: FONTS.display, marginTop: 22, letterSpacing: 0 },
+  titleAccent: { color: '#F0444F' },
+  subtitle: { color: '#8B95A7', fontSize: 17, lineHeight: 25, marginTop: 16, marginBottom: 22 },
+  label: { color: '#FFF', fontSize: 17, fontWeight: '900', marginTop: 24, marginBottom: 12 },
+  bigInput: { minHeight: 76, borderRadius: 24, backgroundColor: 'rgba(10,12,18,0.72)', borderWidth: 1.5, borderColor: '#F0444F', color: '#FFF', paddingHorizontal: 22, fontSize: 21, ...SHADOWS.light },
+  bigInputModern: { borderRadius: 24 },
+  phoneRow: { flexDirection: 'row', gap: 10 },
+  prefixBox: { width: 92, alignItems: 'center', justifyContent: 'center' },
+  prefixText: { color: '#FFF', fontSize: 18, fontWeight: '900' },
+  photoBox: { height: 430, borderRadius: 28, backgroundColor: 'rgba(10,12,18,0.72)', borderWidth: 1.5, borderColor: '#F0444F', borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  photoPreview: { width: '100%', height: '100%' },
+  optionsStack: { gap: 12, marginTop: 18 },
+  optionRow: { minHeight: 64, borderRadius: 18, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(255,255,255,0.055)', borderWidth: 1, borderColor: 'rgba(240,68,79,0.26)' },
+  optionRowActive: { borderColor: '#F71374', backgroundColor: 'rgba(240,68,79,0.24)' },
+  optionText: { color: '#FFF', fontSize: 17, fontWeight: '800' },
+  optionTextActive: { color: '#FFF' },
+  chipsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  chip: { borderRadius: 22, minHeight: 48, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.055)', borderWidth: 1, borderColor: 'rgba(240,68,79,0.26)' },
+  chipActive: { backgroundColor: '#F0444F', borderColor: '#F71374' },
+  chipText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
+  dateRow: { flexDirection: 'row', gap: 10, justifyContent: 'center', alignItems: 'center', marginTop: 24 },
+  dateInput: { width: 78, minHeight: 74, borderRadius: 20, backgroundColor: 'rgba(10,12,18,0.72)', borderWidth: 1.5, borderColor: '#F0444F', color: '#FFF', textAlign: 'center', fontSize: 22, fontWeight: '900' },
+  dateField: { width: 78, borderRadius: 22 },
+  dateFieldInput: { textAlign: 'center', fontSize: 20, fontWeight: '900' },
+  slash: { color: '#6B7280', fontSize: 30 },
+  continueButton: { marginTop: 36, marginBottom: 20, borderRadius: 32, overflow: 'hidden', ...SHADOWS.medium },
+  continueGradient: { height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },
+  continueText: { color: '#FFF', fontSize: 19, fontWeight: '900' },
 });

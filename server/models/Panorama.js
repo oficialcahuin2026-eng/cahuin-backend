@@ -1,58 +1,30 @@
-// server/models/Panorama.js
 const mongoose = require('mongoose');
 
 const panoramaSchema = new mongoose.Schema({
-  titulo: { 
-    type: String, 
-    required: true 
-  },
-  descripcion: { 
-    type: String, 
-    required: true 
-  },
-  lugar: { 
-    type: String, 
-    required: true 
-  },
-  region: { 
-    type: String, 
-    required: true // Ahora la región es obligatoria para el filtro
-  },
-  fecha: { 
-    type: Date, 
-    required: true 
-  },
-  // 🌟 CAMBIO 1: El creador ya no es 'required: true' para que el Robot pueda crear eventos
-  creador: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'User',
-    required: false 
-  },
-  // 🌟 CAMBIO 2: Quitamos la lista estricta (enum) para permitir "Oficial", "Comunidad", "Rock", etc.
-  categoria: { 
-    type: String, 
-    default: 'Otro'
-  },
-  emoji: { 
-    type: String, 
-    default: '📍' 
-  },
-  maxPersonas: { 
-    type: Number, 
-    default: 100 
-  },
-  participantes: [{ 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'User' 
+  titulo: { type: String, required: true },
+  descripcion: { type: String, required: true },
+  lugar: { type: String, required: true },
+  direccion: { type: String }, // 🌟 NUEVO: Para abrir Google Maps/Waze exacto
+  region: { type: String, required: true },
+  fecha: { type: Date, required: true },
+
+  creador: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
+  categoria: { type: String, default: 'Otro' },
+  emoji: { type: String, default: '📍' },
+  imagen: { type: String }, // 🌟 NUEVO: Para el afiche del concierto
+
+  maxPersonas: { type: Number, default: 100 },
+  participantes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  mensajesGrupo: [{
+    remitente: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    texto: { type: String, required: true },
+    tipo: { type: String, enum: ['sistema', 'texto'], default: 'sistema' },
+    fecha: { type: Date, default: Date.now }
   }],
-  // 🌟 CAMBIO 3: Campos especiales para los eventos raspados de internet
-  esOficial: { 
-    type: Boolean, 
-    default: false 
-  },
-  externalUrl: { 
-    type: String 
-  }
+
+  esOficial: { type: Boolean, default: false },
+  activo: { type: Boolean, default: true },
+  externalUrl: { type: String }
 }, {
   timestamps: true
 });

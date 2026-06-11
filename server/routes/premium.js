@@ -8,5 +8,6 @@ router.get('/planes',    ctrl.getPlanes);
 router.get('/regalos',   ctrl.getRegalos);
 router.get('/estado',    ctrl.getEstado);
 router.post('/suscribir',ctrl.suscribir);
+router.post('/comprar-monedas', ctrl.comprarMonedas);
 
 module.exports = router;

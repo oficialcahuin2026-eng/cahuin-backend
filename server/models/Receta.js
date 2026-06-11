@@ -1,15 +1,13 @@
 const mongoose = require('mongoose');
 
-const RecetaSchema = new mongoose.Schema({
-  titulo:       { type: String, required: true },
-  descripcion:  { type: String, required: true },
+const recetaSchema = new mongoose.Schema({
+  titulo: { type: String, required: true },
+  descripcion: { type: String },
   ingredientes: [{ type: String }],
-  pasos:        [{ orden: Number, texto: String }],
-  foto:         { type: String, default: '' },
-  region:       { type: String, default: '' },
-  autor:        { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  likes:        [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-  categoria:    { type: String, enum: ['Entrada', 'Plato de fondo', 'Postre', 'Bebestible', 'Otro'], default: 'Plato de fondo' },
+  instrucciones: { type: String },
+  imagen: { type: String },
+  autor: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
 }, { timestamps: true });
 
-module.exports = mongoose.model('Receta', RecetaSchema);
+module.exports = mongoose.model('Receta', recetaSchema);

@@ -2,10 +2,13 @@
   "expo": {
     "name": "Cahuín",
     "slug": "cahuin",
+    "scheme": "cahuin",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
+    "icon": "./src/assets/icon.png",
     "splash": {
+      "image": "./src/assets/icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#C0392B"
     },
@@ -15,6 +18,7 @@
     },
     "android": {
       "adaptiveIcon": {
+        "foregroundImage": "./src/assets/icon.png",
         "backgroundColor": "#C0392B"
       },
       "package": "cl.cahuin.app"
@@ -25,7 +29,10 @@
       }
     },
     "plugins": [
-      "expo-asset"
+      "expo-asset",
+      "expo-web-browser",
+      "@react-native-community/datetimepicker",
+      "expo-font"
     ]
   }
 }
