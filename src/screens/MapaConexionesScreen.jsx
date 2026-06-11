@@ -1,94 +1,135 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
-import MapView, { Polyline, Marker } from 'react-native-maps';
+import React, { useEffect, useMemo, useState } from 'react';
+import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { RADIUS, SHADOWS } from '../utils/theme';
+import { FONTS, RADIUS, SHADOWS, SPACING } from '../utils/theme';
 
-const CIUDADES_COORDS = [
-  { nombre: 'Arica', latitude: -18.4783, longitude: -70.3126 },
-  { nombre: 'Antofagasta', latitude: -23.6509, longitude: -70.3975 },
-  { nombre: 'La Serena', latitude: -29.9027, longitude: -71.2520 },
-  { nombre: 'Santiago', latitude: -33.4489, longitude: -70.6693 },
-  { nombre: 'Curicó', latitude: -34.9856, longitude: -71.2394 },
-  { nombre: 'Concepción', latitude: -36.8201, longitude: -73.0444 },
-  { nombre: 'Temuco', latitude: -38.7359, longitude: -72.5904 },
-  { nombre: 'Punta Arenas', latitude: -53.1638, longitude: -70.9171 }
+const CIUDADES = [
+  { nombre: 'Arica', zona: 'Norte grande', x: '54%', y: '6%' },
+  { nombre: 'Antofagasta', zona: 'Norte', x: '43%', y: '18%' },
+  { nombre: 'La Serena', zona: 'Costa norte', x: '55%', y: '32%' },
+  { nombre: 'Santiago', zona: 'Centro', x: '47%', y: '45%' },
+  { nombre: 'Concepcion', zona: 'Bio Bio', x: '58%', y: '58%' },
+  { nombre: 'Temuco', zona: 'Araucania', x: '45%', y: '69%' },
+  { nombre: 'Puerto Montt', zona: 'Los Lagos', x: '58%', y: '80%' },
+  { nombre: 'Punta Arenas', zona: 'Magallanes', x: '43%', y: '93%' },
 ];
+
+const pickConnection = () => {
+  const origen = CIUDADES[Math.floor(Math.random() * CIUDADES.length)];
+  let destino = CIUDADES[Math.floor(Math.random() * CIUDADES.length)];
+  while (origen.nombre === destino.nombre) {
+    destino = CIUDADES[Math.floor(Math.random() * CIUDADES.length)];
+  }
+  return {
+    id: Date.now().toString(),
+    origen,
+    destino,
+    hora: new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }),
+  };
+};
 
 export default function MapaConexionesScreen({ navigation }) {
   const { COLORS } = useTheme();
-  const [lineasDeLuz, setLineasDeLuz] = useState([]);
+  const styles = useMemo(() => getStyles(COLORS), [COLORS]);
+  const [conexiones, setConexiones] = useState(() => [pickConnection(), pickConnection(), pickConnection()]);
   const [contadorMatches, setContadorMatches] = useState(148);
 
   useEffect(() => {
-    // Simulador dinámico Socket.io: Encender líneas de luz de amor cada 3 segundos
     const interval = setInterval(() => {
-      const origen = CIUDADES_COORDS[Math.floor(Math.random() * CIUDADES_COORDS.length)];
-      let destino = CIUDADES_COORDS[Math.floor(Math.random() * CIUDADES_COORDS.length)];
-      
-      while (origen.nombre === destino.nombre) {
-        destino = CIUDADES_COORDS[Math.floor(Math.random() * CIUDADES_COORDS.length)];
-      }
-
-      const nuevaLinea = {
-        id: Date.now().toString(),
-        coords: [
-          { latitude: origen.latitude, longitude: origen.longitude },
-          { latitude: destino.latitude, longitude: destino.longitude }
-        ]
-      };
-
-      setLineasDeLuz(prev => [...prev.slice(-4), nuevaLinea]); // Mantener solo las últimas 5 en pantalla
-      setContadorMatches(c => c + 1);
+      setConexiones((prev) => [pickConnection(), ...prev].slice(0, 6));
+      setContadorMatches((current) => current + 1);
     }, 2500);
 
     return () => clearInterval(interval);
   }, []);
 
+  const ciudadesActivas = new Set(conexiones.flatMap((item) => [item.origen.nombre, item.destino.nombre]));
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#0A0A0A' }}>
+    <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}><Ionicons name="arrow-back" size={26} color="white" /></TouchableOpacity>
-        <Text style={styles.titulo}>Radar de Amor Chile 🇨🇱</Text>
-        <View style={{ width: 26 }} />
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#FFF" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Mapa de conexiones</Text>
+        <View style={styles.backButtonPlaceholder} />
       </View>
 
-      <MapView
-        style={styles.mapa}
-        initialRegion={{ latitude: -36.8201, longitude: -71.2520, latitudeDelta: 25, longitudeDelta: 10 }}
-        customMapStyle={DARK_MAP_STYLE}
-      >
-        {CIUDADES_COORDS.map((c, i) => (
-          <Marker key={i} coordinate={{ latitude: c.latitude, longitude: c.longitude }}>
-            <View style={styles.puntoCiudad} />
-          </Marker>
-        ))}
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.liveCard}>
+          <View style={styles.liveTop}>
+            <View>
+              <Text style={styles.liveLabel}>Chile ahora</Text>
+              <Text style={styles.liveTitle}>{contadorMatches} matches activos</Text>
+            </View>
+            <View style={styles.livePill}>
+              <View style={styles.liveDot} />
+              <Text style={styles.livePillText}>En vivo</Text>
+            </View>
+          </View>
 
-        {lineasDeLuz.map((linea) => (
-          <Polyline key={linea.id} coordinates={linea.coords} strokeColor="#E53935" strokeWidth={3} lineDashPattern={[5, 5]} />
-        ))}
-      </MapView>
+          <View style={styles.mapPanel}>
+            <View style={styles.chileSpine} />
+            {CIUDADES.map((ciudad) => {
+              const activa = ciudadesActivas.has(ciudad.nombre);
+              return (
+                <View key={ciudad.nombre} style={[styles.cityNode, { left: ciudad.x, top: ciudad.y }]}>
+                  <View style={[styles.cityDot, activa && styles.cityDotActive]} />
+                  <Text style={[styles.cityLabel, activa && styles.cityLabelActive]}>{ciudad.nombre}</Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
 
-      <View style={[styles.contadorBox, SHADOWS.medium]}>
-        <Text style={styles.contadorTxt}>🔥 {contadorMatches} matches ocurriendo al tiro</Text>
-      </View>
+        <View style={styles.feedHeader}>
+          <Ionicons name="sparkles" size={22} color={COLORS.primario} />
+          <Text style={styles.feedTitle}>Conexiones recientes</Text>
+        </View>
+
+        {conexiones.map((item) => (
+          <View key={item.id} style={styles.connectionRow}>
+            <View style={styles.routeIcon}>
+              <Ionicons name="git-compare" size={20} color={COLORS.primario} />
+            </View>
+            <View style={styles.connectionTextWrap}>
+              <Text style={styles.connectionTitle}>{item.origen.nombre} -> {item.destino.nombre}</Text>
+              <Text style={styles.connectionMeta}>{item.origen.zona} conecto con {item.destino.zona} · {item.hora}</Text>
+            </View>
+          </View>
+        ))}
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, backgroundColor: '#121212' },
-  titulo: { color: 'white', fontSize: 18, fontWeight: 'bold' },
-  mapa: { flex: 1 },
-  puntoCiudad: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#E53935' },
-  contadorBox: { position: 'absolute', bottom: 40, left: 20, right: 20, backgroundColor: '#121212', padding: 15, borderRadius: RADIUS.lg, alignItems: 'center', borderWith: 1, borderColor: '#222' },
-  contadorTxt: { color: 'white', fontWeight: 'bold', fontSize: 16 }
+const getStyles = (COLORS) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: '#070A12' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: SPACING[5], backgroundColor: '#101827' },
+  backButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
+  backButtonPlaceholder: { width: 44, height: 44 },
+  headerTitle: { color: '#FFF', fontSize: 22, fontWeight: '900', fontFamily: FONTS.display },
+  content: { padding: SPACING[5], paddingBottom: 110 },
+  liveCard: { borderRadius: RADIUS.xl, padding: SPACING[4], backgroundColor: '#101827', borderWidth: 1, borderColor: 'rgba(148,163,184,0.22)', ...SHADOWS.dark },
+  liveTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING[4] },
+  liveLabel: { color: '#FCA5A5', fontSize: 12, fontWeight: '900', textTransform: 'uppercase' },
+  liveTitle: { color: '#FFF', fontSize: 28, fontWeight: '900', fontFamily: FONTS.display, marginTop: 4 },
+  livePill: { flexDirection: 'row', alignItems: 'center', gap: 7, borderRadius: 99, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: 'rgba(34,197,94,0.12)', borderWidth: 1, borderColor: 'rgba(34,197,94,0.32)' },
+  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#22C55E' },
+  livePillText: { color: '#BBF7D0', fontSize: 12, fontWeight: '900' },
+  mapPanel: { height: 520, borderRadius: 28, overflow: 'hidden', backgroundColor: '#0B1120', borderWidth: 1, borderColor: 'rgba(148,163,184,0.2)' },
+  chileSpine: { position: 'absolute', left: '48%', top: 24, bottom: 24, width: 42, borderRadius: 28, backgroundColor: 'rgba(240,68,79,0.22)', borderWidth: 1, borderColor: 'rgba(240,68,79,0.35)', transform: [{ skewY: '-10deg' }] },
+  cityNode: { position: 'absolute', minWidth: 120, transform: [{ translateX: -18 }, { translateY: -10 }] },
+  cityDot: { width: 18, height: 18, borderRadius: 9, backgroundColor: '#475569', borderWidth: 3, borderColor: '#0B1120' },
+  cityDotActive: { backgroundColor: COLORS.primario, shadowColor: COLORS.primario, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.9, shadowRadius: 10, elevation: 6 },
+  cityLabel: { color: '#94A3B8', fontSize: 12, fontWeight: '800', marginTop: 4 },
+  cityLabelActive: { color: '#FFF' },
+  feedHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: SPACING[6], marginBottom: SPACING[3] },
+  feedTitle: { color: '#FFF', fontSize: 20, fontWeight: '900', fontFamily: FONTS.display },
+  connectionRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING[3], minHeight: 76, borderRadius: 22, padding: SPACING[3], backgroundColor: '#101827', borderWidth: 1, borderColor: 'rgba(148,163,184,0.18)', marginBottom: SPACING[3] },
+  routeIcon: { width: 46, height: 46, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(240,68,79,0.12)' },
+  connectionTextWrap: { flex: 1 },
+  connectionTitle: { color: '#FFF', fontSize: 17, fontWeight: '900' },
+  connectionMeta: { color: '#94A3B8', fontSize: 13, lineHeight: 18, marginTop: 3 },
 });
-
-const DARK_MAP_STYLE = [
-  { "elementType": "geometry", "stylers": [{ "color": "#212121" }] },
-  { "elementType": "labels.text.fill", "stylers": [{ "color": "#757575" }] },
-  { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#2c2c2c" }] },
-  { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#000000" }] }
-];

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://cahuin-backend-1.onrender.com/api';
+export const BASE_URL = (process.env.EXPO_PUBLIC_API_URL || 'https://cahuin-backend-1.onrender.com/api').replace(/\/+$/, '');
 
 // 🌟 LA SOLUCIÓN: Faltaba la palabra "export" aquí para que el AuthContext lo pueda usar
 export const api = axios.create({ 
@@ -9,38 +9,63 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json' }
 });
 
-api.interceptors.request.use(async (config) => {
+const getAuthHeader = async () => {
   const token = await AsyncStorage.getItem('@cahuin_token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
+const extraerMensajeError = (payload, fallback) => {
+  if (!payload) return fallback;
+  if (typeof payload === 'string') {
+    const limpio = payload.trim();
+    if (limpio.startsWith('<')) return 'El servidor respondio HTML en vez de JSON. Revisa la URL del backend.';
+    return limpio || fallback;
+  }
+  return payload.message || payload.error || fallback;
+};
+
+export const parseFetchResponse = async (respuesta) => {
+  const contentType = respuesta.headers?.get?.('content-type') || '';
+  const texto = await respuesta.text();
+  let payload = {};
+
+  if (texto) {
+    const pareceJson = contentType.includes('application/json') || /^[\[{]/.test(texto.trim());
+    if (pareceJson) {
+      try {
+        payload = JSON.parse(texto);
+      } catch {
+        throw new Error('El backend envio una respuesta JSON invalida.');
+      }
+    } else {
+      payload = { message: texto };
+    }
+  }
+
+  if (!respuesta.ok) {
+    throw new Error(extraerMensajeError(payload, `Error HTTP ${respuesta.status}`));
+  }
+
+  return payload;
+};
+
+api.interceptors.request.use(async (config) => {
+  const authHeader = await getAuthHeader();
+  config.headers = { ...config.headers, ...authHeader };
   return config;
 });
 
 api.interceptors.response.use(
-  (res) => res.data,
+  (res) => res.data || {},
   (err) => Promise.reject(new Error(err.response?.data?.message || "Error de conexión po'"))
 );
 
 export const authService = {
-  login: async (credenciales) => {
-    const response = await api.post('/auth/login', credenciales);
-    return response.data || response;
-  },
-  loginGoogle: async (token) => {
-    const response = await api.post('/auth/google', { token });
-    return response.data || response;
-  },
-  loginFacebook: async (accessToken) => {
-    const response = await api.post('/auth/facebook', { accessToken });
-    return response.data || response;
-  },
-  loginTelefono: async (telefono) => {
-    const response = await api.post('/auth/telefono', { telefono });
-    return response.data || response; 
-  },
-  register: async (datos) => {
-    const response = await api.post('/auth/register', datos);
-    return response.data || response;
-  }
+  login: (credenciales) => api.post('/auth/login', credenciales),
+  loginGoogle: (token) => api.post('/auth/google', { token }),
+  loginFacebook: (accessToken) => api.post('/auth/facebook', { accessToken }),
+  loginTelefono: (telefono) => api.post('/auth/telefono', { telefono }),
+  register: (datos) => api.post('/auth/register', datos),
 };
 
 export const userService = {
@@ -49,15 +74,12 @@ export const userService = {
   actualizar:  (data) => api.put('/users/me', data),
   
   actualizarFotos: async (formData) => {
-    const token = await AsyncStorage.getItem('@cahuin_token');
     const respuesta = await fetch(`${BASE_URL}/users/fotos`, {
       method: 'POST', 
       body: formData, 
-      headers: { 'Authorization': `Bearer ${token}` }
+      headers: await getAuthHeader()
     });
-    const data = await respuesta.json();
-    if (!respuesta.ok) throw new Error(data.message || 'Error del servidor');
-    return data;
+    return parseFetchResponse(respuesta);
   },
 
   descubrir:        (q)             => api.get('/users/descubrir', { params: q }),
@@ -105,6 +127,7 @@ export const cartaService = {
   getCartas:  ()            => api.get('/cartas'),
   reaccionar: (id, tipo)    => api.post(`/cartas/${id}/reaccionar`, { tipo }),
   crear:      (texto)       => api.post('/cartas', { texto }),
+  eliminar:   (id)          => api.delete(`/cartas/${id}`),
 };
 
 export const premiumService = {
@@ -132,7 +155,6 @@ export const socialService = {
   listarHistorias: () => api.get('/social/historias'),
   crearHistoria: async (data) => {
     if (data?.imagen) {
-      const token = await AsyncStorage.getItem('@cahuin_token');
       const formData = new FormData();
       formData.append('texto', data.texto || '');
       formData.append('lugar', data.lugar || '');
@@ -145,11 +167,9 @@ export const socialService = {
       const respuesta = await fetch(`${BASE_URL}/social/historias`, {
         method: 'POST',
         body: formData,
-        headers: { Authorization: `Bearer ${token}` },
+        headers: await getAuthHeader(),
       });
-      const json = await respuesta.json();
-      if (!respuesta.ok) throw new Error(json.message || 'Error publicando historia');
-      return json;
+      return parseFetchResponse(respuesta);
     }
     return api.post('/social/historias', data);
   },

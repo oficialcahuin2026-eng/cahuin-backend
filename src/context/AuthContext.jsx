@@ -24,8 +24,13 @@ export const AuthProvider = ({ children }) => {
           fotoUrl: clerkUser.imageUrl
         });
 
-        const userData = response.data.usuario;
+        const userData = response.usuario;
+        response.data = response;
         const localToken = response.data.token; // 🌟 Capturamos el token del servidor
+
+        if (!userData || !localToken) {
+          throw new Error('El backend no devolvio usuario/token al sincronizar Clerk.');
+        }
 
         setUsuario(userData);
         setToken(localToken);

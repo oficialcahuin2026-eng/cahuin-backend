@@ -83,14 +83,19 @@ exports.listar = async (req, res) => {
       if (regionNormalizada && regionNormalizada !== region) terminos.push(new RegExp(regionNormalizada, 'i'));
       if (region === 'Santiago Centro') terminos.push(new RegExp('Santiago', 'i'));
 
+      const regionBuscadaNorm = normalizarTexto(region);
       for (const [nombreReg, ciudades] of Object.entries(DICCIONARIO_REGIONES)) {
+        const nombreRegNormalizado = normalizarRegionChile(nombreReg);
         // Si el usuario buscó por ciudad (ej: "Puente Alto"), agregamos la región ("Metropolitana")
-        if (ciudades.some(c => c.toLowerCase() === region.toLowerCase()) || (region === 'Santiago Centro' && nombreReg === 'Metropolitana')) {
+        if (ciudades.some(c => normalizarTexto(c) === regionBuscadaNorm) || (region === 'Santiago Centro' && nombreRegNormalizado === 'Metropolitana')) {
           terminos.push(new RegExp(nombreReg, 'i'));
+          if (nombreRegNormalizado !== nombreReg) terminos.push(new RegExp(nombreRegNormalizado, 'i'));
           break;
         }
         // Si el usuario buscó directo por la Región, agregamos todas sus ciudades
-        if (nombreReg.toLowerCase() === region.toLowerCase()) {
+        if (normalizarTexto(nombreReg) === regionBuscadaNorm || normalizarTexto(nombreRegNormalizado) === regionBuscadaNorm) {
+          terminos.push(new RegExp(nombreReg, 'i'));
+          if (nombreRegNormalizado !== nombreReg) terminos.push(new RegExp(nombreRegNormalizado, 'i'));
           ciudades.forEach(c => terminos.push(new RegExp(c, 'i')));
           break;
         }

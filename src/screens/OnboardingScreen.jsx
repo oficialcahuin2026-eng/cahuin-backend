@@ -146,6 +146,8 @@ export default function OnboardingScreen() {
         intereses,
       });
 
+      let usuarioFinal = res.usuario;
+
       if (fotoLocal) {
         try {
           const formData = new FormData();
@@ -155,13 +157,14 @@ export default function OnboardingScreen() {
             name: 'onboarding.jpg',
             type: 'image/jpeg',
           });
-          await userService.actualizarFotos(formData);
+          const fotoRes = await userService.actualizarFotos(formData);
+          usuarioFinal = fotoRes?.usuario || fotoRes || usuarioFinal;
         } catch {
           console.log('Error subiendo imagen en Onboarding.');
         }
       }
 
-      actualizarUsuario(res.usuario);
+      actualizarUsuario(usuarioFinal);
     } catch (error) {
       avisar('Error del servidor', error.message || 'El servidor rechazó los datos.');
     } finally {

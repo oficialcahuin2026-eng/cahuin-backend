@@ -372,32 +372,34 @@ export default function EditarPerfilScreen({ navigation }) {
               <Text style={styles.modalTitle}>Así te verían</Text>
               <TouchableOpacity onPress={() => setPreviewVisible(false)}><Ionicons name="close" size={28} color={COLORS.textPrimary} /></TouchableOpacity>
             </View>
-            <View style={styles.publicCard}>
-              <Image source={{ uri: fotoPrincipal }} style={styles.publicImage} />
-              <LinearGradient colors={['transparent', 'rgba(10,14,24,0.86)']} style={styles.publicOverlay}>
-                <Text style={styles.publicName}>{nombre || 'Tu nombre'}, {usuario?.edad || 18}</Text>
-                <View style={styles.publicLocationRow}>
-                  <Ionicons name="location" size={15} color="rgba(255,255,255,0.88)" />
-                  <Text style={styles.publicLocation}>{ciudad || 'Tu ciudad'} · hasta {distanciaMax} km</Text>
-                </View>
-              </LinearGradient>
-            </View>
-            <Text style={styles.publicBio}>{descripcion || 'Escribe una bio con personalidad Cahuín para que te inviten con tema.'}</Text>
-            <View style={styles.publicChips}>
-              {[queBuscas, ...intereses].filter(Boolean).slice(0, 8).map((chip) => (
-                <View key={chip} style={styles.publicChip}><Text style={styles.publicChipText}>{chip}</Text></View>
-              ))}
-            </View>
-            {categoriasElegidas.length > 0 ? (
-              <View style={styles.previewCategories}>
-                {categoriasElegidas.slice(0, 4).map((categoria) => (
-                  <View key={categoria.id} style={[styles.previewCategory, { backgroundColor: categoria.bg }]}>
-                    <Ionicons name={categoria.icon} size={18} color={categoria.color} />
-                    <Text style={[styles.previewCategoryText, { color: categoria.color }]}>{categoria.title}</Text>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.previewScroll}>
+              <View style={styles.publicCard}>
+                <Image source={{ uri: fotoPrincipal }} style={styles.publicImage} />
+                <LinearGradient colors={['transparent', 'rgba(10,14,24,0.86)']} style={styles.publicOverlay}>
+                  <Text style={styles.publicName}>{nombre || 'Tu nombre'}, {usuario?.edad || 18}</Text>
+                  <View style={styles.publicLocationRow}>
+                    <Ionicons name="location" size={15} color="rgba(255,255,255,0.88)" />
+                    <Text style={styles.publicLocation}>{ciudad || 'Tu ciudad'} · hasta {distanciaMax} km</Text>
                   </View>
+                </LinearGradient>
+              </View>
+              <Text style={styles.publicBio}>{descripcion || 'Escribe una bio con personalidad Cahuín para que te inviten con tema.'}</Text>
+              <View style={styles.publicChips}>
+                {[queBuscas, ...intereses].filter(Boolean).slice(0, 8).map((chip) => (
+                  <View key={chip} style={styles.publicChip}><Text style={styles.publicChipText}>{chip}</Text></View>
                 ))}
               </View>
-            ) : null}
+              {categoriasElegidas.length > 0 ? (
+                <View style={styles.previewCategories}>
+                  {categoriasElegidas.slice(0, 4).map((categoria) => (
+                    <View key={categoria.id} style={[styles.previewCategory, { backgroundColor: categoria.bg }]}>
+                      <Ionicons name={categoria.icon} size={18} color={categoria.color} />
+                      <Text style={[styles.previewCategoryText, { color: categoria.color }]}>{categoria.title}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -493,6 +495,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   trackTitle: { color: COLORS.textPrimary, fontWeight: '900' },
   trackArtist: { color: COLORS.textMuted, marginTop: 2 },
   previewModal: { backgroundColor: COLORS.tarjeta, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 25, maxHeight: '88%' },
+  previewScroll: { paddingBottom: SPACING[5] },
   publicCard: { height: 430, borderRadius: 28, overflow: 'hidden', backgroundColor: COLORS.fondo },
   publicImage: { width: '100%', height: '100%' },
   publicOverlay: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: SPACING[5], paddingTop: 80 },

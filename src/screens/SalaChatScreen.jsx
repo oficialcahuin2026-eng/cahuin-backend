@@ -6,7 +6,7 @@ import io from 'socket.io-client';
 import CitaSeguraModal from '../components/CitaSeguraModal'; 
 import CahuinModal from '../components/CahuinModal';
 import CahuinTextField from '../components/CahuinTextField';
-import { mensajeService, userService, iaService, matchService } from '../services/api'; 
+import { BASE_URL, mensajeService, userService, iaService, matchService } from '../services/api'; 
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext'; 
 import { FONTS, SPACING, RADIUS, SHADOWS } from '../utils/theme';
@@ -25,6 +25,8 @@ const PREGUNTAS_MADRUGADA = [
   '¿Qué miedo te gustaría que alguien entendiera sin juzgarte?',
   '¿Qué parte de ti aparece solo cuando hay confianza?',
 ];
+
+const SOCKET_URL = (process.env.CAHUIN_API_PUBLIC_URL || BASE_URL.replace(/\/api\/?$/, '')).replace(/\/+$/, '');
 
 export default function SalaChatScreen({ route, navigation }) {
   const { matchId, usuario: otroUsuario, compatibilidad, elYaRespondio } = route.params;
@@ -66,7 +68,7 @@ export default function SalaChatScreen({ route, navigation }) {
     cargarMensajesHistorial();
 
     // 🌟 RECUERDA: Si pruebas en casa, cambia esto por tu IP de render o local
-    socketRef.current = io('http://192.168.1.13:5000');
+    socketRef.current = io(SOCKET_URL);
     
     socketRef.current.emit('entrarSala', matchId);
 
