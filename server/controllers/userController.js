@@ -33,6 +33,13 @@ const calcularEdad = (fechaNacimiento) => {
   return edad;
 };
 
+const obtenerEdadValida = (fechaNacimiento, edad) => {
+  const edadPorFecha = calcularEdad(fechaNacimiento);
+  const edadFinal = edadPorFecha ?? Number(edad || 0);
+  if (!Number.isFinite(edadFinal) || edadFinal < 18) return null;
+  return edadFinal;
+};
+
 const subirFotoPerfil = (file) => new Promise((resolve, reject) => {
   const stream = cloudinary.uploader.upload_stream(
     {
@@ -140,7 +147,13 @@ exports.actualizarPerfil = async (req, res) => {
       const regionInferida = inferirRegionPorCiudad(req.body.ciudad);
       if (regionInferida) req.body.region = regionInferida;
     }
-    const usuario = await User.findByIdAndUpdate(req.user._id, { $set: req.body }, { new: true, runValidators: true }).select('-password');
+
+    const usuario = await User.findByIdAndUpdate(
+      req.user._id, 
+      { $set: req.body }, 
+      { new: true, runValidators: true, upsert: true } // 🌟 BLINDAJE: Si no existe, lo crea
+    ).select('-password');
+
     res.json({ usuario });
   } catch (error) { res.status(500).json({ message: 'Error actualizando' }); }
 };
@@ -234,6 +247,7 @@ exports.descubrir = async (req, res) => {
     res.json({ perfiles: perfiles.slice(0, 20) });
   } catch (error) { res.status(500).json({ message: 'Error al buscar perfiles' }); }
 };
+
 exports.getPerfil = async (req, res) => {
   try {
     const perfil = await User.findById(req.params.id).select('-password');
@@ -262,16 +276,33 @@ exports.actualizarFotosMult = async (req, res) => {
     let fotosMantenidas = req.body.fotosExistentes ? JSON.parse(req.body.fotosExistentes) : [];
     let nuevasFotos = req.files && req.files.length > 0 ? await Promise.all(req.files.map(subirFotoPerfil)) : [];
 
+    // 🌟 BLINDAJE: Evita que crashee si dbUser es nulo
+    let dbUser = await User.findById(req.user._id);
+    
+    // Si por latencia de la base de datos no lo encuentra, lo crea o simula un array vacío
+    const tieneFotosActuales = dbUser && dbUser.fotos && dbUser.fotos.length > 0;
+
     if (fotosMantenidas.length === 0 && nuevasFotos.length === 0) {
-      const dbUser = await User.findById(req.user._id);
-      if (dbUser.fotos.length === 0) nuevasFotos.push('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=400');
-      else return res.json(dbUser);
+      if (!tieneFotosActuales) {
+        nuevasFotos.push('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=400');
+      } else {
+        return res.json(dbUser);
+      }
     }
 
     const fotosFinales = [...fotosMantenidas, ...nuevasFotos].slice(0, 6);
-    const usuario = await User.findByIdAndUpdate(req.user._id, { fotos: fotosFinales, foto: fotosFinales[0] || '' }, { new: true }).select('-password');
+    
+    const usuario = await User.findByIdAndUpdate(
+      req.user._id, 
+      { fotos: fotosFinales, foto: fotosFinales[0] || '' }, 
+      { new: true, upsert: true } // Upsert salvará el día si el ID venía pero no estaba creado
+    ).select('-password');
+
     res.json(usuario);
-  } catch (error) { res.status(500).json({ message: 'Error procesando archivos' }); }
+  } catch (error) { 
+    console.error("Error en subir fotos:", error);
+    res.status(500).json({ message: 'Error procesando archivos' }); 
+  }
 };
 
 exports.calificarUsuario = async (req, res) => {
@@ -302,8 +333,10 @@ exports.registrarVista = async (req, res) => {
 exports.getVistas = async (req, res) => {
    try {
       const miUsuario = await User.findById(req.user._id).populate('vistasPerfil.espectador', 'nombre foto edad ciudad');
-      miUsuario.vistasPerfil.sort((a,b) => b.fecha - a.fecha);
-      res.json({ vistas: miUsuario.vistasPerfil });
+      if(miUsuario && miUsuario.vistasPerfil) {
+        miUsuario.vistasPerfil.sort((a,b) => b.fecha - a.fecha);
+      }
+      res.json({ vistas: miUsuario?.vistasPerfil || [] });
    } catch(e) { res.status(500).json({ error: e.message }) }
 };
 
@@ -367,6 +400,8 @@ exports.guardarArquetipo = async (req, res) => {
 exports.getTrending = async (req, res) => {
   try {
     const miUsuario = await User.findById(req.user._id);
+    if(!miUsuario) return res.json({ trending: [] });
+    
     const topPerfiles = await User.find({ region: miUsuario.region, _id: { $ne: miUsuario._id } })
       .sort({ likesRecibidos: -1 }).limit(10).select('nombre foto edad ciudad likesRecibidos arquetipoCahuinero');
     res.json({ trending: topPerfiles });
@@ -405,6 +440,8 @@ exports.escribirDiario = async (req, res) => {
 exports.getAnalyticsPerfil = async (req, res) => {
   try {
     const usuario = await User.findById(req.user._id).select('vistasPerfil fotos foto intereses likesRecibidos isPremium');
+    if(!usuario) return res.json({ analytics: {} });
+    
     const desde = new Date();
     desde.setDate(desde.getDate() - 7);
     const vistasSemana = (usuario.vistasPerfil || []).filter(v => v.fecha >= desde);
