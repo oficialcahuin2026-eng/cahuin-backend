@@ -3,7 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://cahuin-backend-1.onrender.com/api';
 
-const api = axios.create({ 
+// 🌟 LA SOLUCIÓN: Faltaba la palabra "export" aquí para que el AuthContext lo pueda usar
+export const api = axios.create({ 
   baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' }
 });

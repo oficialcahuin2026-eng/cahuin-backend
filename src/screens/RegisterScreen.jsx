@@ -14,12 +14,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
-
-// 🌟 Importaciones de Clerk y el Boleto de Retorno (Linking)
 import * as Linking from 'expo-linking';
-import { useOAuth } from '@clerk/clerk-expo';
 
-import { useAuth } from '../context/AuthContext';
+// 🌟 Importamos useSignUp para que funcione el registro por correo
+import { useOAuth, useSignUp } from '@clerk/clerk-expo';
+
 import CahuinModal from '../components/CahuinModal';
 import CahuinTextField from '../components/CahuinTextField';
 import { FONTS, RADIUS, SHADOWS, SPACING } from '../utils/theme';
@@ -46,17 +45,14 @@ const buildBirthDate = (day, month, year) => {
   if (y < 1900 || m < 1 || m > 12 || d < 1 || d > 31) return null;
 
   const date = new Date(y, m - 1, d);
-  const isExactDate =
-    date.getFullYear() === y &&
-    date.getMonth() === m - 1 &&
-    date.getDate() === d;
+  const isExactDate = date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d;
 
   return isExactDate ? date : null;
 };
 
 export default function RegisterScreen({ navigation }) {
-  const { register } = useAuth();
-  
+  // 🌟 Hooks de Clerk
+  const { isLoaded, signUp, setActive } = useSignUp();
   const { startOAuthFlow: startGoogleOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
   const { startOAuthFlow: startFacebookOAuthFlow } = useOAuth({ strategy: 'oauth_facebook' });
 
@@ -76,28 +72,25 @@ export default function RegisterScreen({ navigation }) {
 
   useEffect(() => {
     void WebBrowser.warmUpAsync();
-    return () => {
-      void WebBrowser.coolDownAsync();
-    };
+    return () => { void WebBrowser.coolDownAsync(); };
   }, []);
 
   const avisar = (title, message) => setModal({ title, message, emoji: '!' });
 
-  const revisarOnboarding = (data) => {
-    const usuarioFinal = data?.usuario || data;
-    if (!usuarioFinal?.fechaNacimiento || !usuarioFinal?.telefono || !usuarioFinal?.ciudad || usuarioFinal?.ciudad === 'Por definir') {
-      navigation.navigate('OnboardingScreen');
-    }
+  const revisarOnboarding = () => {
+    navigation.navigate('OnboardingScreen');
   };
 
   const handleRegistro = async () => {
+    if (!isLoaded) return;
+
     if (!nombre.trim() || !email.trim() || !password) {
       avisar('Faltan datos', 'Completa tu nombre, correo, contraseña y fecha de nacimiento.');
       return;
     }
 
-    if (password.length < 6) {
-      avisar('Contraseña corta', 'La contraseña debe tener al menos 6 caracteres.');
+    if (password.length < 8) {
+      avisar('Contraseña corta', 'Clerk requiere contraseñas de al menos 8 caracteres para ser segura.');
       return;
     }
 
@@ -113,25 +106,24 @@ export default function RegisterScreen({ navigation }) {
       return;
     }
 
-    const fechaNacimiento = `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
-
     setCargando(true);
     try {
-      await register({
-        nombre: nombre.trim(),
-        email: email.trim().toLowerCase(),
-        password,
-        fechaNacimiento,
-        ciudad: 'Por definir',
-        region: 'Por definir',
-        genero: 'Otro',
-        preferencia: 'Todxs',
-        edad,
-        aceptaTerminos: true,
+      // 🌟 Usamos Clerk para crear la cuenta
+      const result = await signUp.create({
+        emailAddress: email.trim().toLowerCase(),
+        password: password,
       });
-      navigation.navigate('OnboardingScreen');
+
+      if (result.status === 'complete') {
+        // Si no pide código de verificación, activa la sesión y entra
+        await setActive({ session: result.createdSessionId });
+        revisarOnboarding();
+      } else {
+        // Si Clerk tiene encendida la Verificación de correo
+        avisar('Revisa tu correo', 'Clerk te ha enviado un código de verificación. (Puedes desactivar esto en el dashboard de Clerk).');
+      }
     } catch (error) {
-      avisar('Error', error.message || 'No se pudo crear la cuenta.');
+      avisar('Error', error.errors?.[0]?.message || 'No se pudo crear la cuenta.');
     } finally {
       setCargando(false);
     }
@@ -141,15 +133,13 @@ export default function RegisterScreen({ navigation }) {
     setCargandoSocial(red);
     try {
       const startOAuthFlow = red === 'Google' ? startGoogleOAuthFlow : startFacebookOAuthFlow;
-      
-      // 🌟 Aquí está el "Boleto de retorno" para que vuelva a Cahuín
-      const { createdSessionId, setActive } = await startOAuthFlow({
+      const { createdSessionId, setActive: setOAuthActive } = await startOAuthFlow({
         redirectUrl: Linking.createURL('/'),
       });
 
       if (createdSessionId) {
-        await setActive({ session: createdSessionId });
-        revisarOnboarding({});
+        await setOAuthActive({ session: createdSessionId });
+        revisarOnboarding();
       }
     } catch (error) {
       avisar(red, error.errors?.[0]?.message || `No pudimos registrarte con ${red}.`);
@@ -177,7 +167,7 @@ export default function RegisterScreen({ navigation }) {
               <View style={styles.form}>
                 <Field icon="person-outline" placeholder="¿Cómo te llamas?" value={nombre} onChangeText={setNombre} />
                 <Field icon="mail-outline" placeholder="Tu mejor correo" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-                <Field icon="lock-closed-outline" placeholder="Contraseña mín. 6 letras" value={password} onChangeText={setPassword} secureTextEntry />
+                <Field icon="lock-closed-outline" placeholder="Contraseña (mín. 8 letras)" value={password} onChangeText={setPassword} secureTextEntry />
 
                 <View style={styles.birthBlock}>
                   <Text style={styles.birthLabel}>Fecha de nacimiento</Text>
@@ -189,7 +179,7 @@ export default function RegisterScreen({ navigation }) {
                       onChangeText={(text) => {
                         const val = onlyNumbers(text);
                         setDia(val);
-                        if (val.length === 2) mesRef.current?.focus(); 
+                        if (val.length === 2) mesRef.current?.focus();
                       }} 
                     />
                     <BirthInput 
@@ -200,7 +190,7 @@ export default function RegisterScreen({ navigation }) {
                       onChangeText={(text) => {
                         const val = onlyNumbers(text);
                         setMes(val);
-                        if (val.length === 2) anioRef.current?.focus(); 
+                        if (val.length === 2) anioRef.current?.focus();
                       }} 
                     />
                     <BirthInput 
