@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from 'react';
+﻿import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { matchService, userService } from '../services/api';
@@ -37,10 +38,44 @@ export default function ExplorarScreen({ navigation }) {
   const [uniendoId, setUniendoId] = useState(null);
   const [categoriaActiva, setCategoriaActiva] = useState(null);
   const [modalInfo, setModalInfo] = useState(null);
+  const [metricas, setMetricas] = useState({ ruleta: 0, comunidades: {} });
 
   const categoriasUnidas = useMemo(() => usuario?.categoriasExplorar || [], [usuario?.categoriasExplorar]);
   const totalUnidas = categoriasUnidas.length;
   const avisar = (title, message, emoji = '🌶️', actions = [], extra = {}) => setModalInfo({ title, message, emoji, actions, ...extra });
+
+  const formatearConteo = (numero) => {
+    if (!numero) return '0';
+    if (numero >= 1000) return (numero / 1000).toFixed(numero >= 10000 ? 0 : 1) + 'K';
+    return String(numero);
+  };
+
+  const cargarMetricas = useCallback(async () => {
+    try {
+      const radar = await userService.descubrir({});
+      const respuestas = await Promise.all(
+        EXPLORAR_CATEGORIAS.map(async (categoria) => {
+          try {
+            const data = await userService.descubrir({ categoria: categoria.id });
+            return [categoria.id, data.perfiles?.length || 0];
+          } catch {
+            return [categoria.id, 0];
+          }
+        })
+      );
+      const comunidades = {};
+      respuestas.forEach(([id, total]) => { comunidades[id] = total; });
+      setMetricas({ ruleta: radar.perfiles?.length || 0, comunidades });
+    } catch {
+      setMetricas({ ruleta: 0, comunidades: {} });
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      cargarMetricas();
+    }, [cargarMetricas, usuario?.distanciaMax, usuario?.ciudad, usuario?.region, usuario?.categoriasExplorar])
+  );
 
   const girarRuleta = async () => {
     avisar(
@@ -122,6 +157,19 @@ export default function ExplorarScreen({ navigation }) {
                 <Ionicons name="happy" size={48} color="#FFF" style={{ marginBottom: 8 }} />
                 <Text style={styles.heroTitle}>Ruleta a Ciegas</Text>
                 <Text style={styles.heroSubtitle}>1 hora de chat sin fotos. Puro bla bla.</Text>
+                <View style={styles.liveRow}>
+                  <View style={styles.avatarStack}>
+                    {[0, 1, 2].map((item) => (
+                      <View key={item} style={[styles.liveAvatar, { marginLeft: item === 0 ? 0 : -10 }]}>
+                        <Ionicons name="person" size={14} color="#FFF" />
+                      </View>
+                    ))}
+                  </View>
+                  <View>
+                    <Text style={styles.liveCount}>{formatearConteo(metricas.ruleta)}</Text>
+                    <Text style={styles.liveLabel}>cerca de ti</Text>
+                  </View>
+                </View>
                 <View style={styles.pricePill}>
                   <Ionicons name="flame" size={25} color="#FFD7DA" />
                   <Text style={styles.priceText}>500</Text>
@@ -164,6 +212,10 @@ export default function ExplorarScreen({ navigation }) {
               ) : null}
               <Text style={styles.categoryTitle}>{item.title}</Text>
               <Text style={styles.categorySubtitle}>{item.subtitle}</Text>
+              <View style={styles.memberRow}>
+                <View style={[styles.memberDot, { backgroundColor: item.color }]} />
+                <Text style={styles.memberText}>{formatearConteo(metricas.comunidades[item.id] || 0)} dentro de tu distancia</Text>
+              </View>
               <View style={[styles.arrowCircle, { borderColor: item.color }]}>
                 <Ionicons name={joined ? 'people' : 'add'} size={20} color={item.color} />
               </View>
@@ -240,6 +292,11 @@ const getStyles = (COLORS) => StyleSheet.create({
   heroOverlay: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING[5] },
   heroTitle: { color: '#FFF', fontSize: 34, fontWeight: '900', fontFamily: FONTS.display, textAlign: 'center', letterSpacing: 0 },
   heroSubtitle: { color: 'rgba(255,255,255,0.9)', fontSize: 17, textAlign: 'center', marginTop: 8 },
+  liveRow: { marginTop: 16, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 18, backgroundColor: 'rgba(10,14,24,0.58)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)' },
+  avatarStack: { flexDirection: 'row', alignItems: 'center' },
+  liveAvatar: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(240,68,79,0.9)', borderWidth: 1.5, borderColor: '#FFF' },
+  liveCount: { color: '#FFF', fontSize: 15, fontWeight: '900' },
+  liveLabel: { color: 'rgba(255,255,255,0.74)', fontSize: 11, fontWeight: '800', marginTop: 1 },
   pricePill: { marginTop: 24, minWidth: 130, height: 56, borderRadius: 28, backgroundColor: COLORS.primario, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   priceText: { color: '#FFF', fontSize: 28, fontWeight: '900' },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING[4] },
@@ -253,6 +310,9 @@ const getStyles = (COLORS) => StyleSheet.create({
   joinedText: { color: '#FFF', fontSize: 10, fontWeight: '900' },
   categoryTitle: { color: COLORS.textPrimary, fontSize: 21, lineHeight: 26, fontWeight: '900', fontFamily: FONTS.display, marginTop: SPACING[6], letterSpacing: 0 },
   categorySubtitle: { color: COLORS.textMuted, fontSize: 14, lineHeight: 20, marginTop: SPACING[2], paddingRight: 8 },
+  memberRow: { position: 'absolute', left: SPACING[4], bottom: SPACING[4], right: 58, minHeight: 34, borderRadius: 17, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: COLORS.fondo, borderWidth: 1, borderColor: COLORS.border },
+  memberDot: { width: 8, height: 8, borderRadius: 4 },
+  memberText: { color: COLORS.textMuted, fontSize: 11, lineHeight: 14, fontWeight: '900', flex: 1 },
   arrowCircle: { position: 'absolute', right: SPACING[4], bottom: SPACING[4], width: 42, height: 42, borderRadius: 21, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   wideButton: { marginTop: SPACING[6] },
   featureGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: SPACING[3], marginTop: SPACING[5], marginBottom: 110 },

@@ -81,7 +81,13 @@ export default function ChatScreen({ navigation }) {
             </Text>
             <Text style={styles.activityText}>{actividad.texto}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={22} color={COLORS.gris} />
+          {item.noLeidos > 0 ? (
+            <View style={styles.unreadBadge}>
+              <Text style={styles.unreadText}>{item.noLeidos > 9 ? '9+' : item.noLeidos}</Text>
+            </View>
+          ) : (
+            <Ionicons name="chevron-forward" size={22} color={COLORS.gris} />
+          )}
         </SoftCard>
       </TouchableOpacity>
     );
@@ -184,4 +190,6 @@ const getStyles = (COLORS) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '900',
   },
+  unreadBadge: { minWidth: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.primario, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
+  unreadText: { color: '#FFF', fontSize: 12, fontWeight: '900' },
 });

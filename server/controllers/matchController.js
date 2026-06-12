@@ -153,6 +153,11 @@ exports.listarMisMatches = async (req, res) => {
         ? salaMatch.respuestasReceptor  : salaMatch.respuestasRemitente;
 
       const rachaConversacion = await calcularRachaConversacion(roomId);
+      const noLeidos = await Mensaje.countDocuments({
+        matchId: roomId,
+        remitente: { $ne: miId },
+        leido: { $ne: true },
+      });
 
       return {
         roomId,
@@ -162,6 +167,7 @@ exports.listarMisMatches = async (req, res) => {
         elYaRespondio:  susRespuestas.length > 0,
         compatibilidad: 85,
         rachaConversacion,
+        noLeidos,
         esRelampago:    false,
         esRuletaCiega:  false,
       };
@@ -194,6 +200,7 @@ exports.listarMisMatches = async (req, res) => {
         elYaRespondio:  true,
         compatibilidad: esRuleta ? null : 99,
         rachaConversacion: 0,
+        noLeidos:       0,
         esRelampago:    !esRuleta,
         esRuletaCiega:  esRuleta,
         salvado:        r.salvado,

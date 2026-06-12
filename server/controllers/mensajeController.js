@@ -50,6 +50,11 @@ exports.enviar = async (req, res) => {
 
 exports.listar = async (req, res) => {
   try {
+    await Mensaje.updateMany(
+      { matchId: req.params.matchId, remitente: { $ne: req.user._id }, leido: { $ne: true } },
+      { $set: { leido: true } }
+    );
+
     const mensajes = await Mensaje.find({ matchId: req.params.matchId })
       .populate('remitente', 'nombre foto')
       .sort('createdAt');

@@ -190,7 +190,8 @@ export default function PerfilScreen({ navigation }) {
   ].filter(Boolean);
   const mostrarResultadoApego = usuario?.mostrarApego && usuario?.tipoApego;
   const mostrarResultadoArquetipo = usuario?.mostrarArquetipo !== false && usuario?.arquetipoCahuinero;
-  const likesPreview = likesData.likes.length ? likesData.likes : likesData.topPicks.slice(0, 4);
+  const likesPreview = likesData.likes;
+  const hayLikesReales = likesData.likes.length > 0;
 
   return (
     <ScreenScaffold COLORS={COLORS}>
@@ -246,6 +247,7 @@ export default function PerfilScreen({ navigation }) {
         </View>
       </SoftCard>
 
+      {(cargandoLikes || hayLikesReales) ? (
       <SoftCard COLORS={COLORS} style={styles.likesCard}>
         <View style={styles.cardTitleRow}>
           <SoftIcon name="heart" color={COLORS.primario} bg={COLORS.softRed} size={46} rounded={23} />
@@ -274,7 +276,7 @@ export default function PerfilScreen({ navigation }) {
                   <Text style={styles.likeName}>{likesData.puedeRevelar ? `${item.nombre || 'Cahuín'}, ${item.edad || ''}` : `Alguien, ${item.edad || '??'}`}</Text>
                   <Text style={styles.likeMeta}>{likesData.puedeRevelar ? (item.ciudad || 'Cerca tuyo') : (item.activoReciente ? 'Activo recientemente' : 'Te dio like')}</Text>
                 </View>
-                {!likesData.puedeRevelar ? (
+                {!likesData.puedeRevelar && hayLikesReales ? (
                   <View style={styles.lockBubble}>
                     <Ionicons name="lock-closed" size={15} color="#FFF" />
                   </View>
@@ -282,19 +284,15 @@ export default function PerfilScreen({ navigation }) {
               </View>
             ))}
           </ScrollView>
-        ) : (
-          <View style={styles.emptyQuestionBox}>
-            <Text style={styles.emptyQuestionTitle}>Todavía no hay likes nuevos.</Text>
-            <Text style={styles.emptyQuestionText}>Cuando alguien se interese por ti, aparecera aqui dentro de Perfil.</Text>
-          </View>
-        )}
+        ) : null}
 
-        {!likesData.puedeRevelar ? (
+        {!likesData.puedeRevelar && hayLikesReales ? (
           <TouchableOpacity style={styles.unlockLikesButton} onPress={() => navigation.navigate('Premium')}>
             <Text style={styles.unlockLikesText}>Descubrir a quién le gustó</Text>
           </TouchableOpacity>
         ) : null}
       </SoftCard>
+      ) : null}
 
       {false ? (
       <>
