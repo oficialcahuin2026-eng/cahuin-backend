@@ -11,7 +11,7 @@ function regionesCercanas(r1, r2) {
   return REGIONES_CERCANAS[r1]?.includes(r2) || REGIONES_CERCANAS[r2]?.includes(r1) || false;
 }
 
-function calcularCompatibilidad(yo, otro) {
+export function calcularCompatibilidad(yo, otro) {
   if (!yo || !otro) return 0;
   let p = 0;
   if (yo.region === otro.region) p += 25;

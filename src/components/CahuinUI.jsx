@@ -131,6 +131,220 @@ export function BottomSheetHandle() {
   return <View style={styles.sheetHandle} />;
 }
 
+// ─────────────────────────────────────────────
+// 🆕 NEW COMPONENTS FOR REDESIGN
+// ─────────────────────────────────────────────
+
+/**
+ * CahuinLogo — Brand logo with optional text for headers
+ */
+export function CahuinLogo({ size = 28, showText = true, COLORS }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <Text style={{ fontSize: size }}>🌶️</Text>
+      {showText && (
+        <Text style={{
+          fontSize: size,
+          fontWeight: '900',
+          fontFamily: FONTS.display,
+          color: COLORS?.textPrimary || '#101828',
+          fontStyle: 'italic',
+        }}>
+          Cahuín
+        </Text>
+      )}
+    </View>
+  );
+}
+
+/**
+ * CahuinesCounter — Pill with fire icon + count + optional "+" button
+ */
+export function CahuinesCounter({ cantidad = 0, onPress, COLORS, showPlus = true }) {
+  return (
+    <TouchableOpacity
+      style={[styles.cahuinesCounter, { backgroundColor: COLORS?.surfaceCard || '#1E1E22', borderColor: COLORS?.border }]}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      <Text style={{ fontSize: 16 }}>🔥</Text>
+      <Text style={[styles.cahuinesCounterText, { color: COLORS?.textPrimary }]}>
+        {cantidad >= 1000 ? `${(cantidad / 1000).toFixed(1)}K` : cantidad}
+      </Text>
+      {showPlus && (
+        <View style={[styles.cahuinesCounterPlus, { backgroundColor: COLORS?.primario || '#F0444F' }]}>
+          <Ionicons name="add" size={14} color="#FFF" />
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+/**
+ * InterestChip — Tag with emoji + text
+ */
+export function InterestChip({ emoji, text, COLORS, small = false }) {
+  const chipSize = small ? styles.chipSmall : styles.chip;
+  const textSize = small ? styles.chipTextSmall : styles.chipTextBase;
+  return (
+    <View style={[chipSize, { backgroundColor: COLORS?.chipBg, borderColor: COLORS?.chipBorder }]}>
+      {emoji && <Text style={{ fontSize: small ? 12 : 14 }}>{emoji}</Text>}
+      <Text style={[textSize, { color: COLORS?.chipText }]}>{text}</Text>
+    </View>
+  );
+}
+
+/**
+ * CompatCircle — Circular compatibility percentage indicator
+ */
+export function CompatCircle({ porcentaje = 0, size = 48, COLORS, showLabel = true }) {
+  const color = porcentaje >= 80 ? COLORS?.compatHigh : porcentaje >= 50 ? COLORS?.compatMedium : COLORS?.compatLow;
+  const strokeWidth = size > 40 ? 4 : 3;
+  const radius = (size - strokeWidth * 2) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const progress = (porcentaje / 100) * circumference;
+
+  return (
+    <View style={{ alignItems: 'center', justifyContent: 'center', width: size, height: size }}>
+      {/* Background circle */}
+      <View style={{
+        position: 'absolute',
+        width: size - strokeWidth,
+        height: size - strokeWidth,
+        borderRadius: size / 2,
+        borderWidth: strokeWidth,
+        borderColor: COLORS?.border || '#374151',
+      }} />
+      {/* Progress arc (simplified as a colored border with clip) */}
+      <View style={{
+        position: 'absolute',
+        width: size - strokeWidth,
+        height: size - strokeWidth,
+        borderRadius: size / 2,
+        borderWidth: strokeWidth,
+        borderColor: color,
+        borderTopColor: porcentaje < 25 ? (COLORS?.border || '#374151') : color,
+        borderRightColor: porcentaje < 50 ? (COLORS?.border || '#374151') : color,
+        borderBottomColor: porcentaje < 75 ? (COLORS?.border || '#374151') : color,
+        transform: [{ rotate: '-90deg' }],
+      }} />
+      {showLabel && (
+        <Text style={{
+          fontSize: size > 40 ? 14 : 11,
+          fontWeight: '800',
+          color: color,
+          fontFamily: FONTS.display,
+        }}>
+          {porcentaje}%
+        </Text>
+      )}
+    </View>
+  );
+}
+
+/**
+ * FilterPills — Horizontal filter pills (Todos, Nuevos, Activos)
+ */
+export function FilterPills({ options, value, onChange, COLORS }) {
+  return (
+    <View style={styles.filterPillsRow}>
+      {options.map((opt) => {
+        const active = opt.value === value;
+        return (
+          <TouchableOpacity
+            key={opt.value}
+            style={[
+              styles.filterPill,
+              {
+                backgroundColor: active ? COLORS?.primario : COLORS?.chipBg,
+                borderColor: active ? COLORS?.primario : COLORS?.chipBorder,
+              },
+            ]}
+            onPress={() => onChange(opt.value)}
+            activeOpacity={0.8}
+          >
+            <Text style={[
+              styles.filterPillText,
+              { color: active ? '#FFF' : COLORS?.textMuted },
+            ]}>
+              {opt.label}
+            </Text>
+            {opt.dot && (
+              <View style={[styles.filterDot, { backgroundColor: opt.dot }]} />
+            )}
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+/**
+ * SectionTitle — Section header with optional subtitle + action link
+ */
+export function SectionTitle({ title, subtitle, icon, actionText, onAction, COLORS }) {
+  return (
+    <View style={styles.sectionTitleWrap}>
+      <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          {icon && <Text style={{ fontSize: 18 }}>{icon}</Text>}
+          <Text style={[styles.sectionTitleText, { color: COLORS?.textPrimary }]}>{title}</Text>
+        </View>
+        {subtitle && (
+          <Text style={[styles.sectionSubtitleText, { color: COLORS?.textMuted }]}>{subtitle}</Text>
+        )}
+      </View>
+      {actionText && onAction && (
+        <TouchableOpacity onPress={onAction} activeOpacity={0.7}>
+          <Text style={[styles.sectionAction, { color: COLORS?.primario }]}>{actionText} &gt;</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+/**
+ * OnlineDot — Green/amber/grey status indicator dot
+ */
+export function OnlineDot({ status = 'offline', size = 14 }) {
+  const color = status === 'online' ? '#22C55E'
+    : status === 'recent' ? '#F59E0B'
+    : '#6B7280';
+  return (
+    <View style={{
+      width: size,
+      height: size,
+      borderRadius: size / 2,
+      backgroundColor: color,
+      borderWidth: 2.5,
+      borderColor: '#0A0A0A',
+    }} />
+  );
+}
+
+/**
+ * ExpandableSection — Collapsible card with chevron
+ */
+export function ExpandableSection({ title, icon, children, COLORS, defaultOpen = false }) {
+  const [open, setOpen] = React.useState(defaultOpen);
+  return (
+    <TouchableOpacity
+      style={[styles.expandable, { backgroundColor: COLORS?.surfaceCard || COLORS?.tarjeta, borderColor: COLORS?.border }]}
+      onPress={() => setOpen(!open)}
+      activeOpacity={0.85}
+    >
+      <View style={styles.expandableHeader}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+          {icon && <Text style={{ fontSize: 16 }}>{icon}</Text>}
+          <Text style={[styles.expandableTitle, { color: COLORS?.textPrimary }]}>{title}</Text>
+        </View>
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={20} color={COLORS?.textMuted} />
+      </View>
+      {open && <View style={styles.expandableBody}>{children}</View>}
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   scrollContent: { paddingHorizontal: SPACING[5], paddingTop: SPACING[4], paddingBottom: 172 },
@@ -256,4 +470,125 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: 26,
   },
+
+  // ── New component styles ──
+
+  cahuinesCounter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 99,
+    borderWidth: 1,
+    gap: 6,
+  },
+  cahuinesCounterText: {
+    fontSize: 16,
+    fontWeight: '800',
+    fontFamily: FONTS.display,
+  },
+  cahuinesCounterPlus: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 2,
+  },
+
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 99,
+    borderWidth: 1,
+    gap: 5,
+  },
+  chipSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 99,
+    borderWidth: 1,
+    gap: 4,
+  },
+  chipTextBase: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  chipTextSmall: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+
+  filterPillsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: SPACING[4],
+  },
+  filterPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 99,
+    borderWidth: 1,
+    gap: 6,
+  },
+  filterPillText: {
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: FONTS.display,
+  },
+  filterDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+
+  sectionTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: SPACING[3],
+    marginTop: SPACING[5],
+  },
+  sectionTitleText: {
+    fontSize: 20,
+    fontWeight: '900',
+    fontFamily: FONTS.display,
+  },
+  sectionSubtitleText: {
+    fontSize: 13,
+    marginTop: 2,
+    lineHeight: 18,
+  },
+  sectionAction: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+
+  expandable: {
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    padding: SPACING[4],
+    marginBottom: SPACING[3],
+  },
+  expandableHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  expandableTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    fontFamily: FONTS.display,
+  },
+  expandableBody: {
+    marginTop: SPACING[3],
+  },
 });
+

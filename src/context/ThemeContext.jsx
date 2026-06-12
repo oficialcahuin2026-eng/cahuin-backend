@@ -32,6 +32,20 @@ export const lightBase = {
   softGreen:   '#EFFAEF',
   softAmber:   '#FFF5E6',
   navy:        '#121A2A',
+  // ── New tokens ──
+  surface:         '#F7F7F8',
+  surfaceElevated: '#FFFFFF',
+  surfaceCard:     '#FFFFFF',
+  chipBg:          'rgba(0,0,0,0.05)',
+  chipText:        '#3F3F46',
+  chipBorder:      'rgba(0,0,0,0.08)',
+  inputBg:         '#F4F4F5',
+  compatHigh:      '#22C55E',
+  compatMedium:    '#F59E0B',
+  compatLow:       '#EF4444',
+  online:          '#22C55E',
+  gradientStart:   '#F0444F',
+  gradientEnd:     '#FF715F',
 };
 
 export const darkBase = {
@@ -50,6 +64,20 @@ export const darkBase = {
   softGreen:   '#15271B',
   softAmber:   '#332716',
   navy:        '#182033',
+  // ── New tokens ──
+  surface:         '#111113',
+  surfaceElevated: '#1A1A1E',
+  surfaceCard:     '#1E1E22',
+  chipBg:          'rgba(255,255,255,0.08)',
+  chipText:        '#D4D4D8',
+  chipBorder:      'rgba(255,255,255,0.12)',
+  inputBg:         '#1A1A1E',
+  compatHigh:      '#22C55E',
+  compatMedium:    '#F59E0B',
+  compatLow:       '#EF4444',
+  online:          '#22C55E',
+  gradientStart:   '#F0444F',
+  gradientEnd:     '#FF715F',
 };
 
 // ─────────────────────────────────────────────

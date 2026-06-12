@@ -1,4 +1,5 @@
 const COLORS = {
+  // ── Core ──
   primario: '#F0444F',
   secundario: '#111827',
   acento: '#FF7A68',
@@ -10,18 +11,47 @@ const COLORS = {
   textMuted: '#667085',
   gris: '#98A2B3',
   border: '#EEF0F4',
+
+  // ── Soft backgrounds ──
   softRed: '#FFF0F1',
   softPurple: '#F4ECFF',
   softGreen: '#EFFAEF',
   softAmber: '#FFF5E6',
   navy: '#121A2A',
   rojoBandera: '#D52B1E',
+
+  // ── Actions ──
   like: '#34A853',
   nope: '#F44336',
   superlike: '#00BCD4',
   doradoPremium: '#FFD166',
   blanco: '#FFFFFF',
   negro: '#000000',
+
+  // ── Surface hierarchy (new) ──
+  surface: '#F7F7F8',
+  surfaceElevated: '#FFFFFF',
+  surfaceCard: '#FFFFFF',
+
+  // ── Chips (new) ──
+  chipBg: 'rgba(0,0,0,0.05)',
+  chipText: '#3F3F46',
+  chipBorder: 'rgba(0,0,0,0.08)',
+
+  // ── Input (new) ──
+  inputBg: '#F4F4F5',
+
+  // ── Compatibility (new) ──
+  compatHigh: '#22C55E',
+  compatMedium: '#F59E0B',
+  compatLow: '#EF4444',
+
+  // ── Status (new) ──
+  online: '#22C55E',
+
+  // ── Gradients (new) ──
+  gradientStart: '#F0444F',
+  gradientEnd: '#FF715F',
 };
 
 const FONTS = {

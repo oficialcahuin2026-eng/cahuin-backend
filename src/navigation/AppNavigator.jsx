@@ -112,51 +112,78 @@ function MainTabs() {
     };
   }, [usuario?.boostGratisDisponibles, usuario?.ciudad, usuario?.region]);
 
+  const TAB_ICONS = {
+    Radar:     { active: 'flame',       inactive: 'flame-outline' },
+    Explorar:  { active: 'compass',     inactive: 'compass-outline' },
+    Panoramas: { active: 'planet',      inactive: 'planet-outline' },
+    Chat:      { active: 'chatbubbles', inactive: 'chatbubbles-outline' },
+    Perfil:    { active: 'person',      inactive: 'person-outline' },
+  };
+
+  const TAB_LABELS = {
+    Radar: 'Radar',
+    Explorar: 'Explorar',
+    Panoramas: 'Panoramas',
+    Chat: 'Cahuines',
+    Perfil: 'Perfil',
+  };
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
+        tabBarShowLabel: false,
         tabBarStyle: {
           position: 'absolute',
-          left: 26,
-          right: 26,
-          bottom: 16,
-          height: 78,
-          borderRadius: 24,
+          left: 20,
+          right: 20,
+          bottom: 14,
+          height: 72,
+          borderRadius: 28,
           backgroundColor: COLORS.tarjeta,
           borderTopWidth: 0,
           borderWidth: 1,
           borderColor: COLORS.border,
-          paddingTop: 8,
-          paddingBottom: 10,
+          paddingTop: 0,
+          paddingBottom: 0,
           shadowColor: '#101828',
-          shadowOffset: { width: 0, height: 16 },
-          shadowOpacity: 0.10,
-          shadowRadius: 28,
-          elevation: 12,
+          shadowOffset: { width: 0, height: 12 },
+          shadowOpacity: 0.12,
+          shadowRadius: 24,
+          elevation: 14,
         },
-        tabBarActiveTintColor: COLORS.primario,
-        tabBarInactiveTintColor: COLORS.gris,
-        tabBarLabelStyle: { fontSize: 12, fontWeight: '700', marginTop: 0 },
-        tabBarIcon: ({ color, focused }) => {
-          let iconName;
-          if (route.name === 'Radar') iconName = 'flame';
-          else if (route.name === 'Explorar') iconName = 'compass';
-          else if (route.name === 'Panoramas') iconName = 'planet';
-          else if (route.name === 'Chat') iconName = 'chatbubbles';
-          else if (route.name === 'Perfil') iconName = 'person';
+        tabBarIcon: ({ focused }) => {
+          const icons = TAB_ICONS[route.name] || { active: 'ellipse', inactive: 'ellipse-outline' };
+          const label = TAB_LABELS[route.name] || route.name;
           const badgeCount = badges[route.name] || 0;
+
           return (
             <View style={{
-              width: focused ? 40 : 32,
-              height: 32,
-              borderRadius: 18,
               alignItems: 'center',
               justifyContent: 'center',
+              minWidth: focused ? 68 : 36,
+              paddingHorizontal: focused ? 14 : 0,
+              paddingVertical: 8,
+              borderRadius: 20,
               backgroundColor: focused ? COLORS.primario : 'transparent',
             }}>
-              <Ionicons name={iconName} size={focused ? 24 : 25} color={focused ? '#FFF' : color} />
-              {badgeCount > 0 ? <TabBadge count={badgeCount} /> : null}
+              <Ionicons
+                name={focused ? icons.active : icons.inactive}
+                size={focused ? 22 : 24}
+                color={focused ? '#FFF' : COLORS.gris}
+              />
+              {focused && (
+                <Text style={{
+                  color: '#FFF',
+                  fontSize: 10,
+                  fontWeight: '800',
+                  marginTop: 2,
+                  letterSpacing: 0.3,
+                }}>
+                  {label}
+                </Text>
+              )}
+              {badgeCount > 0 && <TabBadge count={badgeCount} />}
             </View>
           );
         },
@@ -165,7 +192,7 @@ function MainTabs() {
       <Tab.Screen name="Radar" component={HomeScreen} />
       <Tab.Screen name="Explorar" component={ExplorarScreen} />
       <Tab.Screen name="Panoramas" component={PanoramasScreen} />
-      <Tab.Screen name="Chat" component={ChatScreen} options={{ tabBarLabel: 'Cahuines' }} />
+      <Tab.Screen name="Chat" component={ChatScreen} />
       <Tab.Screen name="Perfil" component={PerfilScreen} />
     </Tab.Navigator>
   );
