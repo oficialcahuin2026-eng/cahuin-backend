@@ -50,7 +50,7 @@ const soloVigentes = (items = []) => {
   return items.filter((item) => !item.fecha || new Date(item.fecha) >= inicio);
 };
 
-export default function PanoramasScreen() {
+export default function PanoramasScreen({ navigation }) {
   const { COLORS } = useTheme();
   const { usuario } = useAuth();
   const styles = getStyles(COLORS);
