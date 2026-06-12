@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { cuecaService } from '../services/api';
@@ -8,21 +8,21 @@ import { COLORS, FONTS, SPACING, RADIUS, SHADOWS } from '../utils/theme';
 const PREGUNTAS = [
   { 
     ronda: 1, 
-    titulo: 'Primera Patita: La Comida 🌭', 
-    pregunta: '¿Para tu cumpleaños, qué prefieres invitar?', 
+    titulo: 'Primera Patita: La Comida ðŸŒ­', 
+    pregunta: 'Â¿Para tu cumpleaÃ±os, quÃ© prefieres invitar?', 
     opciones: ['Asado con los amigos', 'Completada italiana', 'Sushi piola'] 
   },
   { 
     ronda: 2, 
-    titulo: 'Segunda Patita: El Panorama 🏔️', 
-    pregunta: 'Fin de semana largo, ¿para dónde agarramos rumbo?', 
-    opciones: ['Playa y solcito', 'Sur, cabaña y lluvia', 'Me quedo durmiendo'] 
+    titulo: 'Segunda Patita: El Panorama ðŸ”ï¸', 
+    pregunta: 'Fin de semana largo, Â¿para dÃ³nde agarramos rumbo?', 
+    opciones: ['Playa y solcito', 'Sur, cabaÃ±a y lluvia', 'Me quedo durmiendo'] 
   },
   { 
     ronda: 3, 
-    titulo: 'Tercera Patita (Zapateo): La Fiesta 🕺', 
-    pregunta: 'En un mambo, tú eres el que...', 
-    opciones: ['Baila hasta abajo', 'Se queda conversando', 'Controla la música (DJ)'] 
+    titulo: 'Tercera Patita (Zapateo): La Fiesta ðŸ•º', 
+    pregunta: 'En un mambo, tÃº eres el que...', 
+    opciones: ['Baila hasta abajo', 'Se queda conversando', 'Controla la mÃºsica (DJ)'] 
   }
 ];
 
@@ -40,13 +40,13 @@ export default function CuecaScreen({ route, navigation }) {
       
       if (data.terminado) {
         setTerminado(true);
-        Alert.alert("¡Aro, aro, aro! 🇨🇱", data.message);
+        Alert.alert("Â¡Aro, aro, aro! ðŸ‡¨ðŸ‡±", data.message);
       } else {
         setRondaActual(data.rondaActual);
       }
     } catch (error) {
       console.log("Error en La Cueca:", error);
-      Alert.alert("Ups", "Alguien pisó mal en el baile. Intenta de nuevo.");
+      Alert.alert("Ups", "Alguien pisÃ³ mal en el baile. Intenta de nuevo.");
     }
   };
 
@@ -56,15 +56,15 @@ export default function CuecaScreen({ route, navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.btnBack}>
           <Ionicons name="close" size={32} color={COLORS.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>La Cueca 🌶️</Text>
+        <Text style={styles.headerTitle}>La Cueca ðŸŒ¶ï¸</Text>
       </View>
 
       <View style={styles.content}>
         {terminado ? (
           <View style={[styles.card, SHADOWS.medium, { alignItems: 'center', paddingVertical: 40 }]}>
-            <Text style={{ fontSize: 60, marginBottom: 20 }}>🏆</Text>
-            <Text style={styles.tituloJuego}>¡Juego Terminado!</Text>
-            <Text style={styles.textoJuego}>Ya respondiste tus 3 patitas. Ahora espera a que {nombre} responda para ver su compatibilidad y ganar Cahuines.</Text>
+            <Text style={{ fontSize: 60, marginBottom: 20 }}>ðŸ†</Text>
+            <Text style={styles.tituloJuego}>Â¡Juego Terminado!</Text>
+            <Text style={styles.textoJuego}>Ya respondiste tus 3 patitas. Ahora espera a que {nombre} responda para ver su compatibilidad.</Text>
             
             <TouchableOpacity style={styles.btnVolver} onPress={() => navigation.goBack()}>
               <Text style={styles.btnVolverTexto}>Volver al Chat</Text>

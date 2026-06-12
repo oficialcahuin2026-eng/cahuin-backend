@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, FlatList, Image, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { matchService, userService } from '../services/api';
@@ -33,7 +33,7 @@ export default function MatchesScreen({ navigation }) {
   }, [cargarMatches]);
 
   const abrirChat = (match) => {
-    // Si aún ninguno respondió el rompehielo, mandar al rompehielo primero
+    // Si aÃºn ninguno respondiÃ³ el rompehielo, mandar al rompehielo primero
     if (!match.yaRespondi) {
       navigation.navigate('Rompehielo', { matchId: match.roomId, usuario: match.usuario });
     } else {
@@ -47,7 +47,7 @@ export default function MatchesScreen({ navigation }) {
   };
 
   const confirmarEliminar = (matchId) => {
-    Alert.alert('¿Eliminar match?', 'Esta acción no se puede deshacer.', [
+    Alert.alert('Â¿Eliminar match?', 'Esta acciÃ³n no se puede deshacer.', [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Eliminar', style: 'destructive', onPress: async () => {
         try {
@@ -71,12 +71,12 @@ export default function MatchesScreen({ navigation }) {
           <Image source={{ uri: foto }} style={styles.avatar} />
           {esRelampago ? (
             <View style={styles.badgeRelampago}>
-              <Text style={{ fontSize: 10 }}>⚡</Text>
+              <Text style={{ fontSize: 10 }}>âš¡</Text>
             </View>
           ) : null}
           {!item.yaRespondi ? (
             <View style={styles.badgeRompehielo}>
-              <Text style={{ fontSize: 10 }}>❓</Text>
+              <Text style={{ fontSize: 10 }}>â“</Text>
             </View>
           ) : null}
         </View>
@@ -86,18 +86,18 @@ export default function MatchesScreen({ navigation }) {
             <Text style={styles.matchNombre}>{otroUsuario.nombre}, {otroUsuario.edad}</Text>
             {item.rachaConversacion >= 2 ? (
               <View style={styles.streakBadge}>
-                <Text style={styles.streakText}>🔥 {item.rachaConversacion}</Text>
+                <Text style={styles.streakText}>ðŸ”¥ {item.rachaConversacion}</Text>
               </View>
             ) : null}
           </View>
           <Text style={styles.matchCiudad}>{otroUsuario.ciudad}</Text>
           {esRelampago && !item.salvado ? (
-            <Text style={styles.matchRelampago}>⚡ Match Relámpago</Text>
+            <Text style={styles.matchRelampago}>âš¡ Match RelÃ¡mpago</Text>
           ) : null}
           {!item.yaRespondi ? (
-            <Text style={styles.matchPendiente}>🎯 Responde el rompehielo</Text>
+            <Text style={styles.matchPendiente}>ðŸŽ¯ Responde el rompehielo</Text>
           ) : !item.elYaRespondio ? (
-            <Text style={styles.matchEsperando}>⏳ Esperando respuesta...</Text>
+            <Text style={styles.matchEsperando}>â³ Esperando respuesta...</Text>
           ) : null}
         </View>
 
@@ -117,7 +117,7 @@ export default function MatchesScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <Text style={styles.titulo}>Tus Cahuines 🌶️</Text>
+        <Text style={styles.titulo}>Tus conversaciones</Text>
         <View style={styles.contadorBadge}>
           <Text style={styles.contadorTexto}>{matches.length}</Text>
         </View>
@@ -125,8 +125,8 @@ export default function MatchesScreen({ navigation }) {
 
       {matches.length === 0 ? (
         <View style={styles.centro}>
-          <Text style={{ fontSize: 60 }}>💔</Text>
-          <Text style={[styles.textoVacio, { marginTop: 12 }]}>Aún no tienes matches.</Text>
+          <Text style={{ fontSize: 60 }}>ðŸ’”</Text>
+          <Text style={[styles.textoVacio, { marginTop: 12 }]}>AÃºn no tienes matches.</Text>
           <Text style={{ color: COLORS.textMuted, marginTop: 8, textAlign: 'center', marginHorizontal: 40 }}>Sigue deslizando en el radar po'.</Text>
         </View>
       ) : (

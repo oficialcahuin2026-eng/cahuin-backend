@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+﻿import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -26,45 +26,45 @@ import { FONTS, RADIUS, SHADOWS, SPACING } from '../utils/theme';
 const ARTICULOS_RECUPERACION = [
   {
     id: '1',
-    titulo: 'Los nervios son buena señal',
-    emoji: '🦋',
+    titulo: 'Los nervios son buena seÃ±al',
+    emoji: 'ðŸ¦‹',
     lectura: '4 min',
     contenido: 'Sentir nervios antes de conocer a alguien no significa que estes retrocediendo. Muchas veces es tu sistema intentando protegerte mientras otra parte tuya quiere volver a abrir la puerta.\n\nPrueba nombrar lo que pasa sin pelearte con eso: "estoy nervioso y aun asi puedo ir despacio". No necesitas actuar perfecto. Necesitas sentirte suficientemente seguro para estar presente.\n\nUna buena cita no se mide por si hubo chispa inmediata. Tambien cuenta si pudiste respirar, poner un limite, reirte un poco o irte a casa sin castigarte.',
   },
   {
     id: '2',
     titulo: 'Cuanto tiempo esperar?',
-    emoji: '⏱️',
+    emoji: 'â±ï¸',
     lectura: '5 min',
-    contenido: 'No hay un numero magico de semanas o meses. Estar listo no es no sentir nada por lo anterior; es poder salir sin usar a otra persona como anestesia.\n\nTres señales utiles: tienes curiosidad por alguien nuevo, puedes aceptar un "no" sin derrumbarte, y no sientes urgencia por demostrar que ya estas bien.\n\nSi dudas, elige una cita corta y de bajo riesgo: cafe, paseo, algo con hora de salida. Volver no tiene que ser un salto. Puede ser una prueba amable.',
+    contenido: 'No hay un numero magico de semanas o meses. Estar listo no es no sentir nada por lo anterior; es poder salir sin usar a otra persona como anestesia.\n\nTres seÃ±ales utiles: tienes curiosidad por alguien nuevo, puedes aceptar un "no" sin derrumbarte, y no sientes urgencia por demostrar que ya estas bien.\n\nSi dudas, elige una cita corta y de bajo riesgo: cafe, paseo, algo con hora de salida. Volver no tiene que ser un salto. Puede ser una prueba amable.',
   },
   {
     id: '3',
     titulo: 'Miedo al rechazo',
-    emoji: '🛡️',
+    emoji: 'ðŸ›¡ï¸',
     lectura: '5 min',
-    contenido: 'El rechazo duele porque toca pertenencia, deseo y autoestima al mismo tiempo. Pero no es una auditoría completa de tu valor.\n\nAntes de mandar un mensaje o aceptar una cita, separa dos ideas: "quiero que resulte" y "si no resulta, voy a seguir siendo yo". Esa segunda frase es la que te devuelve el piso.\n\nCahuín tip: no conviertas cada match en una final. Habla para descubrir, no para rendir una prueba.',
+    contenido: 'El rechazo duele porque toca pertenencia, deseo y autoestima al mismo tiempo. Pero no es una auditorÃ­a completa de tu valor.\n\nAntes de mandar un mensaje o aceptar una cita, separa dos ideas: "quiero que resulte" y "si no resulta, voy a seguir siendo yo". Esa segunda frase es la que te devuelve el piso.\n\nCahuÃ­n tip: no conviertas cada match en una final. Habla para descubrir, no para rendir una prueba.',
   },
   {
     id: '4',
     titulo: 'Volver a confiar sin apurarse',
-    emoji: '🌱',
+    emoji: 'ðŸŒ±',
     lectura: '6 min',
-    contenido: 'Confiar no significa entregar todo de una. Significa observar consistencia: lo que dice, lo que hace y cómo repara cuando algo incomoda.\n\nPuedes avanzar por capas. Primero conversación, después un plan simple, después compartir algo más personal. Si alguien exige acceso total de inmediato, eso también es información.\n\nTu ritmo no es un problema a solucionar. Es parte de tu cuidado.',
+    contenido: 'Confiar no significa entregar todo de una. Significa observar consistencia: lo que dice, lo que hace y cÃ³mo repara cuando algo incomoda.\n\nPuedes avanzar por capas. Primero conversaciÃ³n, despuÃ©s un plan simple, despuÃ©s compartir algo mÃ¡s personal. Si alguien exige acceso total de inmediato, eso tambiÃ©n es informaciÃ³n.\n\nTu ritmo no es un problema a solucionar. Es parte de tu cuidado.',
   },
   {
     id: '5',
     titulo: 'Como decir lo que necesitas',
-    emoji: '💬',
+    emoji: 'ðŸ’¬',
     lectura: '4 min',
     contenido: 'Pedir claridad no te hace intenso. Pedir respeto no te hace complicado. La forma ayuda: usa frases simples, concretas y sin acusar.\n\nEjemplo: "Me gusta hablar contigo, pero prefiero que si vas a desaparecer me lo digas". O: "Voy lento, pero si hay interes me gusta que se note".\n\nLa gente correcta no siempre va a hacerlo perfecto, pero no te va a castigar por tener necesidades.',
   },
   {
     id: '6',
     titulo: 'Primera cita despues de un periodo dificil',
-    emoji: '☕',
+    emoji: 'â˜•',
     lectura: '5 min',
-    contenido: 'Elige un lugar donde puedas irte fácil, con luz, ruido moderado y algo que hacer si aparece silencio. No llenes la agenda con una cita maratónica.\n\nAntes de salir, define una micro meta: escuchar, reírte, practicar estar presente, o simplemente notar cómo te sientes. La meta no tiene que ser enamorarte.\n\nDespués, no te evalúes como si fueras producto. Pregúntate: "¿Cómo me sentí con esta persona?" Esa respuesta vale más que impresionar.',
+    contenido: 'Elige un lugar donde puedas irte fÃ¡cil, con luz, ruido moderado y algo que hacer si aparece silencio. No llenes la agenda con una cita maratÃ³nica.\n\nAntes de salir, define una micro meta: escuchar, reÃ­rte, practicar estar presente, o simplemente notar cÃ³mo te sientes. La meta no tiene que ser enamorarte.\n\nDespuÃ©s, no te evalÃºes como si fueras producto. PregÃºntate: "Â¿CÃ³mo me sentÃ­ con esta persona?" Esa respuesta vale mÃ¡s que impresionar.',
   },
 ];
 
@@ -88,7 +88,7 @@ export default function PerfilScreen({ navigation }) {
       const data = await userService.getMisPreguntasAnonimas();
       setPreguntas(data.preguntas || []);
     } catch (error) {
-      console.log('Preguntas anónimas:', error);
+      console.log('Preguntas anÃ³nimas:', error);
     } finally {
       setCargandoPreguntas(false);
     }
@@ -183,13 +183,13 @@ export default function PerfilScreen({ navigation }) {
   const completitud = calcularCompletitud();
 
   const lifestyleTags = [
-    usuario?.queBuscas || 'Pololeo serio 💖',
-    usuario?.habitos?.beber || 'Cero alcohol 💧',
-    usuario?.habitos?.fumar || 'No le hago 🚭',
-    usuario?.habitos?.mascotas || 'Dog Lover 🐶',
+    usuario?.queBuscas || 'Pololeo serio ðŸ’–',
+    usuario?.habitos?.beber || 'Cero alcohol ðŸ’§',
+    usuario?.habitos?.fumar || 'No le hago ðŸš­',
+    usuario?.habitos?.mascotas || 'Dog Lover ðŸ¶',
   ].filter(Boolean);
 
-  const intereses = usuario?.intereses?.length ? usuario.intereses : ['Videojuegos 🎮', 'Naturaleza 🌲', 'Astrologia ✨', 'Fotografia 📸', 'Cine y Series 🍿'];
+  const intereses = usuario?.intereses?.length ? usuario.intereses : ['Videojuegos ðŸŽ®', 'Naturaleza ðŸŒ²', 'Astrologia âœ¨', 'Fotografia ðŸ“¸', 'Cine y Series ðŸ¿'];
   const preguntasPendientes = preguntas.filter((p) => !p.respondida);
   const preguntasRespondidas = preguntas.filter((p) => p.respondida);
   const valoresCompletos = Boolean(
@@ -198,9 +198,9 @@ export default function PerfilScreen({ navigation }) {
     usuario?.mapaValores?.dealBreaker
   );
   const testsPendientes = [
-    !usuario?.tipoApego ? { key: 'apego', label: 'Apego', emoji: '🧠', route: 'TestApego' } : null,
-    !usuario?.arquetipoCahuinero ? { key: 'cahuinero', label: 'Cahuínero', emoji: '🌶️', route: 'TestCahuinero' } : null,
-    !valoresCompletos ? { key: 'valores', label: 'Valores', emoji: '🧭', route: 'MapaValores' } : null,
+    !usuario?.tipoApego ? { key: 'apego', label: 'Apego', emoji: 'ðŸ§ ', route: 'TestApego' } : null,
+    !usuario?.arquetipoCahuinero ? { key: 'cahuinero', label: 'CahuÃ­nero', emoji: 'ðŸŒ¶ï¸', route: 'TestCahuinero' } : null,
+    !valoresCompletos ? { key: 'valores', label: 'Valores', emoji: 'ðŸ§­', route: 'MapaValores' } : null,
   ].filter(Boolean);
   const mostrarResultadoApego = usuario?.mostrarApego && usuario?.tipoApego;
   const mostrarResultadoArquetipo = usuario?.mostrarArquetipo !== false && usuario?.arquetipoCahuinero;
@@ -209,7 +209,7 @@ export default function PerfilScreen({ navigation }) {
 
   return (
     <ScreenScaffold COLORS={COLORS}>
-      {/* ── Header con settings ── */}
+      {/* â”€â”€ Header con settings â”€â”€ */}
       <View style={styles.headerRow}>
         <Text style={styles.headerTitle}>Mi Perfil</Text>
         <TouchableOpacity style={styles.settingsButton} onPress={() => navigation.navigate('Ajustes')}>
@@ -217,7 +217,7 @@ export default function PerfilScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* ── Hero horizontal: foto + info ── */}
+      {/* â”€â”€ Hero horizontal: foto + info â”€â”€ */}
       <View style={styles.heroRow}>
         <View style={styles.avatarOuter}>
           <Image source={{ uri: usuario?.foto || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=300' }} style={styles.avatar} />
@@ -230,22 +230,22 @@ export default function PerfilScreen({ navigation }) {
             <Text style={styles.name} numberOfLines={1}>{usuario?.nombre || 'Cahuinero'}, {usuario?.edad || '??'}</Text>
             {usuario?.verificado && <MaterialCommunityIcons name="check-decagram" size={20} color="#3B82F6" />}
           </View>
-          <Text style={styles.location}>📍 {usuario?.ciudad || 'Por definir'}</Text>
+          <Text style={styles.location}>ðŸ“ {usuario?.ciudad || 'Por definir'}</Text>
           <TouchableOpacity style={styles.editPill} onPress={() => navigation.navigate('EditarPerfil')}>
             <Ionicons name="pencil" size={14} color={COLORS.textPrimary} />
             <Text style={styles.editPillText}>Editar perfil</Text>
           </TouchableOpacity>
           {usuario?.verificado ? (
-            <Text style={styles.verifiedText}>✅ Verificado con selfie</Text>
+            <Text style={styles.verifiedText}>âœ… Verificado con selfie</Text>
           ) : (
             <TouchableOpacity onPress={verificarConSelfie}>
-              <Text style={[styles.verifiedText, { color: COLORS.primario }]}>📷 Verificar con selfie</Text>
+              <Text style={[styles.verifiedText, { color: COLORS.primario }]}>ðŸ“· Verificar con selfie</Text>
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      {/* ── Barra de completitud ── */}
+      {/* â”€â”€ Barra de completitud â”€â”€ */}
       <SoftCard COLORS={COLORS} style={styles.completitudCard}>
         <View style={styles.completitudRow}>
           <View style={styles.completitudCircle}>
@@ -255,7 +255,7 @@ export default function PerfilScreen({ navigation }) {
             <Text style={styles.completitudTitle}>
               {completitud >= 80 ? 'Tu perfil va muy bien' : completitud >= 50 ? 'Tu perfil va bien' : 'Completa tu perfil'}
             </Text>
-            <Text style={styles.completitudSub}>Completa tu perfil para tener más match.</Text>
+            <Text style={styles.completitudSub}>Completa tu perfil para tener mÃ¡s match.</Text>
             <TouchableOpacity onPress={() => navigation.navigate('EditarPerfil')}>
               <Text style={[styles.completitudAction, { color: COLORS.primario }]}>Ver sugerencias &gt;</Text>
             </TouchableOpacity>
@@ -267,31 +267,31 @@ export default function PerfilScreen({ navigation }) {
         </View>
       </SoftCard>
 
-      {/* ── Stats: Racha + Cahuines ── */}
+      {/* â”€â”€ Stats: Racha + Plan â”€â”€ */}
       <SoftCard COLORS={COLORS} style={styles.statsCard}>
         <View style={styles.statBox}>
-          <SoftIcon emoji="🔥" bg={COLORS.softRed} size={52} rounded={18} iconSize={26} />
+          <SoftIcon emoji="ðŸ”¥" bg={COLORS.softRed} size={52} rounded={18} iconSize={26} />
           <View>
-            <Text style={styles.statValue}>{usuario?.rachaDias || 1} día</Text>
-            <Text style={styles.statLabel}>¡Sigue así!</Text>
+            <Text style={styles.statValue}>{usuario?.rachaDias || 1} dÃ­a</Text>
+            <Text style={styles.statLabel}>Â¡Sigue asÃ­!</Text>
           </View>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statBox}>
-          <SoftIcon emoji="🪙" bg={COLORS.softAmber} size={52} rounded={18} iconSize={26} />
+          <SoftIcon emoji="✨" bg={COLORS.softAmber} size={52} rounded={18} iconSize={26} />
           <View>
-            <Text style={styles.statValue}>{usuario?.cahuines || 0}</Text>
+            <Text style={styles.statValue}>{usuario?.isPremium ? 'Activo' : 'Gratis'}</Text>
             <TouchableOpacity onPress={() => navigation.navigate('Premium')}>
-              <Text style={[styles.statAction, { color: COLORS.primario }]}>Ver historial &gt;</Text>
+              <Text style={[styles.statAction, { color: COLORS.primario }]}>Ver planes &gt;</Text>
             </TouchableOpacity>
           </View>
         </View>
       </SoftCard>
 
-      {/* ── Likes recibidos ── */}
+      {/* â”€â”€ Likes recibidos â”€â”€ */}
       {(cargandoLikes || hayLikesReales) ? (
         <>
-          <SectionTitle title="Quién te dio like" icon="💜" COLORS={COLORS} actionText="Ver todos" onAction={() => navigation.navigate('Premium')} />
+          <SectionTitle title="Me tincaron" icon="ðŸ’œ" COLORS={COLORS} actionText="Ver todos" onAction={() => navigation.navigate('LikesCahuin')} />
           <SoftCard COLORS={COLORS} style={styles.likesCard}>
             {likesPreview.length ? (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.likesStrip}>
@@ -304,7 +304,7 @@ export default function PerfilScreen({ navigation }) {
                     />
                     <LinearGradient colors={['transparent', 'rgba(0,0,0,0.78)']} style={styles.likeOverlay} />
                     <View style={styles.likeInfo}>
-                      <Text style={styles.likeName}>{likesData.puedeRevelar ? `${item.nombre || 'Cahuín'}, ${item.edad || ''}` : `Alguien, ${item.edad || '??'}`}</Text>
+                      <Text style={styles.likeName}>{likesData.puedeRevelar ? `${item.nombre || 'Cahuin'}, ${item.edad || ''}` : `Alguien, ${item.edad || '??'}`}</Text>
                     </View>
                     {!likesData.puedeRevelar && hayLikesReales ? (
                       <View style={styles.lockBubble}>
@@ -316,15 +316,15 @@ export default function PerfilScreen({ navigation }) {
               </ScrollView>
             ) : null}
             {!likesData.puedeRevelar && hayLikesReales ? (
-              <TouchableOpacity style={styles.unlockLikesButton} onPress={() => navigation.navigate('Premium')}>
-                <Text style={styles.unlockLikesText}>Descubrir quién ❤️</Text>
+              <TouchableOpacity style={styles.unlockLikesButton} onPress={() => navigation.navigate('LikesCahuin')}>
+                <Text style={styles.unlockLikesText}>Sapear quien te tinca</Text>
               </TouchableOpacity>
             ) : null}
           </SoftCard>
         </>
       ) : null}
 
-      {/* ── Estilo de Vida + Gustos (side by side) ── */}
+      {/* â”€â”€ Estilo de Vida + Gustos (side by side) â”€â”€ */}
       <View style={styles.twoCol}>
         <SoftCard COLORS={COLORS} style={[styles.halfCard]}>
           <View style={styles.miniHeader}>
@@ -352,19 +352,19 @@ export default function PerfilScreen({ navigation }) {
           <View style={styles.tagsContainer}>
             {intereses.slice(0, 4).map((interes, idx) => (
               <View key={`${interes}-${idx}`} style={[styles.tag, { borderColor: 'rgba(139,92,246,0.28)' }]}>
-                <Text style={[styles.tagText, { color: '#7C3AED' }]} numberOfLines={1}>✨ {interes}</Text>
+                <Text style={[styles.tagText, { color: '#7C3AED' }]} numberOfLines={1}>âœ¨ {interes}</Text>
               </View>
             ))}
           </View>
         </SoftCard>
       </View>
 
-      {/* ── Recuperación COMPACTA + Premium CTA (side by side if both) ── */}
+      {/* â”€â”€ RecuperaciÃ³n COMPACTA + Premium CTA (side by side if both) â”€â”€ */}
       <View style={styles.twoCol}>
         {usuario?.modoRecuperacion ? (
           <SoftCard COLORS={COLORS} style={[styles.halfCard, { backgroundColor: COLORS.softGreen, borderColor: 'rgba(52,168,83,0.3)' }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-              <Text style={{ fontSize: 16 }}>🌱</Text>
+              <Text style={{ fontSize: 16 }}>ðŸŒ±</Text>
               <Text style={[styles.miniTitle, { color: '#2F9E4D' }]} numberOfLines={1}>Volver a florecer</Text>
             </View>
             <TouchableOpacity onPress={() => abrirArticulo(ARTICULOS_RECUPERACION[0])} style={styles.recoveryPreview}>
@@ -379,9 +379,9 @@ export default function PerfilScreen({ navigation }) {
 
         <TouchableOpacity activeOpacity={0.9} onPress={() => navigation.navigate('Premium')} style={[styles.halfCard, { flex: usuario?.modoRecuperacion ? 1 : undefined, width: usuario?.modoRecuperacion ? undefined : '100%' }]}>
           <LinearGradient colors={['#07111F', '#121A2A']} style={styles.premiumMini}>
-            <Text style={{ fontSize: 20 }}>💎</Text>
-            <Text style={styles.premiumMiniTitle} numberOfLines={1}>Cahuín Premium</Text>
-            <Text style={styles.premiumMiniSub} numberOfLines={2}>Más visibilidad y funciones exclusivas.</Text>
+            <Text style={{ fontSize: 20 }}>ðŸ’Ž</Text>
+            <Text style={styles.premiumMiniTitle} numberOfLines={1}>Cahuin a Fondo</Text>
+            <Text style={styles.premiumMiniSub} numberOfLines={2}>Revela likes, La Pica y Modo Destacado.</Text>
             <View style={styles.premiumMiniButton}>
               <Text style={styles.premiumMiniButtonText}>Mejorar &gt;</Text>
             </View>
@@ -389,12 +389,12 @@ export default function PerfilScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* ── Preguntas anónimas ── */}
+      {/* â”€â”€ Preguntas anÃ³nimas â”€â”€ */}
       <SoftCard COLORS={COLORS} style={styles.questionsCard}>
         <View style={styles.cardTitleRow}>
           <SoftIcon name="chatbubble-ellipses" color={COLORS.primario} bg={COLORS.softRed} size={42} rounded={21} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.infoTitle}>Preguntas anónimas</Text>
+            <Text style={styles.infoTitle}>Preguntas anÃ³nimas</Text>
             <Text style={styles.infoSub}>Lo que te mandan desde otros perfiles.</Text>
           </View>
           {cargandoPreguntas ? <ActivityIndicator color={COLORS.primario} /> : <Text style={styles.counterPill}>{preguntasPendientes.length}</Text>}
@@ -402,7 +402,7 @@ export default function PerfilScreen({ navigation }) {
 
         {preguntas.length === 0 ? (
           <View style={styles.emptyQuestionBox}>
-            <Text style={styles.emptyQuestionTitle}>Todavía no hay preguntas.</Text>
+            <Text style={styles.emptyQuestionTitle}>TodavÃ­a no hay preguntas.</Text>
             <Text style={styles.emptyQuestionText}>Cuando alguien te mande una, podras responderla.</Text>
           </View>
         ) : (
@@ -427,7 +427,7 @@ export default function PerfilScreen({ navigation }) {
         )}
       </SoftCard>
 
-      {/* ── Tests de personalidad ── */}
+      {/* â”€â”€ Tests de personalidad â”€â”€ */}
       {testsPendientes.length > 0 ? (
         <SoftCard COLORS={COLORS} style={styles.testsCard}>
           <View style={styles.cardTitleRow}>
@@ -448,7 +448,7 @@ export default function PerfilScreen({ navigation }) {
         </SoftCard>
       ) : null}
 
-      {/* ── Insignias visibles ── */}
+      {/* â”€â”€ Insignias visibles â”€â”€ */}
       {(mostrarResultadoApego || mostrarResultadoArquetipo) ? (
         <SoftCard COLORS={COLORS} style={styles.testsCard}>
           <View style={styles.cardTitleRow}>
@@ -465,7 +465,7 @@ export default function PerfilScreen({ navigation }) {
         </SoftCard>
       ) : null}
 
-      {/* ── Modals ── */}
+      {/* â”€â”€ Modals â”€â”€ */}
       <Modal visible={modalArticuloVisible} animationType="slide" transparent={false}>
         <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }}>
           <View style={styles.articleModalHeader}>
@@ -510,7 +510,7 @@ export default function PerfilScreen({ navigation }) {
 }
 
 const getStyles = (COLORS) => StyleSheet.create({
-  // ── Header ──
+  // â”€â”€ Header â”€â”€
   headerRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginBottom: SPACING[4],
@@ -522,7 +522,7 @@ const getStyles = (COLORS) => StyleSheet.create({
     backgroundColor: COLORS.tarjeta, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.light,
   },
 
-  // ── Hero horizontal ──
+  // â”€â”€ Hero horizontal â”€â”€
   heroRow: {
     flexDirection: 'row', alignItems: 'center', gap: 16,
     marginBottom: SPACING[5],
@@ -548,7 +548,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   editPillText: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '700' },
   verifiedText: { fontSize: 12, fontWeight: '700', color: COLORS.compatHigh, marginTop: 2 },
 
-  // ── Completitud ──
+  // â”€â”€ Completitud â”€â”€
   completitudCard: { marginBottom: SPACING[4] },
   completitudRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 10 },
   completitudCircle: {
@@ -563,7 +563,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   progressBar: { height: 6, borderRadius: 3, backgroundColor: COLORS.border, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 3 },
 
-  // ── Stats ──
+  // â”€â”€ Stats â”€â”€
   statsCard: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING[4] },
   statBox: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING[2] },
   statDivider: { width: 1, height: 48, backgroundColor: COLORS.border },
@@ -571,7 +571,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   statLabel: { color: COLORS.textMuted, fontSize: 13, marginTop: 1 },
   statAction: { fontSize: 12, fontWeight: '700', marginTop: 1 },
 
-  // ── Likes ──
+  // â”€â”€ Likes â”€â”€
   likesCard: { marginBottom: SPACING[4] },
   likesStrip: { gap: SPACING[2], paddingRight: SPACING[2] },
   likeTile: { width: 130, height: 180, borderRadius: 18, overflow: 'hidden', backgroundColor: COLORS.fondo, borderWidth: 1, borderColor: COLORS.border },
@@ -583,7 +583,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   unlockLikesButton: { minHeight: 44, borderRadius: 14, backgroundColor: COLORS.textPrimary, alignItems: 'center', justifyContent: 'center', marginTop: SPACING[2] },
   unlockLikesText: { color: COLORS.bg, fontWeight: '900', fontSize: 14 },
 
-  // ── Two columns ──
+  // â”€â”€ Two columns â”€â”€
   twoCol: { flexDirection: 'row', gap: SPACING[2], marginBottom: SPACING[4] },
   halfCard: { flex: 1, padding: SPACING[3] },
   miniHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 4 },
@@ -594,18 +594,18 @@ const getStyles = (COLORS) => StyleSheet.create({
   tag: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 6, paddingVertical: 4, backgroundColor: COLORS.tarjeta },
   tagText: { color: COLORS.textPrimary, fontSize: 11, fontWeight: '700' },
 
-  // ── Recovery compact ──
+  // â”€â”€ Recovery compact â”€â”€
   recoveryPreview: { flexDirection: 'row', alignItems: 'center', gap: 6, padding: 8, backgroundColor: COLORS.tarjeta, borderRadius: 12 },
   recoveryPreviewTitle: { fontSize: 11, fontWeight: '700', flex: 1 },
 
-  // ── Premium mini ──
+  // â”€â”€ Premium mini â”€â”€
   premiumMini: { borderRadius: 16, padding: 12, ...SHADOWS.dark },
   premiumMiniTitle: { color: '#FFF', fontSize: 14, fontWeight: '900', fontFamily: FONTS.display, marginTop: 4 },
   premiumMiniSub: { color: '#CBD5E1', fontSize: 11, lineHeight: 14, marginTop: 2 },
   premiumMiniButton: { backgroundColor: '#FFD166', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6, alignSelf: 'flex-start', marginTop: 8 },
   premiumMiniButtonText: { color: '#111827', fontSize: 11, fontWeight: '900' },
 
-  // ── Questions ──
+  // â”€â”€ Questions â”€â”€
   questionsCard: { marginBottom: SPACING[4] },
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING[3] },
   infoTitle: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '900', flex: 1 },
@@ -622,7 +622,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   answeredQuestion: { color: COLORS.textMuted, fontSize: 12, fontWeight: '700' },
   answeredText: { color: COLORS.textPrimary, fontSize: 14, lineHeight: 19, marginTop: 4, fontWeight: '700' },
 
-  // ── Tests ──
+  // â”€â”€ Tests â”€â”€
   testsCard: { marginBottom: SPACING[4] },
   testActions: { flexDirection: 'row', gap: SPACING[2] },
   testButton: { flex: 1, minHeight: 72, backgroundColor: COLORS.fondo, borderWidth: 1, borderColor: COLORS.border, borderRadius: 14, padding: SPACING[2], justifyContent: 'center', alignItems: 'center', ...SHADOWS.light },
@@ -631,7 +631,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   testResults: { marginTop: SPACING[2], backgroundColor: COLORS.softPurple, borderRadius: 14, padding: SPACING[2], gap: 3 },
   testResultText: { color: '#7C3AED', fontWeight: '800', fontSize: 13 },
 
-  // ── Modals ──
+  // â”€â”€ Modals â”€â”€
   articleModalHeader: { flexDirection: 'row', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   articleModalBody: { padding: 25, paddingBottom: 100 },
   articleModalEmoji: { fontSize: 52, marginBottom: 15 },

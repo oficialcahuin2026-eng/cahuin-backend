@@ -6,12 +6,12 @@ import { matchService } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import {
-  CahuinLogo, CahuinesCounter, EmptyState, FilterPills,
+  CahuinLogo, EmptyState, FilterPills,
   InterestChip, OnlineDot, ScreenScaffold, SoftCard,
 } from '../components/CahuinUI';
 import { FONTS, RADIUS, SPACING } from '../utils/theme';
 
-const emptyCahuines = require('../assets/illustrations/empty-cahuines.png');
+const emptyChats = require('../assets/illustrations/empty-cahuines.png');
 
 // Mapeo de intereses a emojis
 const INTERES_EMOJI = {
@@ -180,7 +180,10 @@ export default function ChatScreen({ navigation }) {
       <View style={styles.headerRow}>
         <CahuinLogo size={26} showText COLORS={COLORS} />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <CahuinesCounter cantidad={usuario?.cahuines || 0} COLORS={COLORS} onPress={() => navigation.navigate('Premium')} />
+          <TouchableOpacity style={styles.planPill} onPress={() => navigation.navigate('Premium')} activeOpacity={0.85}>
+            <Ionicons name="sparkles" size={16} color={COLORS.primario} />
+            <Text style={styles.planPillText}>Planes</Text>
+          </TouchableOpacity>
           <TouchableOpacity activeOpacity={0.7}>
             <Ionicons name="search-outline" size={24} color={COLORS.textPrimary} />
           </TouchableOpacity>
@@ -188,7 +191,7 @@ export default function ChatScreen({ navigation }) {
       </View>
 
       {/* ── Título + subtítulo ── */}
-      <Text style={styles.titulo}>Tus Cahuines</Text>
+      <Text style={styles.titulo}>Tus conversaciones</Text>
       <Text style={styles.subtitulo}>Conversa, conecta y encuentra tu vibe.</Text>
 
       {/* ── Filtros ── */}
@@ -197,7 +200,7 @@ export default function ChatScreen({ navigation }) {
       {matches.length === 0 ? (
         <EmptyState
           COLORS={COLORS}
-          image={emptyCahuines}
+          image={emptyChats}
           title="Todavía no hay matches."
           subtitle="Sigue deslizando para encontrar con quién cahuinear."
           imageStyle={styles.emptyImage}
@@ -231,6 +234,18 @@ const getStyles = (COLORS) => StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: SPACING[4],
   },
+  planPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: 40,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: COLORS.tarjeta,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  planPillText: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '900' },
   titulo: {
     fontSize: 28,
     fontWeight: '900',

@@ -1,5 +1,9 @@
-const User = require('../models/User');
+﻿const User = require('../models/User');
 const Match = require('../models/Match');
+
+const PLAN_PIOLA_O_SUPERIOR = ['piola', 'a_fondo', 'plus', 'gold', 'platinum'];
+const PLAN_A_FONDO_O_SUPERIOR = ['a_fondo', 'gold', 'platinum'];
+const tienePlan = (usuario, planes) => Boolean(usuario?.isPremium && planes.includes(usuario.premiumPlan || 'gold'));
 const Reporte = require('../models/Reporte');
 const PreguntaAnonima = require('../models/PreguntaAnonima');
 const { Readable } = require('stream');
@@ -84,17 +88,6 @@ exports.getMiPerfil = async (req, res) => {
       usuario.premiumHasta = null;
     }
 
-    if (usuario.isPremium) {
-      const ultimaEntrega = usuario.ultimaEntregaPremium ? new Date(usuario.ultimaEntregaPremium) : new Date(0);
-      const diffTiempoPrem = hoy.getTime() - ultimaEntrega.getTime();
-      const diffDiasPrem = Math.floor(diffTiempoPrem / (1000 * 60 * 60 * 24));
-
-      if (diffDiasPrem >= 7) {
-        usuario.cahuines += 5000;
-        usuario.ultimaEntregaPremium = hoy;
-      }
-    }
-
     const diaHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
     const diaUltima = new Date(ultima.getFullYear(), ultima.getMonth(), ultima.getDate());
     const diffTiempo = diaHoy.getTime() - diaUltima.getTime();
@@ -102,7 +95,6 @@ exports.getMiPerfil = async (req, res) => {
 
     if (diffDias === 1) {
       usuario.rachaDias += 1;
-      usuario.cahuines += usuario.rachaDias % 7 === 0 ? 100 : Math.min(usuario.rachaDias, 6) * 10;
       if (usuario.rachaDias % 7 === 0) {
         const boost = new Date();
         boost.setMinutes(boost.getMinutes() + 30);
@@ -110,7 +102,6 @@ exports.getMiPerfil = async (req, res) => {
       }
     } else if (diffDias > 1) {
       usuario.rachaDias = 1;
-      usuario.cahuines += 10;
     }
 
     const hoyFechaStr = hoy.toDateString();
@@ -132,10 +123,10 @@ exports.actualizarPerfil = async (req, res) => {
       req.body.edad = calcularEdad(req.body.fechaNacimiento);
     }
     if (req.body.fechaNacimiento && req.body.edad < 18) {
-      return res.status(400).json({ message: 'Cahuín es solo para mayores de 18 años.' });
+      return res.status(400).json({ message: 'CahuÃ­n es solo para mayores de 18 aÃ±os.' });
     }
     if (!req.body.fechaNacimiento && req.body.edad !== undefined && Number(req.body.edad) < 18) {
-      return res.status(400).json({ message: 'Cahuín es solo para mayores de 18 años.' });
+      return res.status(400).json({ message: 'CahuÃ­n es solo para mayores de 18 aÃ±os.' });
     }
     if (req.body.ciudad) {
       req.body.ciudad = normalizarCiudadChile(req.body.ciudad);
@@ -151,7 +142,7 @@ exports.actualizarPerfil = async (req, res) => {
     const usuario = await User.findByIdAndUpdate(
       req.user._id, 
       { $set: req.body }, 
-      { new: true, runValidators: true, upsert: true } // 🌟 BLINDAJE: Si no existe, lo crea
+      { new: true, runValidators: true, upsert: true } // ðŸŒŸ BLINDAJE: Si no existe, lo crea
     ).select('-password');
 
     res.json({ usuario });
@@ -163,7 +154,7 @@ exports.actualizar = exports.actualizarPerfil;
 exports.verificarPerfil = async (req, res) => {
   try {
     const usuario = await User.findByIdAndUpdate(req.user._id, { verificado: true }, { new: true }).select('-password');
-    res.json({ usuario, message: 'Perfil verificado con éxito' });
+    res.json({ usuario, message: 'Perfil verificado con Ã©xito' });
   } catch (error) { res.status(500).json({ message: 'Error' }); }
 };
 
@@ -276,10 +267,10 @@ exports.actualizarFotosMult = async (req, res) => {
     let fotosMantenidas = req.body.fotosExistentes ? JSON.parse(req.body.fotosExistentes) : [];
     let nuevasFotos = req.files && req.files.length > 0 ? await Promise.all(req.files.map(subirFotoPerfil)) : [];
 
-    // 🌟 BLINDAJE: Evita que crashee si dbUser es nulo
+    // ðŸŒŸ BLINDAJE: Evita que crashee si dbUser es nulo
     let dbUser = await User.findById(req.user._id);
     
-    // Si por latencia de la base de datos no lo encuentra, lo crea o simula un array vacío
+    // Si por latencia de la base de datos no lo encuentra, lo crea o simula un array vacÃ­o
     const tieneFotosActuales = dbUser && dbUser.fotos && dbUser.fotos.length > 0;
 
     if (fotosMantenidas.length === 0 && nuevasFotos.length === 0) {
@@ -295,7 +286,7 @@ exports.actualizarFotosMult = async (req, res) => {
     const usuario = await User.findByIdAndUpdate(
       req.user._id, 
       { fotos: fotosFinales, foto: fotosFinales[0] || '' }, 
-      { new: true, upsert: true } // Upsert salvará el día si el ID venía pero no estaba creado
+      { new: true, upsert: true } // Upsert salvarÃ¡ el dÃ­a si el ID venÃ­a pero no estaba creado
     ).select('-password');
 
     res.json(usuario);
@@ -344,7 +335,7 @@ exports.getLikesRecibidos = async (req, res) => {
   try {
     const usuario = await User.findById(req.user._id).select('isPremium premiumPlan');
     const plan = usuario?.premiumPlan || (usuario?.isPremium ? 'gold' : 'free');
-    const puedeRevelar = usuario?.isPremium && ['gold', 'platinum'].includes(plan);
+    const puedeRevelar = usuario?.isPremium && ['a_fondo', 'gold', 'platinum'].includes(plan);
 
     const likes = await Match.find({
       receptor: req.user._id,
@@ -412,9 +403,8 @@ exports.togglePausaCuenta = async (req, res) => {
   try {
     const usuario = await User.findById(req.user._id);
     usuario.cuentaPausada = !usuario.cuentaPausada;
-    if (!usuario.cuentaPausada) usuario.cahuines += 500;
     await usuario.save();
-    res.json({ usuario, message: usuario.cuentaPausada ? 'Cuenta Pausada' : '¡Bienvenido de vuelta! Recibiste 500 Cahuines.' });
+    res.json({ usuario, message: usuario.cuentaPausada ? 'Cuenta Pausada' : 'Bienvenido de vuelta.' });
   } catch (error) { res.status(500).json({ message: 'Error' }); }
 };
 
@@ -433,7 +423,7 @@ exports.escribirDiario = async (req, res) => {
     const usuario = await User.findById(req.user._id);
     usuario.diarioCitas.push({ matchId: req.params.matchId, texto, fecha: new Date() });
     await usuario.save();
-    res.json({ message: 'Nota guardada en secreto 📖' });
+    res.json({ message: 'Nota guardada en secreto ðŸ“–' });
   } catch (error) { res.status(500).json({ message: 'Error' }); }
 };
 
@@ -480,14 +470,11 @@ exports.activarBoost = async (req, res) => {
         message: 'Usaste tu Boost gratis de racha por 30 minutos.'
       });
     }
-
-    if (usuario.cahuines < 500) {
-      return res.status(400).json({ message: 'Necesitas 500 Cahuines para activar destacado.' });
-    }
+    if (!tienePlan(usuario, PLAN_A_FONDO_O_SUPERIOR))
+      return res.status(403).json({ message: 'Modo Destacado es parte de Cahuin a Fondo.' });
 
     const boostHasta = new Date();
     boostHasta.setMinutes(boostHasta.getMinutes() + 30);
-    usuario.cahuines -= 500;
     usuario.boostActivoHasta = boostHasta;
     await usuario.save();
 
@@ -504,11 +491,11 @@ exports.activarBoost = async (req, res) => {
 exports.continuarRachaSwipes = async (req, res) => {
   try {
     const usuario = await User.findById(req.user._id);
-    if (usuario.cahuines < 1) return res.status(400).json({ message: 'Necesitas 1 Cahuin para salvar la racha.' });
+    if (!tienePlan(usuario, PLAN_PIOLA_O_SUPERIOR))
+      return res.status(403).json({ message: 'Salvar la racha es parte de Cahuin Piola.' });
 
     const ayer = new Date();
     ayer.setDate(ayer.getDate() - 1);
-    usuario.cahuines -= 1;
     usuario.ultimoSwipeRachaFecha = ayer;
     usuario.rachaSwipesDias = Math.max(usuario.rachaSwipesDias || 1, 1);
     await usuario.save();

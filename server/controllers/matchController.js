@@ -1,6 +1,10 @@
-const Match = require('../models/Match');
+﻿const Match = require('../models/Match');
 const User  = require('../models/User');
 const Mensaje = require('../models/Mensaje');
+
+const PLAN_PIOLA_O_SUPERIOR = ['piola', 'a_fondo', 'plus', 'gold', 'platinum'];
+const PLAN_A_FONDO_O_SUPERIOR = ['a_fondo', 'gold', 'platinum'];
+const tienePlan = (usuario, planes) => Boolean(usuario?.isPremium && planes.includes(usuario.premiumPlan || 'gold'));
 
 const actualizarRachaSwipes = async (usuarioId) => {
   const usuario = await User.findById(usuarioId);
@@ -60,7 +64,7 @@ exports.darLike = async (req, res) => {
       const likesHoy = await Match.countDocuments({
         remitente: remitenteId, tipo: 'like', createdAt: { $gte: inicioHoy }
       });
-      if (likesHoy >= 5) return res.status(403).json({ message: '¡Límite de likes diarios! Hazte Premium.' });
+      if (likesHoy >= 5) return res.status(403).json({ message: 'Se acabaron tus likes de hoy. Pasa a Cahuin Piola para seguir.' });
     }
 
     await Match.findOneAndUpdate(
@@ -289,18 +293,15 @@ exports.generarRelampago = async (req, res) => {
 };
 
 // ─────────────────────────────────────────────
-// MATCH RELÁMPAGO — salvar (cuesta 100 Cahuines)
+// MATCH RELÁMPAGO — salvar requiere Cahuin a Fondo
 // ─────────────────────────────────────────────
 exports.salvarRelampago = async (req, res) => {
   try {
     const match   = await Match.findById(req.params.id);
     const usuario = await User.findById(req.user._id);
 
-    if (usuario.cahuines < 100)
-      return res.status(400).json({ message: 'No tienes suficientes Cahuines (cuesta 100 🪙)' });
-
-    usuario.cahuines -= 100;
-    await usuario.save();
+    if (!tienePlan(usuario, PLAN_A_FONDO_O_SUPERIOR))
+      return res.status(403).json({ message: 'Salvar un Relampago es parte de Cahuin a Fondo.' });
 
     match.salvado = true;
     await match.save();
@@ -310,14 +311,14 @@ exports.salvarRelampago = async (req, res) => {
 };
 
 // ─────────────────────────────────────────────
-// DESHACER ÚLTIMO DISLIKE (cuesta 50 Cahuines)
+// DESHACER ÚLTIMO DISLIKE — requiere Cahuin Piola o superior
 // ─────────────────────────────────────────────
 exports.deshacerUltimoDislike = async (req, res) => {
   try {
     const miUsuario = await User.findById(req.user._id);
 
-    if (miUsuario.cahuines < 50)
-      return res.status(400).json({ message: 'No tienes suficientes Cahuines (cuesta 50)' });
+    if (!tienePlan(miUsuario, PLAN_PIOLA_O_SUPERIOR))
+      return res.status(403).json({ message: 'Retroceder es parte de Cahuin Piola.' });
 
     const ultimoDislike = await Match.findOne({
       remitente: req.user._id, tipo: 'dislike'
@@ -325,9 +326,6 @@ exports.deshacerUltimoDislike = async (req, res) => {
 
     if (!ultimoDislike)
       return res.status(404).json({ message: 'No tienes perfiles recientes para deshacer.' });
-
-    miUsuario.cahuines -= 50;
-    await miUsuario.save();
 
     await Match.findByIdAndDelete(ultimoDislike._id);
 
@@ -344,8 +342,8 @@ exports.jugarRuletaCiega = async (req, res) => {
   try {
     const miUsuario = await User.findById(req.user._id);
 
-    if (miUsuario.cahuines < 500)
-      return res.status(400).json({ message: 'No tienes 500 Cahuines 🪙' });
+    if (!tienePlan(miUsuario, PLAN_PIOLA_O_SUPERIOR))
+      return res.status(403).json({ message: 'La Ruleta a Ciegas es parte de Cahuin Piola.' });
 
     // Busca candidatos PRIMERO
     const candidatos = await User.find({
@@ -355,15 +353,11 @@ exports.jugarRuletaCiega = async (req, res) => {
 
     if (candidatos.length === 0) {
       // 🌟 FIX: Si estás solo en la base de datos, te avisa y NO TE COBRA.
-      return res.status(404).json({ message: 'Por el momento no hay ningún Cahuín disponible. 🏜️ (No se te cobró nada)' });
+      return res.status(404).json({ message: 'Por el momento no hay nadie disponible para la Ruleta.' });
     }
 
     // Si hay alguien, lo elegimos
     const elegido = candidatos[Math.floor(Math.random() * candidatos.length)];
-
-    // 🌟 AHORA SÍ COBRAMOS LOS 500 CAHUINES
-    miUsuario.cahuines -= 500;
-    await miUsuario.save();
 
     const expira = new Date();
     expira.setHours(expira.getHours() + 1);

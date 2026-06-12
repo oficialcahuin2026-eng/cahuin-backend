@@ -1,4 +1,4 @@
-const { MercadoPagoConfig, Preference } = require('mercadopago');
+﻿const { MercadoPagoConfig, Preference } = require('mercadopago');
 const {
   Environment,
   IntegrationApiKeys,
@@ -13,95 +13,35 @@ const WEB_URL = process.env.CAHUIN_WEB_URL || 'http://localhost:3000';
 const API_URL = process.env.CAHUIN_API_PUBLIC_URL || `http://localhost:${process.env.PORT || 5000}`;
 
 const PRODUCTS = {
-  premium_plus_month: {
-    id: 'premium_plus_month',
+  cahuin_piola_monthly: {
+    id: 'cahuin_piola_monthly',
     type: 'premium',
-    tier: 'plus',
-    title: 'Cahuín Plus mensual',
-    amount: 4590,
+    tier: 'piola',
+    title: 'Cahuin Piola mensual',
+    amount: 3990,
     premiumDays: 30,
-    bonusCahuines: 700,
     features: [
-      'Likes ilimitados',
-      'Rewind cuando te equivocas',
-      'Modo viajero nacional',
-      '700 Cahuines incluidos',
+      'Likes sin limite',
+      'Retroceder cuando te equivocas',
+      'Ruleta a Ciegas',
+      'Modo Chile',
+      'Sin anuncios',
     ],
   },
-  premium_gold_month: {
-    id: 'premium_gold_month',
+  cahuin_a_fondo_monthly: {
+    id: 'cahuin_a_fondo_monthly',
     type: 'premium',
-    tier: 'gold',
-    title: 'Cahuín Gold mensual',
-    amount: 7490,
+    tier: 'a_fondo',
+    title: 'Cahuin a Fondo mensual',
+    amount: 6990,
     premiumDays: 30,
-    bonusCahuines: 1500,
     features: [
-      'Todo lo de Plus',
-      'Descubre quién te dio like',
-      'Top picks de tu región',
-      '1 Boost gratis al mes',
-      '1500 Cahuines incluidos',
+      'Todo lo de Cahuin Piola',
+      'Ver quien te dio like',
+      'La Pica',
+      'Modo Destacado',
+      'Salvar Match Relampago',
     ],
-  },
-  premium_platinum_month: {
-    id: 'premium_platinum_month',
-    type: 'premium',
-    tier: 'platinum',
-    title: 'Cahuín Platinum mensual',
-    amount: 11450,
-    premiumDays: 30,
-    bonusCahuines: 3000,
-    features: [
-      'Todo lo de Gold',
-      'Likes prioritarios',
-      '3 Super Likes por semana',
-      'Modo incognito',
-      '3000 Cahuines incluidos',
-    ],
-  },
-  premium_month: {
-    id: 'premium_month',
-    type: 'premium',
-    tier: 'gold',
-    title: 'Cahuín Gold mensual',
-    amount: 7490,
-    premiumDays: 30,
-    bonusCahuines: 1500,
-    features: [
-      'Likes ilimitados',
-      'Descubre quién te dio like',
-      '1 Boost gratis al mes',
-      '1500 Cahuines incluidos',
-    ],
-  },
-  cahuines_1000: {
-    id: 'cahuines_1000',
-    type: 'cahuines',
-    title: '1000 Cahuines',
-    amount: 1990,
-    cahuines: 1000,
-  },
-  cahuines_3000: {
-    id: 'cahuines_3000',
-    type: 'cahuines',
-    title: '3000 Cahuines',
-    amount: 4990,
-    cahuines: 3000,
-  },
-  cahuines_7000: {
-    id: 'cahuines_7000',
-    type: 'cahuines',
-    title: '7000 Cahuines',
-    amount: 9990,
-    cahuines: 7000,
-  },
-  cahuines_15000: {
-    id: 'cahuines_15000',
-    type: 'cahuines',
-    title: '15000 Cahuines',
-    amount: 17990,
-    cahuines: 15000,
   },
 };
 
@@ -112,7 +52,7 @@ const makeBuyOrder = (userId) => `cw-${Date.now()}-${String(userId).slice(-6)}`;
 const applyPurchase = async (intent) => {
   if (!intent || intent.appliedAt) return intent;
   const product = getProduct(intent.productId);
-  if (!product) throw new Error('Producto inválido');
+  if (!product) throw new Error('Producto invÃ¡lido');
 
   const user = await User.findById(intent.user);
   if (!user) throw new Error('Usuario no encontrado');
@@ -124,11 +64,6 @@ const applyPurchase = async (intent) => {
     user.isPremium = true;
     user.premiumPlan = product.tier || 'gold';
     user.premiumHasta = premiumHasta;
-    if (product.bonusCahuines) user.cahuines += product.bonusCahuines;
-  }
-
-  if (product.type === 'cahuines') {
-    user.cahuines += product.cahuines;
   }
 
   await user.save();
@@ -145,7 +80,7 @@ exports.getProducts = (req, res) => {
 exports.createMercadoPagoPreference = async (req, res) => {
   try {
     const product = getProduct(req.body.productId);
-    if (!product) return res.status(400).json({ message: 'Producto inválido' });
+    if (!product) return res.status(400).json({ message: 'Producto invÃ¡lido' });
 
     const buyOrder = makeBuyOrder(req.user._id);
     const intent = await PaymentIntent.create({
@@ -225,7 +160,7 @@ const getWebpayTransaction = () => {
 exports.createWebpayTransaction = async (req, res) => {
   try {
     const product = getProduct(req.body.productId);
-    if (!product) return res.status(400).json({ message: 'Producto inválido' });
+    if (!product) return res.status(400).json({ message: 'Producto invÃ¡lido' });
 
     const buyOrder = makeBuyOrder(req.user._id);
     const intent = await PaymentIntent.create({

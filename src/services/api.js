@@ -1,9 +1,9 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const BASE_URL = (process.env.EXPO_PUBLIC_API_URL || 'https://cahuin-backend-1.onrender.com/api').replace(/\/+$/, '');
 
-// 🌟 LA SOLUCIÓN: Faltaba la palabra "export" aquí para que el AuthContext lo pueda usar
+// ðŸŒŸ LA SOLUCIÃ“N: Faltaba la palabra "export" aquÃ­ para que el AuthContext lo pueda usar
 export const api = axios.create({ 
   baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' }
@@ -57,7 +57,7 @@ api.interceptors.request.use(async (config) => {
 
 api.interceptors.response.use(
   (res) => res.data || {},
-  (err) => Promise.reject(new Error(err.response?.data?.message || "Error de conexión po'"))
+  (err) => Promise.reject(new Error(err.response?.data?.message || "Error de conexiÃ³n po'"))
 );
 
 export const authService = {
@@ -135,9 +135,6 @@ export const premiumService = {
   getRegalos: ()       => api.get('/premium/regalos'),
   getEstado:  ()       => api.get('/premium/estado'),
   suscribir:  (planId) => api.post('/premium/suscribir', { planId }),
-  
-  // 🌟 NUEVO ENDPOINT PARA LAS MONEDAS
-  comprarMonedas: (cantidad) => api.post('/premium/comprar-monedas', { cantidad }),
 };
 
 export const iaService = {
@@ -158,7 +155,7 @@ export const socialService = {
       const formData = new FormData();
       formData.append('texto', data.texto || '');
       formData.append('lugar', data.lugar || '');
-      formData.append('emoji', data.emoji || '📸');
+      formData.append('emoji', data.emoji || 'ðŸ“¸');
       formData.append('imagen', {
         uri: data.imagen.uri,
         name: data.imagen.name || 'historia.jpg',

@@ -2,50 +2,60 @@ const User = require('../models/User');
 
 const PLANES = [
   {
-    id: 'premium_plus_month',
-    tier: 'plus',
-    nombre: 'Cahuín Plus',
-    precio: '$4.590',
-    cahuines: 700,
-    descripcion: 'Likes ilimitados, rewind, modo viajero nacional y 700 Cahuines.',
+    id: 'cahuin_piola_monthly',
+    tier: 'piola',
+    nombre: 'Cahuin Piola',
+    precio: 'CLP3.990/mes',
+    storeProductId: 'cahuin_piola',
+    basePlanId: 'mensual',
+    googleProductId: 'cahuin_piola:mensual',
+    productAliases: ['cahuin_piola', 'cahuin_piola_mensual', 'cahuin_piola:mensual'],
+    revenueCatEntitlement: 'cahuin_premium',
+    descripcion: 'Likes sin limite, retroceder, Ruleta a Ciegas, Modo Chile y sin anuncios.',
+    beneficios: [
+      'Likes diarios sin limite',
+      'Retroceder cuando pasaste a alguien sin querer',
+      'Ruleta a Ciegas',
+      'Salvar racha de swipes',
+      'Modo Chile para cambiar ciudad dentro del pais',
+      'Sin anuncios',
+    ],
   },
   {
-    id: 'premium_gold_month',
-    tier: 'gold',
-    nombre: 'Cahuín Gold',
-    precio: '$7.490',
-    cahuines: 1500,
-    descripcion: 'Todo Plus, ver quién te dio like, top picks, 1 boost mensual y 1500 Cahuines.',
-  },
-  {
-    id: 'premium_platinum_month',
-    tier: 'platinum',
-    nombre: 'Cahuín Platinum',
-    precio: '$11.450',
-    cahuines: 3000,
-    descripcion: 'Todo Gold, likes prioritarios, modo incógnito, 3 super likes semanales y 3000 Cahuines.',
+    id: 'cahuin_a_fondo_monthly',
+    tier: 'a_fondo',
+    nombre: 'Cahuin a Fondo',
+    precio: 'CLP6.990/mes',
+    storeProductId: 'cahuin_a_fondo',
+    basePlanId: 'mensual',
+    googleProductId: 'cahuin_a_fondo:mensual',
+    productAliases: ['cahuin_a_fondo', 'cahuin_a_fondo_mensual', 'cahuin_a_fondo:mensual'],
+    revenueCatEntitlement: 'cahuin_premium',
+    descripcion: 'Todo Piola, ver quien te tinca, La Pica, prioridad, Modo Destacado y Relampago.',
+    beneficios: [
+      'Todo lo de Cahuin Piola',
+      'Ver quien te tiro like',
+      'La Pica: seleccion diaria de perfiles con mas onda',
+      'Tus likes aparecen antes',
+      'Modo Destacado',
+      'Salvar Match Relampago',
+      'Estrellas incluidas',
+    ],
   },
 ];
 
-const REGALOS = [
-  { id: 'empanada', nombre: 'Empanada', emoji: '🥟', precio: '100 Cahuines' },
-  { id: 'copihue', nombre: 'Copihue', emoji: '🌺', precio: '200 Cahuines' },
-  { id: 'vino', nombre: 'Vino Tinto', emoji: '🍷', precio: '300 Cahuines' },
-  { id: 'terremoto', nombre: 'Terremoto', emoji: '🍹', precio: '500 Cahuines' },
-  { id: 'completo', nombre: 'Completo', emoji: '🌭', precio: '150 Cahuines' },
-];
+const REGALOS = [];
 
 exports.getPlanes = (req, res) => res.json({ planes: PLANES });
 exports.getRegalos = (req, res) => res.json({ regalos: REGALOS });
 
 exports.getEstado = async (req, res) => {
   try {
-    const usuario = await User.findById(req.user._id).select('isPremium premiumPlan premiumHasta cahuines');
+    const usuario = await User.findById(req.user._id).select('isPremium premiumPlan premiumHasta');
     res.json({
       isPremium: usuario.isPremium,
       premiumPlan: usuario.premiumPlan || 'free',
       premiumHasta: usuario.premiumHasta,
-      cahuines: usuario.cahuines,
     });
   } catch (error) {
     res.status(500).json({ message: 'Error obteniendo estado' });
@@ -55,7 +65,14 @@ exports.getEstado = async (req, res) => {
 exports.suscribir = async (req, res) => {
   try {
     const { planId } = req.body;
-    const plan = PLANES.find((p) => p.id === planId || p.tier === planId);
+    const plan = PLANES.find((p) => (
+      p.id === planId ||
+      p.tier === planId ||
+      p.googleProductId === planId ||
+      p.storeProductId === planId ||
+      p.basePlanId === planId ||
+      p.productAliases?.includes(planId)
+    ));
     if (!plan) return res.status(400).json({ message: 'Ese plan no existe.' });
 
     const premiumHasta = new Date();
@@ -67,13 +84,12 @@ exports.suscribir = async (req, res) => {
         isPremium: true,
         premiumPlan: plan.tier,
         premiumHasta,
-        $inc: { cahuines: plan.cahuines || 0 },
       },
       { new: true }
     ).select('-password');
 
     res.json({
-      message: `Felicidades. Ahora eres ${plan.nombre}.`,
+      message: `Listo. Ahora tienes ${plan.nombre}.`,
       usuario: usuarioActualizado,
     });
   } catch (error) {
@@ -83,18 +99,5 @@ exports.suscribir = async (req, res) => {
 };
 
 exports.comprarMonedas = async (req, res) => {
-  try {
-    const cantidad = Math.max(0, Number(req.body.cantidad || 0));
-    if (!cantidad) return res.status(400).json({ message: 'Cantidad invalida' });
-
-    const usuarioActualizado = await User.findByIdAndUpdate(
-      req.user._id,
-      { $inc: { cahuines: cantidad } },
-      { new: true }
-    ).select('-password');
-
-    res.json({ usuario: usuarioActualizado, message: `${cantidad} Cahuines agregados.` });
-  } catch (error) {
-    res.status(500).json({ message: 'Error agregando Cahuines' });
-  }
+  res.status(410).json({ message: 'Las monedas estan desactivadas por ahora. Usa un plan Cahuin.' });
 };

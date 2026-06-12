@@ -20,7 +20,7 @@ const userSchema = new mongoose.Schema({
   distanciaMax:       { type: Number, default: 50 },
 
   isPremium:   { type: Boolean, default: false },
-  premiumPlan: { type: String, enum: ['free', 'plus', 'gold', 'platinum'], default: 'free' },
+  premiumPlan: { type: String, enum: ['free', 'piola', 'a_fondo', 'plus', 'gold', 'platinum'], default: 'free' },
   ultimaEntregaPremium: { type: Date, default: null },
   premiumHasta:{ type: Date, default: null },
   ultimoCumpleCeleb: { type: Number, default: 0 },

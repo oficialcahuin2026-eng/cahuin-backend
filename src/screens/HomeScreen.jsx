@@ -17,7 +17,7 @@ import { matchService, userService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import {
-  CahuinesCounter, EmptyState, ExpandableSection,
+  EmptyState, ExpandableSection,
   GradientButton, InterestChip, ScreenScaffold, SoftCard,
 } from '../components/CahuinUI';
 import CahuinModal from '../components/CahuinModal';
@@ -158,7 +158,7 @@ export default function HomeScreen({ navigation }) {
     avisar('Modo Destacado', 'Aparece primero en el radar de tu ciudad durante 30 minutos.', {
       emoji: '🔥',
       tone: 'premium',
-      details: `500 Cahuines\nTu saldo actual: ${usuario?.cahuines || 0} Cahuines`,
+      details: 'Incluido en Cahuin a Fondo',
       actions: [
         { label: 'Cancelar', variant: 'secondary', color: '#F0444F', onPress: () => setModalInfo(null) },
         {
@@ -273,13 +273,16 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      {/* ── Header: Radar + subtítulo + CahuinesCounter ── */}
+      {/* ── Header: Radar + subtítulo + planes ── */}
       <View style={styles.header}>
         <View>
           <Text style={styles.headerTitle}>Radar ✨</Text>
           <Text style={styles.headerSub}>Descubre gente cerca</Text>
         </View>
-        <CahuinesCounter cantidad={usuario?.cahuines || 0} COLORS={COLORS} onPress={() => navigation.navigate('Premium')} />
+        <TouchableOpacity style={styles.planPill} onPress={() => navigation.navigate('Premium')} activeOpacity={0.85}>
+          <Ionicons name="sparkles" size={16} color={COLORS.primario} />
+          <Text style={styles.planPillText}>Planes</Text>
+        </TouchableOpacity>
       </View>
 
       {/* ── Card principal ── */}
@@ -482,6 +485,18 @@ const getStyles = (COLORS) => StyleSheet.create({
   },
   headerTitle: { color: COLORS.textPrimary, fontSize: 30, fontWeight: '900', fontFamily: FONTS.display },
   headerSub: { color: COLORS.textMuted, fontSize: 14, marginTop: 2 },
+  planPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: 40,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: COLORS.tarjeta,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  planPillText: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '900' },
 
   // ── Card principal ──
   tarjetaContenedor: {

@@ -24,6 +24,7 @@ import PerfilScreen from '../screens/PerfilScreen';
 import CartasAnonimasScreen from '../screens/CartasAnonimasScreen';
 
 import PremiumScreen from '../screens/PremiumScreen';
+import LikesCahuinScreen from '../screens/LikesCahuinScreen';
 import SalaChatScreen from '../screens/SalaChatScreen';
 import OtroPerfilScreen from '../screens/OtroPerfilScreen';
 import RompehieloScreen from '../screens/RompehieloScreen';
@@ -125,7 +126,7 @@ function MainTabs() {
     Radar: 'Radar',
     Explorar: 'Explorar',
     Panoramas: 'Panoramas',
-    Chat: 'Cahuines',
+    Chat: 'Chat',
     Perfil: 'Perfil',
   };
 
@@ -237,6 +238,7 @@ function MainNavigator() {
       <Stack.Screen name="Tabs" component={MainTabs} />
       <Stack.Screen name="Cartas" component={CartasAnonimasScreen} />
       <Stack.Screen name="Premium" component={PremiumScreen} />
+      <Stack.Screen name="LikesCahuin" component={LikesCahuinScreen} />
       <Stack.Screen name="SalaChat" component={SalaChatScreen} />
       <Stack.Screen name="OtroPerfil" component={OtroPerfilScreen} />
       <Stack.Screen name="Rompehielo" component={RompehieloScreen} />
