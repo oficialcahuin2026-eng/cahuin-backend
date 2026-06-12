@@ -39,6 +39,9 @@ const REGIONES_CHILE = {
   Magallanes: ['Punta Arenas', 'Puerto Natales', 'Porvenir', 'Cabo de Hornos'],
 };
 
+const INSTAGRAM_URL = 'https://www.instagram.com/cahuinapp?igsh=NjZyaGxoYTRhdDUw';
+const TIKTOK_URL = 'https://www.tiktok.com/@cahuinapp?_r=1&_t=ZS-978PynTyi4G';
+
 export default function AjustesScreen({ navigation }) {
   const { usuario, actualizarUsuario, logout } = useAuth();
   const { isDarkMode, toggleTheme, COLORS } = useTheme();
@@ -52,6 +55,17 @@ export default function AjustesScreen({ navigation }) {
   const [modalInfo, setModalInfo] = useState(null);
 
   const avisar = (title, message, extra = {}) => setModalInfo({ title, message, ...extra });
+
+  const abrirRedSocial = async (url) => {
+    try {
+      await Linking.openURL(url);
+    } catch {
+      avisar('Redes Cahuín', 'No pudimos abrir la red social. Intenta de nuevo en un momento.', {
+        emoji: '✨',
+        tone: 'danger',
+      });
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -163,6 +177,26 @@ export default function AjustesScreen({ navigation }) {
         <ScreenHeader title="Ajustes" centered />
         <View style={{ width: 54 }} />
       </View>
+
+      <SoftCard COLORS={COLORS} style={styles.socialCard}>
+        <View style={styles.socialHeader}>
+          <SoftIcon name="sparkles" color={COLORS.primario} bg={COLORS.softRed} size={54} rounded={18} iconSize={25} />
+          <View style={styles.socialCopy}>
+            <Text style={styles.socialTitle}>Cahuín oficial</Text>
+            <Text style={styles.socialSubtitle}>Novedades, eventos y comunidad en nuestras redes.</Text>
+          </View>
+        </View>
+        <View style={styles.socialActions}>
+          <TouchableOpacity activeOpacity={0.88} style={[styles.socialButton, styles.instagramButton]} onPress={() => abrirRedSocial(INSTAGRAM_URL)}>
+            <Ionicons name="logo-instagram" size={24} color="#FFF" />
+            <Text style={styles.socialButtonText}>Instagram</Text>
+          </TouchableOpacity>
+          <TouchableOpacity activeOpacity={0.88} style={[styles.socialButton, styles.tiktokButton]} onPress={() => abrirRedSocial(TIKTOK_URL)}>
+            <Ionicons name="musical-notes" size={24} color="#FFF" />
+            <Text style={styles.socialButtonText}>TikTok</Text>
+          </TouchableOpacity>
+        </View>
+      </SoftCard>
 
       <SettingsSection COLORS={COLORS} title="VISIBILIDAD Y UBICACIÓN" icon="eye" color="#8B5CF6">
         <SettingsRow
@@ -361,6 +395,16 @@ const rowStyles = StyleSheet.create({
 const getStyles = (COLORS) => StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING[4] },
   backButton: { width: 54, height: 54, alignItems: 'center', justifyContent: 'center' },
+  socialCard: { marginBottom: SPACING[5], padding: SPACING[4] },
+  socialHeader: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: SPACING[4] },
+  socialCopy: { flex: 1 },
+  socialTitle: { color: COLORS.textPrimary, fontSize: 22, fontWeight: '900', fontFamily: FONTS.display },
+  socialSubtitle: { color: COLORS.textMuted, fontSize: 14, lineHeight: 20, marginTop: 3 },
+  socialActions: { flexDirection: 'row', gap: 12 },
+  socialButton: { flex: 1, minHeight: 54, borderRadius: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  instagramButton: { backgroundColor: '#E1306C' },
+  tiktokButton: { backgroundColor: '#111827', borderWidth: 1, borderColor: COLORS.border },
+  socialButtonText: { color: '#FFF', fontSize: 15, fontWeight: '900' },
   logoutButton: { minHeight: 66, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.tarjeta, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: SPACING[4] },
   logoutText: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '900' },
   deleteButton: { minHeight: 72, borderRadius: 20, borderWidth: 1.5, borderColor: COLORS.primario, backgroundColor: COLORS.softRed, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: SPACING[8] },

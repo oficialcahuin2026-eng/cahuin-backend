@@ -20,6 +20,7 @@ import CahuinModal from '../components/CahuinModal';
 const API_KEY = Platform.OS === 'ios' 
   ? process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY 
   : process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY;
+const revenueCatDisponible = !!API_KEY && !API_KEY.startsWith('test_');
 
 export default function PremiumScreen({ navigation }) {
   const [packages, setPackages] = useState([]);
@@ -31,8 +32,8 @@ export default function PremiumScreen({ navigation }) {
   useEffect(() => {
     const setupRevenueCat = async () => {
       try {
-        if (!API_KEY) {
-          console.log("Falta la API Key de RevenueCat en el archivo .env");
+        if (!revenueCatDisponible) {
+          console.log("RevenueCat sin llave productiva; Premium queda en modo vista previa.");
           setLoading(false);
           return;
         }
@@ -104,7 +105,15 @@ export default function PremiumScreen({ navigation }) {
             <ActivityIndicator size="large" color="#FFD700" style={{ marginTop: 40 }} />
           ) : (
             <View style={styles.plansContainer}>
-              {planMensual && (
+              {!revenueCatDisponible ? (
+                <View style={styles.previewCard}>
+                  <Ionicons name="shield-checkmark" size={28} color="#FFD700" />
+                  <Text style={styles.previewTitle}>Premium en preparacion</Text>
+                  <Text style={styles.previewText}>Las compras se activaran cuando RevenueCat tenga una llave productiva. Por ahora puedes revisar los beneficios sin cerrar la app.</Text>
+                </View>
+              ) : null}
+
+              {revenueCatDisponible && planMensual && (
                 <TouchableOpacity 
                   style={styles.planCard} 
                   onPress={() => purchasePackage(planMensual)}
@@ -116,7 +125,7 @@ export default function PremiumScreen({ navigation }) {
                 </TouchableOpacity>
               )}
 
-              {planAnual && (
+              {revenueCatDisponible && planAnual && (
                 <TouchableOpacity 
                   style={[styles.planCard, styles.planCardBest]} 
                   onPress={() => purchasePackage(planAnual)}
@@ -180,6 +189,9 @@ const styles = StyleSheet.create({
   featureTitle: { color: '#FFF', fontSize: 17, fontWeight: '700', marginBottom: 4 },
   featureDesc: { color: '#A0AEC0', fontSize: 14 },
   plansContainer: { flexDirection: 'row', gap: 15 },
+  previewCard: { flex: 1, minHeight: 160, borderRadius: 22, padding: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,215,0,0.32)' },
+  previewTitle: { color: '#FFF', fontSize: 20, fontWeight: '900', marginTop: 12, textAlign: 'center' },
+  previewText: { color: '#A0AEC0', fontSize: 14, lineHeight: 20, textAlign: 'center', marginTop: 8 },
   planCard: { flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20, padding: 20, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   planCardBest: { backgroundColor: '#FFD700', borderColor: '#FFD700' },
   bestBadge: { position: 'absolute', top: -12, backgroundColor: '#F0444F', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },

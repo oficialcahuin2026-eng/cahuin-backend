@@ -25,11 +25,8 @@ const features = [
   { title: 'Historias culturales', text: 'Sube foto, lugar y comentarios por 24h.', icon: 'camera', route: 'HistoriasCulturales' },
   { title: 'Cahuín del Día', text: 'Vota a las 20:00 y conecta por humor.', icon: 'chatbubble-ellipses', route: 'CahuinDelDia' },
   { title: 'Swipe de Panoramas', text: 'Haz match por destino regional.', icon: 'ticket', route: 'SwipePanoramas' },
-  { title: 'Mapa de Calor', text: 'Zonas prendidas sin doxxeo.', icon: 'map', route: 'MapaCalor' },
   { title: 'Historias de éxito', text: 'Solo historias verificadas por el equipo.', icon: 'heart', route: 'HistoriasExito' },
-  { title: 'Mapa de conexiones', text: 'Matches prendiendo Chile.', icon: 'sparkles', route: 'MapaConexiones' },
   { title: 'Botella digital', text: 'Un mensaje anónimo flotando por Chile.', icon: 'mail-open', route: 'Botellas' },
-  { title: 'Modo 18', text: 'Cuecazo, badges y previa dieciochera.', icon: 'flag', route: 'ModoPatrio' },
 ];
 
 export default function ExplorarScreen({ navigation }) {
