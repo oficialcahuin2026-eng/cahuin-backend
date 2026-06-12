@@ -381,33 +381,41 @@ export default function HomeScreen({ navigation }) {
 
         {/* ── Botones de acción con labels ── */}
         <View style={styles.botonesOverlay}>
-          <TouchableOpacity style={[styles.btnAccion, styles.btnSmallAction]} onPress={deshacerUltimo} disabled={procesandoAccion}>
-            <Ionicons name="arrow-undo" size={22} color="#F59E0B" />
+          <TouchableOpacity style={{ alignItems: 'center' }} onPress={deshacerUltimo} disabled={procesandoAccion}>
+            <View style={[styles.btnAccion, styles.btnSmallAction]}>
+              <Ionicons name="arrow-undo" size={22} color="#F59E0B" />
+            </View>
             <Text style={[styles.btnLabel, { color: COLORS.textMuted }]}>Volver</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.btnAccion, styles.btnDislike]} onPress={() => procesarInteraccion('dislike')} disabled={procesandoAccion}>
-            <Ionicons name="close" size={30} color="#F0444F" />
+          <TouchableOpacity style={{ alignItems: 'center' }} onPress={() => procesarInteraccion('dislike')} disabled={procesandoAccion}>
+            <View style={[styles.btnAccion, styles.btnDislike]}>
+              <Ionicons name="close" size={30} color="#F0444F" />
+            </View>
             <Text style={[styles.btnLabel, { color: COLORS.textMuted }]}>Nope</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.btnAccion, styles.btnSuperLike]} onPress={() => procesarInteraccion('superlike')} disabled={procesandoAccion}>
-            <Ionicons name="star" size={24} color="#FFF" />
-            <Text style={[styles.btnLabel, { color: '#FFF' }]}>Súper Like</Text>
+          <TouchableOpacity style={{ alignItems: 'center' }} onPress={() => procesarInteraccion('superlike')} disabled={procesandoAccion}>
+            <View style={[styles.btnAccion, styles.btnSuperLike]}>
+              <Ionicons name="star" size={24} color="#FFF" />
+            </View>
+            <Text style={[styles.btnLabel, { color: COLORS.textMuted }]}>Súper Like</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.btnAccion, styles.btnLike]} onPress={() => procesarInteraccion('like')} disabled={procesandoAccion}>
-            <Ionicons name="heart" size={34} color="#FFF" />
-            <Text style={[styles.btnLabel, { color: '#FFF' }]}>Me gusta</Text>
+          <TouchableOpacity style={{ alignItems: 'center' }} onPress={() => procesarInteraccion('like')} disabled={procesandoAccion}>
+            <View style={[styles.btnAccion, styles.btnLike]}>
+              <Ionicons name="heart" size={34} color="#FFF" />
+            </View>
+            <Text style={[styles.btnLabel, { color: COLORS.textMuted }]}>Me gusta</Text>
           </TouchableOpacity>
-          <View>
-            <TouchableOpacity style={[styles.btnAccion, styles.btnSmallAction]} onPress={activarBoost}>
+          <TouchableOpacity style={{ alignItems: 'center' }} onPress={activarBoost}>
+            <View style={[styles.btnAccion, styles.btnSmallAction]}>
               <Ionicons name="flash" size={22} color="#8B5CF6" />
-              <Text style={[styles.btnLabel, { color: COLORS.textMuted }]}>Boost</Text>
-            </TouchableOpacity>
-            {usuario?.boostGratisDisponibles > 0 && (
-              <View style={styles.boostBadge}>
-                <Text style={styles.boostBadgeText}>{usuario.boostGratisDisponibles}</Text>
-              </View>
-            )}
-          </View>
+              {usuario?.boostGratisDisponibles > 0 && (
+                <View style={styles.boostBadge}>
+                  <Text style={styles.boostBadgeText}>{usuario.boostGratisDisponibles}</Text>
+                </View>
+              )}
+            </View>
+            <Text style={[styles.btnLabel, { color: COLORS.textMuted }]}>Boost</Text>
+          </TouchableOpacity>
         </View>
       </View>
 

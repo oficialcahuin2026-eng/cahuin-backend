@@ -328,9 +328,9 @@ export default function PerfilScreen({ navigation }) {
       <View style={styles.twoCol}>
         <SoftCard COLORS={COLORS} style={[styles.halfCard]}>
           <View style={styles.miniHeader}>
-            <Text style={styles.miniTitle}>Mi Estilo de Vida</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('EditarPerfil')}>
-              <Text style={[styles.miniAction, { color: COLORS.primario }]}>Editar ✏️</Text>
+            <Text style={styles.miniTitle} numberOfLines={1}>Estilo de Vida</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('EditarPerfil')} style={styles.editMiniBtn}>
+              <Ionicons name="pencil" size={14} color={COLORS.primario} />
             </TouchableOpacity>
           </View>
           <View style={styles.tagsContainer}>
@@ -344,15 +344,15 @@ export default function PerfilScreen({ navigation }) {
 
         <SoftCard COLORS={COLORS} style={[styles.halfCard]}>
           <View style={styles.miniHeader}>
-            <Text style={styles.miniTitle}>Mis Gustos</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('EditarPerfil')}>
-              <Text style={[styles.miniAction, { color: COLORS.primario }]}>Editar ✏️</Text>
+            <Text style={styles.miniTitle} numberOfLines={1}>Mis Gustos</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('EditarPerfil')} style={styles.editMiniBtn}>
+              <Ionicons name="pencil" size={14} color={COLORS.primario} />
             </TouchableOpacity>
           </View>
           <View style={styles.tagsContainer}>
             {intereses.slice(0, 4).map((interes, idx) => (
               <View key={`${interes}-${idx}`} style={[styles.tag, { borderColor: 'rgba(139,92,246,0.28)' }]}>
-                <Text style={[styles.tagText, { color: '#7C3AED' }]}>✨ {interes}</Text>
+                <Text style={[styles.tagText, { color: '#7C3AED' }]} numberOfLines={1}>✨ {interes}</Text>
               </View>
             ))}
           </View>
@@ -363,25 +363,25 @@ export default function PerfilScreen({ navigation }) {
       <View style={styles.twoCol}>
         {usuario?.modoRecuperacion ? (
           <SoftCard COLORS={COLORS} style={[styles.halfCard, { backgroundColor: COLORS.softGreen, borderColor: 'rgba(52,168,83,0.3)' }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <Text style={{ fontSize: 20 }}>🌱</Text>
-              <Text style={[styles.miniTitle, { color: '#2F9E4D' }]}>Volviendo a florecer</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <Text style={{ fontSize: 16 }}>🌱</Text>
+              <Text style={[styles.miniTitle, { color: '#2F9E4D' }]} numberOfLines={1}>Volver a florecer</Text>
             </View>
             <TouchableOpacity onPress={() => abrirArticulo(ARTICULOS_RECUPERACION[0])} style={styles.recoveryPreview}>
-              <Text style={{ fontSize: 14 }}>{ARTICULOS_RECUPERACION[0].emoji}</Text>
+              <Text style={{ fontSize: 12 }}>{ARTICULOS_RECUPERACION[0].emoji}</Text>
               <Text style={[styles.recoveryPreviewTitle, { color: COLORS.textPrimary }]} numberOfLines={1}>{ARTICULOS_RECUPERACION[0].titulo}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => abrirArticulo(ARTICULOS_RECUPERACION[0])}>
-              <Text style={[styles.miniAction, { color: '#2F9E4D', marginTop: 6 }]}>Ver todo &gt;</Text>
+              <Text style={[styles.miniAction, { color: '#2F9E4D', marginTop: 8 }]}>Ver todo &gt;</Text>
             </TouchableOpacity>
           </SoftCard>
         ) : null}
 
         <TouchableOpacity activeOpacity={0.9} onPress={() => navigation.navigate('Premium')} style={[styles.halfCard, { flex: usuario?.modoRecuperacion ? 1 : undefined, width: usuario?.modoRecuperacion ? undefined : '100%' }]}>
           <LinearGradient colors={['#07111F', '#121A2A']} style={styles.premiumMini}>
-            <Text style={{ fontSize: 24 }}>💎</Text>
-            <Text style={styles.premiumMiniTitle}>Cahuín Premium</Text>
-            <Text style={styles.premiumMiniSub}>Más visibilidad y funciones exclusivas.</Text>
+            <Text style={{ fontSize: 20 }}>💎</Text>
+            <Text style={styles.premiumMiniTitle} numberOfLines={1}>Cahuín Premium</Text>
+            <Text style={styles.premiumMiniSub} numberOfLines={2}>Más visibilidad y funciones exclusivas.</Text>
             <View style={styles.premiumMiniButton}>
               <Text style={styles.premiumMiniButtonText}>Mejorar &gt;</Text>
             </View>
@@ -592,23 +592,24 @@ const getStyles = (COLORS) => StyleSheet.create({
   // ── Two columns ──
   twoCol: { flexDirection: 'row', gap: SPACING[2], marginBottom: SPACING[4] },
   halfCard: { flex: 1, padding: SPACING[3] },
-  miniHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  miniTitle: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '800' },
+  miniHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 4 },
+  miniTitle: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '800', flexShrink: 1 },
   miniAction: { fontSize: 12, fontWeight: '700' },
-  tagsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  tag: { borderWidth: 1, borderRadius: 99, paddingHorizontal: 8, paddingVertical: 5, backgroundColor: COLORS.tarjeta },
+  editMiniBtn: { padding: 4, backgroundColor: 'rgba(240,68,79,0.1)', borderRadius: 12 },
+  tagsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  tag: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 6, paddingVertical: 4, backgroundColor: COLORS.tarjeta },
   tagText: { color: COLORS.textPrimary, fontSize: 11, fontWeight: '700' },
 
   // ── Recovery compact ──
-  recoveryPreview: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 8, backgroundColor: COLORS.tarjeta, borderRadius: 12 },
-  recoveryPreviewTitle: { fontSize: 12, fontWeight: '700', flex: 1 },
+  recoveryPreview: { flexDirection: 'row', alignItems: 'center', gap: 6, padding: 8, backgroundColor: COLORS.tarjeta, borderRadius: 12 },
+  recoveryPreviewTitle: { fontSize: 11, fontWeight: '700', flex: 1 },
 
   // ── Premium mini ──
-  premiumMini: { borderRadius: 20, padding: 14, ...SHADOWS.dark },
-  premiumMiniTitle: { color: '#FFF', fontSize: 15, fontWeight: '900', fontFamily: FONTS.display, marginTop: 6 },
-  premiumMiniSub: { color: '#CBD5E1', fontSize: 11, lineHeight: 16, marginTop: 3 },
-  premiumMiniButton: { backgroundColor: '#FFD166', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7, alignSelf: 'flex-start', marginTop: 8 },
-  premiumMiniButtonText: { color: '#111827', fontSize: 12, fontWeight: '900' },
+  premiumMini: { borderRadius: 16, padding: 12, ...SHADOWS.dark },
+  premiumMiniTitle: { color: '#FFF', fontSize: 14, fontWeight: '900', fontFamily: FONTS.display, marginTop: 4 },
+  premiumMiniSub: { color: '#CBD5E1', fontSize: 11, lineHeight: 14, marginTop: 2 },
+  premiumMiniButton: { backgroundColor: '#FFD166', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6, alignSelf: 'flex-start', marginTop: 8 },
+  premiumMiniButtonText: { color: '#111827', fontSize: 11, fontWeight: '900' },
 
   // ── Questions ──
   questionsCard: { marginBottom: SPACING[4] },

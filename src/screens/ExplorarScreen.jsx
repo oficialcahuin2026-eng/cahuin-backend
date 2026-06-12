@@ -61,7 +61,6 @@ export default function ExplorarScreen({ navigation }) {
     try {
       const radar = await userService.descubrir({});
       const perfilesRadar = radar.perfiles || [];
-      // Usar primeros 6 perfiles como trending
       setTrendingPerfiles(perfilesRadar.slice(0, 6));
 
       const respuestas = await Promise.all(
@@ -87,6 +86,25 @@ export default function ExplorarScreen({ navigation }) {
       cargarMetricas();
     }, [cargarMetricas, usuario?.distanciaMax, usuario?.ciudad, usuario?.region, usuario?.categoriasExplorar])
   );
+
+  React.useEffect(() => {
+    import('socket.io-client').then(({ default: io }) => {
+      const socket = io((process.env.CAHUIN_API_PUBLIC_URL || 'http://localhost:5000').replace(/\/api\/?$/, '').replace(/\/+$/, ''));
+      if (usuario?.region) {
+        socket.emit('registrarRegion', usuario.region);
+      }
+      socket.on('statsRegiones', (stats) => {
+        if (usuario?.region && stats[usuario.region]) {
+          // Add online users to ruleta count for more dynamic feeling
+          setMetricas(prev => ({
+            ...prev,
+            activosRegion: stats[usuario.region]
+          }));
+        }
+      });
+      return () => socket.disconnect();
+    });
+  }, [usuario?.region]);
 
   const girarRuleta = async () => {
     avisar(
@@ -187,7 +205,7 @@ export default function ExplorarScreen({ navigation }) {
                         </View>
                       ))}
                     </View>
-                    <Text style={styles.liveCount}>{formatearConteo(metricas.ruleta)} conectando ahora</Text>
+                    <Text style={styles.liveCount}>{formatearConteo(metricas.ruleta + (metricas.activosRegion || 0))} conectando ahora</Text>
                   </View>
                 </View>
 

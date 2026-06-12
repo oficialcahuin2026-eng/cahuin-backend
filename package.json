@@ -4,7 +4,8 @@
   "description": "App de citas chilena, hecha por y para chilenos",
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
-    "start": "expo start",
+    "start": "node server/index.js",
+    "expo-start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "server": "node server/index.js"

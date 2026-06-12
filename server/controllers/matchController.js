@@ -125,6 +125,7 @@ exports.darLikeODislike = async (req, res) => {
 exports.listarMisMatches = async (req, res) => {
   try {
     const miId = String(req.user._id);
+    const miUsuario = await User.findById(miId);
 
     const misLikesDocs = await Match.find({
       remitente: miId, tipo: { $in: ['like', 'superlike', 'relampago'] }
@@ -159,13 +160,19 @@ exports.listarMisMatches = async (req, res) => {
         leido: { $ne: true },
       });
 
+      const misIntereses = miUsuario.intereses || [];
+      const susIntereses = m.remitente.intereses || [];
+      const comunes = misIntereses.filter(i => susIntereses.includes(i));
+      const compatibilidadReal = Math.min(99, 60 + (comunes.length * 8));
+
       return {
         roomId,
         usuario:        m.remitente,
         fecha:          m.createdAt,
         yaRespondi:     misRespuestas.length > 0,
         elYaRespondio:  susRespuestas.length > 0,
-        compatibilidad: 85,
+        compatibilidad: compatibilidadReal,
+        interesesComunes: comunes,
         rachaConversacion,
         noLeidos,
         esRelampago:    false,

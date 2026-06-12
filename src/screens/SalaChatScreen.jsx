@@ -128,6 +128,44 @@ export default function SalaChatScreen({ route, navigation }) {
   const ejecutarAccionSeguridad = async (accion, mensajeExito) => {
     try {
       if (accion === 'bloquear') await userService.bloquear(otroUsuario._id);
+  };
+  
+  const cargarMensajesHistorial = async () => {
+    try {
+      const data = await mensajeService.listar(matchId);
+      const mensajesNuevos = data.mensajes || [];
+      setMensajes(mensajesNuevos);
+
+      if (mensajesNuevos.length > 0) {
+        const energiaData = await iaService.getEnergia(mensajesNuevos.slice(-10)); 
+        setEnergiaChat(energiaData);
+      }
+    } catch (error) { console.log('Error:', error); }
+  };
+
+  const handleEnviar = async () => {
+    if (!texto.trim()) return;
+    
+    const textoMensaje = texto;
+    setTexto(''); 
+
+    try { 
+      const data = await mensajeService.enviar(matchId, textoMensaje); 
+      
+      setMensajes(prev => [...prev, data.mensaje]);
+
+      if (socketRef.current) {
+        socketRef.current.emit('enviarMensaje', {
+          matchId,
+          mensaje: data.mensaje
+        });
+      }
+    } catch (error) { console.log(error); }
+  };
+
+  const ejecutarAccionSeguridad = async (accion, mensajeExito) => {
+    try {
+      if (accion === 'bloquear') await userService.bloquear(otroUsuario._id);
       else await userService.reportar(otroUsuario._id);
       avisar('Listo 🛡️', mensajeExito, '🛡️');
       navigation.goBack();
@@ -135,10 +173,28 @@ export default function SalaChatScreen({ route, navigation }) {
   };
 
   const mostrarMenuSeguridad = () => {
-    avisar('Opciones de cuidado', '¿Qué quieres hacer con este chat?', '🛡️', [
+    avisar('Seguridad', '¿Qué quieres hacer con este chat?', '🛡️', [
       { label: 'Reportar', variant: 'danger', onPress: () => { setModalCahuin(null); ejecutarAccionSeguridad('reportar', 'Usuario reportado.'); } },
       { label: 'Bloquear', variant: 'danger', onPress: () => { setModalCahuin(null); ejecutarAccionSeguridad('bloquear', 'Usuario bloqueado.'); } },
       { label: 'Cancelar', variant: 'secondary', onPress: () => setModalCahuin(null) },
+    ]);
+  };
+
+  const mostrarOpcionesChat = () => {
+    avisar('Opciones de Chat', '¿Qué te gustaría hacer?', '⚙️', [
+      { label: '📅 Ver disponibilidad', onPress: () => { setModalCahuin(null); setModalFechasVisible(true); } },
+      { label: '📖 Diario Privado', onPress: () => { setModalCahuin(null); abrirDiario(); } },
+      { label: '⭐ Calificar match', onPress: () => { setModalCahuin(null); setModalCalificarVisible(true); } },
+      { label: '🛡️ Opciones de seguridad', onPress: () => { setModalCahuin(null); mostrarMenuSeguridad(); } },
+      { label: 'Cancelar', variant: 'secondary', onPress: () => setModalCahuin(null) }
+    ]);
+  };
+
+  const mostrarOpcionesAdjunto = () => {
+    avisar('Extras', 'Haz más interactivo tu chat', '✨', [
+      { label: '🤖 Ayuda del Wingman IA', onPress: () => { setModalCahuin(null); invocarWingman(); } },
+      { label: '🎤 Proponer Karaoke', onPress: () => { setModalCahuin(null); abrirKaraoke(); } },
+      { label: 'Cancelar', variant: 'secondary', onPress: () => setModalCahuin(null) }
     ]);
   };
 
@@ -302,7 +358,6 @@ export default function SalaChatScreen({ route, navigation }) {
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}><Ionicons name="arrow-back" size={26} color={COLORS.textPrimary} /></TouchableOpacity>
         
-        {/* 🌟 SI ES RULETA Y AÚN NO SE REVELAN, OCULTAR IDENTIDAD */}
         <TouchableOpacity style={styles.headerInfo} disabled={route.params?.esRuletaCiega && !route.params?.ambosRevelaron} onPress={() => navigation.navigate('OtroPerfil', { usuario: otroUsuario })}>
           <Image source={{ uri: otroUsuario?.foto || 'https://images.unsplash.com/photo-1511882150382-421056c89033?q=80&w=150' }} style={styles.avatar} />
           <View>
@@ -317,7 +372,6 @@ export default function SalaChatScreen({ route, navigation }) {
           </View>
         </TouchableOpacity>
 
-        {/* 🌟 BOTÓN PARA REVELARSE EN RULETA CIEGA */}
         {route.params?.esRuletaCiega && !route.params?.ambosRevelaron && (
            <TouchableOpacity 
              onPress={handleRevelarse} 
@@ -330,13 +384,9 @@ export default function SalaChatScreen({ route, navigation }) {
         )}
 
         {!route.params?.esRuletaCiega && (
-          <>
-            <TouchableOpacity onPress={() => setModalFechasVisible(true)} style={styles.btnIcono}><Ionicons name="calendar" size={26} color="#2196F3" /></TouchableOpacity>
-            <TouchableOpacity onPress={abrirDiario} style={styles.btnIcono}><Ionicons name="book" size={24} color="#8E24AA" /></TouchableOpacity>
-            <TouchableOpacity onPress={() => setModalCalificarVisible(true)} style={styles.btnIcono}><Ionicons name="star" size={26} color="#FFD700" /></TouchableOpacity>
-            <TouchableOpacity onPress={() => setModalSeguridadVisible(true)} style={styles.btnIcono}><MaterialCommunityIcons name="shield-account" size={28} color="#4CAF50" /></TouchableOpacity>
-            <TouchableOpacity onPress={mostrarMenuSeguridad} style={styles.btnIcono}><Ionicons name="flag" size={24} color={COLORS.primario} /></TouchableOpacity>
-          </>
+          <TouchableOpacity onPress={mostrarOpcionesChat} style={styles.btnIcono}>
+            <Ionicons name="ellipsis-vertical" size={24} color={COLORS.textPrimary} />
+          </TouchableOpacity>
         )}
       </View>
 
@@ -351,28 +401,31 @@ export default function SalaChatScreen({ route, navigation }) {
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
         />
 
-        <TouchableOpacity style={styles.btnKaraoke} onPress={abrirKaraoke}>
-          <Ionicons name="mic" size={23} color="#FFF" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.btnWingman} onPress={invocarWingman}>
-          <MaterialCommunityIcons name="robot-outline" size={24} color="#FFF" />
-        </TouchableOpacity>
-
         <View style={styles.inputRow}>
-          <CahuinTextField 
-            icon="chatbubble-ellipses-outline"
-            containerStyle={{ flex: 1 }}
-            value={texto} 
-            onChangeText={setTexto} 
-            placeholder="Escribe un mensaje..." 
-            returnKeyType="send"
-            onSubmitEditing={handleEnviar}
-            blurOnSubmit={false} 
-          />
-          <TouchableOpacity style={styles.btnEnviar} onPress={handleEnviar}>
-            <Ionicons name="send" size={20} color="#FFF" />
+          <TouchableOpacity style={styles.btnAttach} onPress={mostrarOpcionesAdjunto}>
+            <Ionicons name="add-circle" size={28} color={COLORS.textMuted} />
           </TouchableOpacity>
+          
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.inputText}
+              value={texto}
+              onChangeText={setTexto}
+              placeholder="Mensaje..."
+              placeholderTextColor={COLORS.textMuted}
+              multiline
+            />
+          </View>
+          
+          {texto.trim().length === 0 ? (
+            <TouchableOpacity style={styles.btnVoice}>
+              <Ionicons name="mic" size={24} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.btnEnviar} onPress={handleEnviar}>
+              <Ionicons name="send" size={18} color="#FFF" style={{ marginLeft: 2 }} />
+            </TouchableOpacity>
+          )}
         </View>
       </KeyboardAvoidingView>
 
@@ -533,9 +586,12 @@ const getStyles = (COLORS) => StyleSheet.create({
   inviteText: { color: COLORS.textPrimary, fontSize: 15, lineHeight: 22, fontWeight: '700' },
   karaokeMessage: { maxWidth: '86%', borderRadius: 22, padding: SPACING[4], borderWidth: 1, marginVertical: 2, ...SHADOWS.light },
 
-  inputRow: { flexDirection: 'row', alignItems: 'center', padding: SPACING[3], gap: 10, backgroundColor: COLORS.tarjeta, borderTopWidth: 1, borderTopColor: COLORS.border },
-  input: { flex: 1, backgroundColor: COLORS.fondo, borderWidth: 1, borderColor: COLORS.border, borderRadius: 24, paddingHorizontal: SPACING[4], paddingVertical: SPACING[3], color: COLORS.textPrimary, maxHeight: 100, fontSize: 16, ...SHADOWS.light },
-  btnEnviar: { width: 46, height: 46, borderRadius: 23, backgroundColor: COLORS.primario, justifyContent: 'center', alignItems: 'center', ...SHADOWS.sm },
+  inputRow: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: SPACING[3], paddingVertical: 10, gap: 10, backgroundColor: COLORS.tarjeta, borderTopWidth: 1, borderTopColor: COLORS.border },
+  btnAttach: { marginBottom: 6, padding: 4 },
+  inputContainer: { flex: 1, minHeight: 44, maxHeight: 120, backgroundColor: COLORS.fondo, borderRadius: 22, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 16, justifyContent: 'center' },
+  inputText: { color: COLORS.textPrimary, fontSize: 16, paddingTop: 10, paddingBottom: 10 },
+  btnVoice: { marginBottom: 6, padding: 8 },
+  btnEnviar: { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.primario, justifyContent: 'center', alignItems: 'center', ...SHADOWS.sm, marginBottom: 2 },
   
   modalFondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: 20 },
   modalCard: { backgroundColor: COLORS.tarjeta, borderRadius: RADIUS.xl, padding: 25, ...SHADOWS.lg },

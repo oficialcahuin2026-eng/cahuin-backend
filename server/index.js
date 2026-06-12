@@ -90,11 +90,30 @@ cron.schedule('0 20 * * *', async () => {
   } catch (e) { console.log('Error Cron IA:', e); }
 });
 
+// Tracking de conectados por región
+const conectadosPorRegion = {};
+
 io.on('connection', (socket) => {
   console.log('🔌 Nuevo celular conectado al chat en vivo');
+  
+  socket.on('registrarRegion', (region) => {
+    if (region) {
+      socket.userRegion = region;
+      conectadosPorRegion[region] = (conectadosPorRegion[region] || 0) + 1;
+      io.emit('statsRegiones', conectadosPorRegion);
+    }
+  });
+
   socket.on('entrarSala', (matchId) => { socket.join(matchId); });
   socket.on('enviarMensaje', (data) => { socket.to(data.matchId).emit('recibirMensaje', data.mensaje); });
-  socket.on('disconnect', () => { console.log('❌ Celular desconectado del chat'); });
+  
+  socket.on('disconnect', () => { 
+    if (socket.userRegion && conectadosPorRegion[socket.userRegion] > 0) {
+      conectadosPorRegion[socket.userRegion] -= 1;
+      io.emit('statsRegiones', conectadosPorRegion);
+    }
+    console.log('❌ Celular desconectado del chat'); 
+  });
 });
 
 const PORT = process.env.PORT || 5000;
