@@ -83,6 +83,20 @@ export default function SalaChatScreen({ route, navigation }) {
     return () => {
       if (socketRef.current) socketRef.current.disconnect();
     };
+    
+    socketRef.current.emit('entrarSala', matchId);
+
+    socketRef.current.on('recibirMensaje', (mensajeNuevo) => {
+      setMensajes(prevMensajes => {
+        if (prevMensajes.some(m => m._id === mensajeNuevo._id)) return prevMensajes;
+        return [...prevMensajes, mensajeNuevo];
+      });
+      Vibration.vibrate([0, 100, 100]); 
+    });
+
+    return () => {
+      if (socketRef.current) socketRef.current.disconnect();
+    };
   }, []);
 
   const handleRevelarse = async () => {
@@ -110,44 +124,6 @@ export default function SalaChatScreen({ route, navigation }) {
     
     const textoMensaje = texto;
     setTexto(''); // Limpiamos la cajita al instante
-
-    try { 
-      const data = await mensajeService.enviar(matchId, textoMensaje); 
-      
-      setMensajes(prev => [...prev, data.mensaje]);
-
-      if (socketRef.current) {
-        socketRef.current.emit('enviarMensaje', {
-          matchId,
-          mensaje: data.mensaje
-        });
-      }
-    } catch (error) { console.log(error); }
-  };
-
-  const ejecutarAccionSeguridad = async (accion, mensajeExito) => {
-    try {
-      if (accion === 'bloquear') await userService.bloquear(otroUsuario._id);
-  };
-  
-  const cargarMensajesHistorial = async () => {
-    try {
-      const data = await mensajeService.listar(matchId);
-      const mensajesNuevos = data.mensajes || [];
-      setMensajes(mensajesNuevos);
-
-      if (mensajesNuevos.length > 0) {
-        const energiaData = await iaService.getEnergia(mensajesNuevos.slice(-10)); 
-        setEnergiaChat(energiaData);
-      }
-    } catch (error) { console.log('Error:', error); }
-  };
-
-  const handleEnviar = async () => {
-    if (!texto.trim()) return;
-    
-    const textoMensaje = texto;
-    setTexto(''); 
 
     try { 
       const data = await mensajeService.enviar(matchId, textoMensaje); 
