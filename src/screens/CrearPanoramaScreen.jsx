@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, TextInput, Platform, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
+import MapView, { Marker } from 'react-native-maps';
 import { useTheme } from '../context/ThemeContext';
 import { FONTS, SHADOWS, SPACING, RADIUS } from '../utils/theme';
 import { GradientButton } from '../components/CahuinUI';
@@ -23,9 +25,52 @@ export default function CrearPanoramaScreen({ navigation }) {
   const [cupos, setCupos] = useState('4');
   const [privacidad, setPrivacidad] = useState('Público');
   
+  const [showCuposModal, setShowCuposModal] = useState(false);
+  const [showPrivacidadModal, setShowPrivacidadModal] = useState(false);
+  
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [cargandoUbicacion, setCargandoUbicacion] = useState(false);
+  
+  // Coordenadas por defecto (ej. centro de Chile o Santiago)
+  const [regionMap, setRegionMap] = useState({
+    latitude: -33.4489,
+    longitude: -70.6693,
+    latitudeDelta: 0.05,
+    longitudeDelta: 0.05,
+  });
+
+  const obtenerUbicacionActual = async () => {
+    setCargandoUbicacion(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+
+      const location = await Location.getCurrentPositionAsync({});
+      const coords = {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      };
+      setRegionMap(coords);
+
+      const geocode = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+
+      if (geocode && geocode.length > 0) {
+        const place = geocode[0];
+        setLugar(`${place.street || ''} ${place.streetNumber || ''}, ${place.city || place.subregion || ''}`);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setCargandoUbicacion(false);
+    }
+  };
 
   const toggleVibe = (vibe) => {
     if (vibes.includes(vibe)) {
@@ -94,21 +139,23 @@ export default function CrearPanoramaScreen({ navigation }) {
               onChangeText={setLugar}
             />
           </View>
-          {/* Map mockup */}
+          {/* Map */}
           <View style={styles.mapContainer}>
-            <Image 
-              source={{ uri: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=600' }} 
-              style={styles.mapImage} 
-            />
-            <View style={styles.mapOverlay}>
-              <View style={styles.mapPin}>
-                <Ionicons name="location" size={20} color="#FFF" />
-              </View>
-            </View>
+            <MapView
+              style={styles.mapImage}
+              region={regionMap}
+              onRegionChangeComplete={(r) => setRegionMap(r)}
+            >
+              <Marker coordinate={{ latitude: regionMap.latitude, longitude: regionMap.longitude }}>
+                <View style={styles.mapPin}>
+                  <Ionicons name="location" size={20} color="#FFF" />
+                </View>
+              </Marker>
+            </MapView>
           </View>
-          <TouchableOpacity style={styles.useLocationBtn}>
+          <TouchableOpacity style={styles.useLocationBtn} onPress={obtenerUbicacionActual} disabled={cargandoUbicacion}>
             <Ionicons name="navigate-outline" size={16} color={COLORS.primario} />
-            <Text style={styles.useLocationText}>Usar mi ubicación actual</Text>
+            <Text style={styles.useLocationText}>{cargandoUbicacion ? 'Obteniendo...' : 'Usar mi ubicación actual'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -195,18 +242,19 @@ export default function CrearPanoramaScreen({ navigation }) {
         <View style={styles.row}>
           <View style={[styles.inputGroup, { flex: 1 }]}>
             <Text style={styles.label}>Cupos</Text>
-            <View style={styles.selectBox}>
-              <TextInput style={styles.selectText} value={cupos} onChangeText={setCupos} keyboardType="numeric" />
+            <TouchableOpacity style={styles.selectBox} onPress={() => setShowCuposModal(true)}>
+              <Text style={styles.selectText}>{cupos}</Text>
               <Text style={styles.selectLabel}>personas</Text>
-            </View>
+              <Ionicons name="chevron-down" size={16} color={COLORS.textMuted} style={{ marginLeft: 'auto' }} />
+            </TouchableOpacity>
           </View>
           <View style={[styles.inputGroup, { flex: 1.5 }]}>
             <Text style={styles.label}>Privacidad</Text>
-            <View style={styles.selectBox}>
+            <TouchableOpacity style={styles.selectBox} onPress={() => setShowPrivacidadModal(true)}>
               <Ionicons name={privacidad === 'Público' ? "globe-outline" : "lock-closed-outline"} size={16} color={COLORS.textMuted} />
               <Text style={[styles.selectText, { flex: 1, marginLeft: 8 }]}>{privacidad}</Text>
               <Ionicons name="chevron-down" size={16} color={COLORS.textMuted} />
-            </View>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -216,6 +264,41 @@ export default function CrearPanoramaScreen({ navigation }) {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Modals para Selección */}
+      {showCuposModal && (
+        <View style={styles.bottomSheetOverlay}>
+          <View style={styles.bottomSheet}>
+            <Text style={styles.bottomSheetTitle}>¿Cuántos cupos?</Text>
+            {['2', '4', '6', '10', 'Sin límite'].map(opt => (
+              <TouchableOpacity key={opt} style={styles.sheetOption} onPress={() => { setCupos(opt); setShowCuposModal(false); }}>
+                <Text style={styles.sheetOptionText}>{opt} {opt !== 'Sin límite' ? 'personas' : ''}</Text>
+                {cupos === opt && <Ionicons name="checkmark-circle" size={20} color={COLORS.primario} />}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowCuposModal(false)}>
+              <Text style={styles.sheetCancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {showPrivacidadModal && (
+        <View style={styles.bottomSheetOverlay}>
+          <View style={styles.bottomSheet}>
+            <Text style={styles.bottomSheetTitle}>Privacidad del Panorama</Text>
+            {['Público', 'Amigos', 'Solo invitación'].map(opt => (
+              <TouchableOpacity key={opt} style={styles.sheetOption} onPress={() => { setPrivacidad(opt); setShowPrivacidadModal(false); }}>
+                <Text style={styles.sheetOptionText}>{opt}</Text>
+                {privacidad === opt && <Ionicons name="checkmark-circle" size={20} color={COLORS.primario} />}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowPrivacidadModal(false)}>
+              <Text style={styles.sheetCancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -290,5 +373,12 @@ const getStyles = (COLORS) => StyleSheet.create({
   },
   selectText: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '600', padding: 0 },
   selectLabel: { color: COLORS.textMuted, fontSize: 14, marginLeft: 4 },
-  btnSubmit: { marginTop: 10 }
+  btnSubmit: { marginTop: 10 },
+  bottomSheetOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end', zIndex: 999 },
+  bottomSheet: { backgroundColor: COLORS.tarjeta, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl, padding: SPACING[4], paddingBottom: SPACING[6] },
+  bottomSheetTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '800', marginBottom: 15, textAlign: 'center' },
+  sheetOption: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  sheetOptionText: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '600' },
+  sheetCancel: { marginTop: 20, paddingVertical: 15, backgroundColor: COLORS.fondo, borderRadius: RADIUS.lg, alignItems: 'center' },
+  sheetCancelText: { color: COLORS.textMuted, fontSize: 16, fontWeight: '700' }
 });

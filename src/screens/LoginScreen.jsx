@@ -28,7 +28,6 @@ export default function LoginScreen({ navigation }) {
   // 🌟 Hooks de Clerk para manejar la sesión
   const { signIn, setActive, isLoaded } = useSignIn();
   const { startOAuthFlow: startGoogleOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
-  const { startOAuthFlow: startFacebookOAuthFlow } = useOAuth({ strategy: 'oauth_facebook' });
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -95,11 +94,7 @@ export default function LoginScreen({ navigation }) {
   const loginSocial = async (red) => {
     setCargandoSocial(red);
     try {
-      // 🌟 Elegimos el flujo correcto según el botón presionado
-      const startOAuthFlow = red === 'Google' ? startGoogleOAuthFlow : startFacebookOAuthFlow;
-      
-      // 🌟 Aquí está el "Boleto de retorno" para que vuelva a Cahuín después de Google/Facebook
-      const { createdSessionId, setActive: setOAuthActive } = await startOAuthFlow({
+      const { createdSessionId, setActive: setOAuthActive } = await startGoogleOAuthFlow({
         redirectUrl: Linking.createURL('/'),
       });
 
@@ -114,7 +109,7 @@ export default function LoginScreen({ navigation }) {
       showModal(
         red, 
         error.errors?.[0]?.message || `No pudimos iniciar sesión con ${red}.`, 
-        red === 'Facebook' ? '#1877F2' : '#F0444F'
+        '#F0444F'
       );
     } finally {
       setCargandoSocial(null);
@@ -176,19 +171,6 @@ export default function LoginScreen({ navigation }) {
                 <Ionicons name="logo-google" size={22} color="#DB4437" />
               )}
               <Text style={[styles.socialText, { color: '#111827' }]}>Google</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.socialButton, { backgroundColor: '#1877F2' }]}
-              onPress={() => loginSocial('Facebook')}
-              disabled={!!cargandoSocial}
-            >
-              {cargandoSocial === 'Facebook' ? (
-                <ActivityIndicator color="#FFF" />
-              ) : (
-                <Ionicons name="logo-facebook" size={22} color="#FFF" />
-              )}
-              <Text style={styles.socialText}>Facebook</Text>
             </TouchableOpacity>
           </View>
 

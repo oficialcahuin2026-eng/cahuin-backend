@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
@@ -66,6 +67,8 @@ export default function OnboardingScreen() {
   const [dia, setDia] = useState('');
   const [mes, setMes] = useState('');
   const [anio, setAno] = useState('');
+  const [trabajo, setTrabajo] = useState('');
+  const [cargandoUbicacion, setCargandoUbicacion] = useState(false);
 
   // 🌟 Referencias para saltar automáticamente entre las cajas de fecha
   const mesRef = useRef(null);
@@ -83,6 +86,35 @@ export default function OnboardingScreen() {
   const [modal, setModal] = useState(null);
 
   const avisar = (title, message, emoji = '🌶️') => setModal({ title, message, emoji });
+
+  const obtenerUbicacion = async () => {
+    setCargandoUbicacion(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        avisar('Permiso denegado', 'Necesitamos tu ubicación para mostrarte gente cerca.', '😢');
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+      const geocode = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+
+      if (geocode && geocode.length > 0) {
+        const place = geocode[0];
+        setRegion(place.region || place.subregion || '');
+        setCiudad(place.city || place.subregion || '');
+      } else {
+        avisar('Error', 'No pudimos determinar tu ciudad automáticamente.', '😢');
+      }
+    } catch (error) {
+      avisar('Error', 'Hubo un problema obteniendo tu ubicación.', '😢');
+    } finally {
+      setCargandoUbicacion(false);
+    }
+  };
 
   const tomarFoto = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -247,14 +279,31 @@ export default function OnboardingScreen() {
               {paso === 4 && (
                 <View>
                   {titleWithAccent('De dónde ', 'eres?')}
-                  <Text style={styles.subtitle}>Esto define tu radar: Temuco, Villarrica, Arica, Pucón... no más Santiago por defecto.</Text>
-                  <Text style={styles.label}>Región</Text>
-                  {renderChips(Object.keys(REGIONES_CHILE), region, (reg) => { setRegion(reg); setCiudad(''); })}
-                  {region ? (
-                    <>
-                      <Text style={styles.label}>Ciudad</Text>
-                      {renderChips(REGIONES_CHILE[region], ciudad, setCiudad)}
-                    </>
+                  <Text style={styles.subtitle}>Activa tu ubicación para conectar con gente y panoramas en tu misma zona. Si viajas, se actualizará.</Text>
+                  
+                  <TouchableOpacity 
+                    style={[styles.bigInputModern, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#F0444F', borderWidth: 0, marginTop: 20 }]} 
+                    onPress={obtenerUbicacion}
+                    disabled={cargandoUbicacion}
+                  >
+                    {cargandoUbicacion ? (
+                      <ActivityIndicator color="#FFF" />
+                    ) : (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <Ionicons name="location" size={24} color="#FFF" />
+                        <Text style={{ color: '#FFF', fontSize: 18, fontWeight: '700' }}>Activar ubicación</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+
+                  {region && ciudad ? (
+                    <View style={{ marginTop: 30, alignItems: 'center' }}>
+                      <Text style={{ color: '#9CA3AF', fontSize: 14, marginBottom: 8 }}>Ubicación detectada:</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 16, paddingVertical: 12, borderRadius: RADIUS.lg }}>
+                        <Ionicons name="map" size={20} color="#F0444F" />
+                        <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '600' }}>{ciudad}, {region}</Text>
+                      </View>
+                    </View>
                   ) : null}
                 </View>
               )}

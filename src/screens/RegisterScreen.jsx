@@ -54,7 +54,6 @@ export default function RegisterScreen({ navigation }) {
   // 🌟 Hooks de Clerk
   const { isLoaded, signUp, setActive } = useSignUp();
   const { startOAuthFlow: startGoogleOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
-  const { startOAuthFlow: startFacebookOAuthFlow } = useOAuth({ strategy: 'oauth_facebook' });
 
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
@@ -132,8 +131,7 @@ export default function RegisterScreen({ navigation }) {
   const loginSocial = async (red) => {
     setCargandoSocial(red);
     try {
-      const startOAuthFlow = red === 'Google' ? startGoogleOAuthFlow : startFacebookOAuthFlow;
-      const { createdSessionId, setActive: setOAuthActive } = await startOAuthFlow({
+      const { createdSessionId, setActive: setOAuthActive } = await startGoogleOAuthFlow({
         redirectUrl: Linking.createURL('/'),
       });
 
@@ -221,10 +219,6 @@ export default function RegisterScreen({ navigation }) {
                 <TouchableOpacity style={[styles.socialButton, { backgroundColor: '#FFF' }]} onPress={() => loginSocial('Google')} disabled={!!cargandoSocial}>
                   {cargandoSocial === 'Google' ? <ActivityIndicator color="#111827" /> : <Ionicons name="logo-google" size={22} color="#DB4437" />}
                   <Text style={[styles.socialText, { color: '#111827' }]}>Google</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.socialButton, { backgroundColor: '#1877F2' }]} onPress={() => loginSocial('Facebook')} disabled={!!cargandoSocial}>
-                  {cargandoSocial === 'Facebook' ? <ActivityIndicator color="#FFF" /> : <Ionicons name="logo-facebook" size={22} color="#FFF" />}
-                  <Text style={styles.socialText}>Facebook</Text>
                 </TouchableOpacity>
               </View>
 
