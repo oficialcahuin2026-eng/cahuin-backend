@@ -19,6 +19,7 @@ import ExplorarScreen from '../screens/ExplorarScreen';
 import CategoriaExplorarScreen from '../screens/CategoriaExplorarScreen';
 import ChatScreen from '../screens/ChatScreen';
 import PanoramasScreen from '../screens/PanoramasScreen';
+import CrearPanoramaScreen from '../screens/CrearPanoramaScreen';
 import PerfilScreen from '../screens/PerfilScreen';
 import CartasAnonimasScreen from '../screens/CartasAnonimasScreen';
 
@@ -254,6 +255,7 @@ function MainNavigator() {
       <Stack.Screen name="MapaCalor" component={MapaCalorScreen} />
       <Stack.Screen name="Botellas" component={BotellasScreen} />
       <Stack.Screen name="ModoPatrio" component={ModoPatrioScreen} />
+      <Stack.Screen name="CrearPanorama" component={CrearPanoramaScreen} />
     </Stack.Navigator>
   );
 }

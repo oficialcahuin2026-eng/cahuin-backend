@@ -198,9 +198,9 @@ export default function PerfilScreen({ navigation }) {
     usuario?.mapaValores?.dealBreaker
   );
   const testsPendientes = [
-    !usuario?.tipoApego ? { key: 'apego', label: 'Test de Apego', emoji: '🧠', route: 'TestApego' } : null,
-    !usuario?.arquetipoCahuinero ? { key: 'cahuinero', label: 'Test Cahuínero', emoji: '🌶️', route: 'TestCahuinero' } : null,
-    !valoresCompletos ? { key: 'valores', label: 'Mapa de Valores', emoji: '🧭', route: 'MapaValores' } : null,
+    !usuario?.tipoApego ? { key: 'apego', label: 'Apego', emoji: '🧠', route: 'TestApego' } : null,
+    !usuario?.arquetipoCahuinero ? { key: 'cahuinero', label: 'Cahuínero', emoji: '🌶️', route: 'TestCahuinero' } : null,
+    !valoresCompletos ? { key: 'valores', label: 'Valores', emoji: '🧭', route: 'MapaValores' } : null,
   ].filter(Boolean);
   const mostrarResultadoApego = usuario?.mostrarApego && usuario?.tipoApego;
   const mostrarResultadoArquetipo = usuario?.mostrarArquetipo !== false && usuario?.arquetipoCahuinero;
@@ -438,18 +438,12 @@ export default function PerfilScreen({ navigation }) {
             </View>
           </View>
           <View style={styles.testActions}>
-            <TouchableOpacity style={styles.testButton} onPress={() => navigation.navigate('TestApego')}>
-              <Text style={styles.testEmoji}>🧠</Text>
-              <Text style={styles.testText}>Apego</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.testButton} onPress={() => navigation.navigate('TestCahuinero')}>
-              <Text style={styles.testEmoji}>🌶️</Text>
-              <Text style={styles.testText}>Cahuínero</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.testButton} onPress={() => navigation.navigate('MapaValores')}>
-              <Text style={styles.testEmoji}>🧭</Text>
-              <Text style={styles.testText}>Valores</Text>
-            </TouchableOpacity>
+            {testsPendientes.map((test) => (
+              <TouchableOpacity key={test.key} style={styles.testButton} onPress={() => navigation.navigate(test.route)}>
+                <Text style={styles.testEmoji}>{test.emoji}</Text>
+                <Text style={styles.testText}>{test.label}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </SoftCard>
       ) : null}

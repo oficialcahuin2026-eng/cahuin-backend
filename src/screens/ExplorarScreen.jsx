@@ -29,11 +29,8 @@ const features = [
   { title: 'Historias culturales', text: 'Fotos y momentos por 24h.', icon: 'camera', route: 'HistoriasCulturales', emoji: '📸' },
   { title: 'Cahuín del Día', text: 'Vota a las 20:00.', icon: 'chatbubble-ellipses', route: 'CahuinDelDia', emoji: '💬' },
   { title: 'Swipe Panoramas', text: 'Match por destino.', icon: 'ticket', route: 'SwipePanoramas', emoji: '🎫' },
-  { title: 'Mapa de Calor', text: 'Zonas con más gente.', icon: 'map', route: 'MapaCalor', emoji: '🗺️' },
   { title: 'Historias de éxito', text: 'Parejas verificadas.', icon: 'heart', route: 'HistoriasExito', emoji: '❤️' },
-  { title: 'Mapa Conexiones', text: 'Tu red en el mapa.', icon: 'globe', route: 'MapaConexiones', emoji: '🌐' },
   { title: 'Botella digital', text: 'Mensaje anónimo.', icon: 'mail-open', route: 'Botellas', emoji: '🍾' },
-  { title: 'Modo Patrio', text: 'Orgullo regional.', icon: 'flag', route: 'ModoPatrio', emoji: '🇨🇱' },
 ];
 
 export default function ExplorarScreen({ navigation }) {
@@ -226,8 +223,6 @@ export default function ExplorarScreen({ navigation }) {
         title="Comunidades Cahuín"
         subtitle={totalUnidas > 0 ? `${totalUnidas} categorías activas` : 'Únete según lo que buscas'}
         COLORS={COLORS}
-        actionText="Ver todas"
-        onAction={() => navigation.navigate('EditarPerfil')}
       />
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.comunidadesScroll} contentContainerStyle={styles.comunidadesContent}>
@@ -266,8 +261,6 @@ export default function ExplorarScreen({ navigation }) {
         title="Funciones destacadas"
         icon="✨"
         COLORS={COLORS}
-        actionText="Ver todas"
-        onAction={() => {}}
       />
 
       <View style={styles.featureGrid}>

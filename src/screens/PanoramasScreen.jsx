@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -300,7 +300,7 @@ export default function PanoramasScreen() {
       ) : (
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Panoramas Locales</Text>
-          <TouchableOpacity style={styles.darkPill} onPress={() => setModalCrear(true)}>
+          <TouchableOpacity style={styles.darkPill} onPress={() => navigation.navigate('CrearPanorama')}>
             <Ionicons name="add" size={22} color="#FFF" />
             <Text style={styles.darkPillText}>Crear Panorama</Text>
           </TouchableOpacity>
@@ -318,7 +318,7 @@ export default function PanoramasScreen() {
             ? 'Prueba otra región o vuelve más tarde para descubrir carteleras nuevas.'
             : 'Los mejores panoramas nacen de la comunidad. Inventa uno tú y ayuda a otros a descubrirlo.'}
           action={tabActiva === 'comunidad' ? (
-            <GradientButton icon="add" style={{ width: '100%', marginTop: 28 }} onPress={() => setModalCrear(true)}>
+            <GradientButton icon="add" style={{ width: '100%', marginTop: 28 }} onPress={() => navigation.navigate('CrearPanorama')}>
               Crear Panorama
             </GradientButton>
           ) : null}

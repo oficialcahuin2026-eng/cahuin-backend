@@ -31,6 +31,13 @@ export default function TestApegoScreen({ navigation }) {
       if (q.ansioso) nuevosPuntajes.Ansioso += 2;
       if (q.evitativo) nuevosPuntajes.Evitativo += 2;
       if (q.seguro) nuevosPuntajes.Seguro += 2;
+    } else {
+      if (q.ansioso) nuevosPuntajes.Seguro += 1;
+      if (q.evitativo) nuevosPuntajes.Seguro += 1;
+      if (q.seguro) {
+        nuevosPuntajes.Ansioso += 1;
+        nuevosPuntajes.Evitativo += 1;
+      }
     }
 
     setScores(nuevosPuntajes);

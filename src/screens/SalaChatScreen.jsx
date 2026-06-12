@@ -158,10 +158,10 @@ export default function SalaChatScreen({ route, navigation }) {
 
   const mostrarOpcionesChat = () => {
     avisar('Opciones de Chat', '¿Qué te gustaría hacer?', '⚙️', [
-      { label: '📅 Ver disponibilidad', onPress: () => { setModalCahuin(null); setModalFechasVisible(true); } },
-      { label: '📖 Diario Privado', onPress: () => { setModalCahuin(null); abrirDiario(); } },
-      { label: '⭐ Calificar match', onPress: () => { setModalCahuin(null); setModalCalificarVisible(true); } },
-      { label: '🛡️ Opciones de seguridad', onPress: () => { setModalCahuin(null); mostrarMenuSeguridad(); } },
+      { label: '📅 Ver disponibilidad', variant: 'secondary', onPress: () => { setModalCahuin(null); setModalFechasVisible(true); } },
+      { label: '📖 Diario Privado', variant: 'secondary', onPress: () => { setModalCahuin(null); abrirDiario(); } },
+      { label: '⭐ Calificar match', variant: 'secondary', onPress: () => { setModalCahuin(null); setModalCalificarVisible(true); } },
+      { label: '🛡️ Opciones de seguridad', variant: 'secondary', onPress: () => { setModalCahuin(null); mostrarMenuSeguridad(); } },
       { label: 'Cancelar', variant: 'secondary', onPress: () => setModalCahuin(null) }
     ]);
   };
@@ -378,10 +378,6 @@ export default function SalaChatScreen({ route, navigation }) {
         />
 
         <View style={styles.inputRow}>
-          <TouchableOpacity style={styles.btnAttach} onPress={mostrarOpcionesAdjunto}>
-            <Ionicons name="add-circle" size={28} color={COLORS.textMuted} />
-          </TouchableOpacity>
-          
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.inputText}
@@ -393,13 +389,9 @@ export default function SalaChatScreen({ route, navigation }) {
             />
           </View>
           
-          {texto.trim().length === 0 ? (
-            <TouchableOpacity style={styles.btnVoice}>
-              <Ionicons name="mic" size={24} color={COLORS.textMuted} />
-            </TouchableOpacity>
-          ) : (
+          {texto.trim().length > 0 && (
             <TouchableOpacity style={styles.btnEnviar} onPress={handleEnviar}>
-              <Ionicons name="send" size={18} color="#FFF" style={{ marginLeft: 2 }} />
+              <Ionicons name="send" size={20} color="#FFF" style={{ marginLeft: 3 }} />
             </TouchableOpacity>
           )}
         </View>

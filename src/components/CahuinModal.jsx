@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -47,7 +47,11 @@ export default function CahuinModal({
           {message ? <Text style={styles.message}>{message}</Text> : null}
           {details ? <Text style={styles.details}>{details}</Text> : null}
 
-          <View style={[styles.actions, finalActions.length === 1 && styles.actionsSingle]}>
+          <View style={[
+            styles.actions, 
+            finalActions.length === 1 && styles.actionsSingle,
+            finalActions.length > 2 && { flexDirection: 'column' }
+          ]}>
             {finalActions.map((action) => {
               const primary = action.variant !== 'secondary';
               const danger = action.variant === 'danger';
