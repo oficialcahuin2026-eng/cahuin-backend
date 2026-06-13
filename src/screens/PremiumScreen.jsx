@@ -154,20 +154,6 @@ export default function PremiumScreen({ navigation }) {
             </View>
           )}
 
-          {!revenueCatDisponible ? (
-            <View style={styles.previewCard}>
-              <View style={styles.previewIconBox}>
-                <Ionicons name="construct" size={22} color="#F59E0B" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.previewTitle}>Compras en vista previa</Text>
-                <Text style={styles.previewText}>
-                  Cuando RevenueCat tenga llave productiva y los productos existan en Google Play, estos botones comprarán de verdad.
-                </Text>
-              </View>
-            </View>
-          ) : null}
-
           <View style={styles.sectionTitleWrap}>
             <Text style={styles.sectionTitle}>Qué trae cada plan</Text>
           </View>

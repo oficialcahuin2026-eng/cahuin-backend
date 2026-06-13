@@ -18,7 +18,8 @@
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_API_URL": "https://cahuin-backend-1.onrender.com/api",
-        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_dW5pdGVkLWdyb3VzZS01Mi5jbGVyay5hY2NvdW50cy5kZXYk"
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_dW5pdGVkLWdyb3VzZS01Mi5jbGVyay5hY2NvdW50cy5kZXYk",
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "goog_TAtasWIqJOzAMalXkGrboJnTchl"
       }
     }
   },
