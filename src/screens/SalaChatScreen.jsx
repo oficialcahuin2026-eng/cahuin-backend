@@ -642,10 +642,22 @@ const getStyles = (COLORS) => StyleSheet.create({
   modalCard: { backgroundColor: COLORS.tarjeta, borderRadius: RADIUS.xl, padding: 25, ...SHADOWS.lg },
   modalTitulo: { fontSize: 22, fontWeight: 'bold', color: COLORS.textPrimary, marginBottom: 10 },
   modalSubtitulo: { fontSize: 15, color: COLORS.textMuted, marginBottom: 25, lineHeight: 22 },
+  btnEnviar: { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.primario, justifyContent: 'center', alignItems: 'center', ...SHADOWS.sm, marginBottom: 2 },
+  
+  modalFondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: 20 },
+  modalCard: { backgroundColor: COLORS.tarjeta, borderRadius: RADIUS.xl, padding: 25, ...SHADOWS.lg },
+  modalTitulo: { fontSize: 22, fontWeight: 'bold', color: COLORS.textPrimary, marginBottom: 10 },
+  modalSubtitulo: { fontSize: 15, color: COLORS.textMuted, marginBottom: 25, lineHeight: 22 },
   estrellasContainer: { flexDirection: 'row', justifyContent: 'center', marginBottom: 30 },
   modalBotones: { flexDirection: 'row', gap: 15 },
   btnCancelar: { flex: 1, padding: 15, alignItems: 'center', backgroundColor: COLORS.fondo, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border },
   btnCancelarTexto: { color: COLORS.textPrimary, fontWeight: 'bold', fontSize: 16 },
   btnGuardar: { flex: 1, padding: 15, alignItems: 'center', backgroundColor: COLORS.primario, borderRadius: RADIUS.lg },
-  btnGuardarTexto: { color: '#FFF', fontWeight: 'bold', fontSize: 16 }
+  btnGuardarTexto: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  motivosWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  motivoChip: { borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, paddingVertical: 9, paddingHorizontal: 12, backgroundColor: COLORS.fondo },
+  motivoChipActive: { backgroundColor: COLORS.primario, borderColor: COLORS.primario },
+  motivoChipText: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '800' },
+  motivoChipTextActive: { color: '#FFF' },
+  detalleReporteInput: { minHeight: 110, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.fondo, color: COLORS.textPrimary, padding: 14, marginBottom: 18, fontWeight: '700' }
 });
