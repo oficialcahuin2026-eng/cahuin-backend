@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
-import MapView, { Marker } from 'react-native-maps';
 import { useTheme } from '../context/ThemeContext';
 import { FONTS, SHADOWS, SPACING, RADIUS } from '../utils/theme';
 import { GradientButton } from '../components/CahuinUI';
@@ -35,13 +34,7 @@ export default function CrearPanoramaScreen({ navigation }) {
   const [guardando, setGuardando] = useState(false);
   const [cargandoUbicacion, setCargandoUbicacion] = useState(false);
   
-  // Coordenadas por defecto (ej. centro de Chile o Santiago)
-  const [regionMap, setRegionMap] = useState({
-    latitude: -33.4489,
-    longitude: -70.6693,
-    latitudeDelta: 0.05,
-    longitudeDelta: 0.05,
-  });
+
 
   const obtenerUbicacionActual = async () => {
     setCargandoUbicacion(true);
@@ -50,13 +43,7 @@ export default function CrearPanoramaScreen({ navigation }) {
       if (status !== 'granted') return;
 
       const location = await Location.getCurrentPositionAsync({});
-      const coords = {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      };
-      setRegionMap(coords);
+
 
       const geocode = await Location.reverseGeocodeAsync({
         latitude: location.coords.latitude,
@@ -142,24 +129,7 @@ export default function CrearPanoramaScreen({ navigation }) {
                 onChangeText={setLugar}
               />
             </View>
-            {/* Map */}
-            <View style={styles.mapContainer}>
-              <MapView
-                style={styles.mapImage}
-                region={regionMap}
-                onRegionChangeComplete={(r) => setRegionMap(r)}
-                userInterfaceStyle={isDarkMode ? "dark" : "light"}
-              >
-                <Marker coordinate={{ latitude: regionMap.latitude, longitude: regionMap.longitude }}>
-                  <View style={styles.mapPinWrap}>
-                    <View style={styles.mapPin}>
-                      <Ionicons name="location" size={20} color="#FFF" />
-                    </View>
-                    <View style={styles.mapPinPulse} />
-                  </View>
-                </Marker>
-              </MapView>
-            </View>
+
             <TouchableOpacity style={styles.useLocationBtn} onPress={obtenerUbicacionActual} disabled={cargandoUbicacion}>
               <Ionicons name="navigate" size={18} color={COLORS.primario} />
               <Text style={styles.useLocationText}>{cargandoUbicacion ? 'Obteniendo ubicación...' : 'Usar mi ubicación actual'}</Text>
