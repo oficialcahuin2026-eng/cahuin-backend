@@ -9,7 +9,7 @@ const PLANES = [
     storeProductId: 'cahuin_piola',
     basePlanId: 'mensual',
     googleProductId: 'cahuin_piola:mensual',
-    productAliases: ['cahuin_piola', 'cahuin_piola_mensual', 'cahuin_piola:mensual'],
+    productAliases: ['cahuin_piola', 'cahuin_piola_mensual', 'cahuin_piola:mensual', 'cahuin_piola_mensual:mensual'],
     revenueCatEntitlement: 'cahuin_premium',
     descripcion: 'Likes sin limite, retroceder, Ruleta a Ciegas, Modo Chile y sin anuncios.',
     beneficios: [
