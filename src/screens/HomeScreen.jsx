@@ -21,7 +21,7 @@ import { EmptyState, ExpandableSection, GradientButton, InterestChip, SoftCard }
 import CahuinModal from '../components/CahuinModal';
 import MatchCelebrationModal from '../components/MatchCelebrationModal';
 import PreferenciasModal from '../components/PreferenciasModal';
-import SimulatedAdModal from '../components/SimulatedAdModal';
+import AdManagerModal from '../components/AdManagerModal';
 import { inferirRegionPorCiudad, normalizarCiudadChile, normalizarRegionChile } from '../utils/chileLocations';
 import { calcularCompatibilidad, emojiCompatibilidad } from '../hooks/useCompatibilidad';
 import { FONTS, SHADOWS, SPACING, RADIUS } from '../utils/theme';
@@ -51,15 +51,18 @@ export default function HomeScreen({ navigation }) {
   const [procesandoAccion, setProcesandoAccion] = useState(false);
   const [modalInfo, setModalInfo] = useState(null);
   const [modalPreferencias, setModalPreferencias] = useState(false);
-  const [modalAnuncio, setModalAnuncio] = useState(false);
+  const [modalAnuncioVisible, setModalAnuncioVisible] = useState(false);
+  const [anunciosRequeridos, setAnunciosRequeridos] = useState(1);
   const [accionPendiente, setAccionPendiente] = useState(null);
+  const [swipeCount, setSwipeCount] = useState(0);
 
-  const iniciarAnuncioYEjecutar = (accionFn) => {
+  const iniciarAnuncioYEjecutar = (accionFn, cantAds = 1) => {
     if (usuario?.isPremium) {
       accionFn();
     } else {
       setAccionPendiente(() => accionFn);
-      setModalAnuncio(true);
+      setAnunciosRequeridos(cantAds);
+      setModalAnuncioVisible(true);
     }
   };
 
@@ -100,6 +103,7 @@ export default function HomeScreen({ navigation }) {
       const data = await userService.descubrir({});
       const recibidos = data.perfiles || data.usuarios || [];
       
+      // Inyección de mock publicitario general
       if (!usuario?.isPremium && recibidos.length > 2) {
         recibidos.splice(2, 0, {
           _id: 'AD_MOCK_' + Date.now(),
@@ -147,6 +151,30 @@ export default function HomeScreen({ navigation }) {
         const data = await matchService.pasar(perfilVisto._id);
         if (data?.usuario) actualizarUsuario(data.usuario);
       }
+
+      // Inyección cada 3 swipes
+      const nuevoCount = swipeCount + 1;
+      if (!usuario?.isPremium && nuevoCount >= 3) {
+        setSwipeCount(0);
+        setPerfiles((prev) => {
+          const copia = [...prev];
+          copia.splice(perfilActual + 1, 0, {
+            _id: 'AD_MOCK_' + Date.now(),
+            nombre: 'Oferta Especial',
+            edad: 99,
+            ciudad: 'Publicidad',
+            foto: 'https://i.imgur.com/vHqJk6K.jpeg',
+            fotos: ['https://i.imgur.com/vHqJk6K.jpeg'],
+            descripcion: '¡🍔 + 🥤 Envío sin costo! Toca en la App.',
+            intereses: ['Promoción'],
+            isAd: true
+          });
+          return copia;
+        });
+      } else {
+        setSwipeCount(nuevoCount);
+      }
+
     } catch (error) {
       console.log(error.message);
       // Para efectos del rediseño fluido, ignoramos errores de conexión al dar swipe y seguimos.
@@ -177,7 +205,22 @@ export default function HomeScreen({ navigation }) {
   };
 
   const deshacerUltimo = () => {
-    iniciarAnuncioYEjecutar(deshacerUltimoReal);
+    iniciarAnuncioYEjecutar(deshacerUltimoReal, 1);
+  };
+
+  const intentarSuperLike = () => {
+    if (usuario?.isPremium) {
+      procesarInteraccion('superlike');
+    } else {
+      avisar('Super Like', 'Destaca tu perfil con una estrella azul vibrante.', {
+        emoji: '⭐',
+        tone: 'premium',
+        actions: [
+          { label: 'Comprar Plan', color: '#8B5CF6', onPress: () => { setModalInfo(null); navigation.navigate('Premium'); } },
+          { label: 'Ver 2 Anuncios', variant: 'secondary', onPress: () => { setModalInfo(null); iniciarAnuncioYEjecutar(() => procesarInteraccion('superlike'), 2); } }
+        ]
+      });
+    }
   };
 
   const activarBoost = () => {
@@ -188,8 +231,8 @@ export default function HomeScreen({ navigation }) {
       actions: [
         { label: 'Cancelar', variant: 'secondary', color: '#8B5CF6', onPress: () => setModalInfo(null) },
         {
-          label: 'Activar',
-          icon: 'sparkles',
+          label: usuario?.isPremium ? 'Activar' : 'Ver 2 Anuncios',
+          icon: usuario?.isPremium ? 'sparkles' : 'play',
           color: '#8B5CF6',
           onPress: () => {
             setModalInfo(null);
@@ -201,7 +244,7 @@ export default function HomeScreen({ navigation }) {
               } catch (error) {
                 avisar('Boost', error.message || 'No pudimos activar destacado.', { emoji: '💎', tone: 'danger' });
               }
-            });
+            }, 2);
           },
         },
       ],
@@ -377,7 +420,7 @@ export default function HomeScreen({ navigation }) {
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionBtnSmallWrap} onPress={() => procesarInteraccion('superlike')} disabled={procesandoAccion}>
+            <TouchableOpacity style={styles.actionBtnSmallWrap} onPress={intentarSuperLike} disabled={procesandoAccion}>
               <View style={[styles.actionBtnSmall, { backgroundColor: isDarkMode ? 'rgba(20,20,20,0.6)' : '#FFF', borderWidth: 1, borderColor: isDarkMode ? '#3B82F6' : '#93C5FD' }]}>
                 <Ionicons name="star" size={24} color="#3B82F6" />
               </View>
@@ -442,9 +485,10 @@ export default function HomeScreen({ navigation }) {
         onSave={() => cargarPerfilesConFiltros()} 
       />
 
-      <SimulatedAdModal
-        visible={modalAnuncio}
-        onClose={() => setModalAnuncio(false)}
+      <AdManagerModal
+        visible={modalAnuncioVisible}
+        requiredAdsCount={anunciosRequeridos}
+        onClose={() => setModalAnuncioVisible(false)}
         onAdFinished={() => {
           if (accionPendiente) {
             accionPendiente();

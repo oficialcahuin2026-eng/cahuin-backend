@@ -22,6 +22,7 @@ import {
   GradientButton, ScreenScaffold, SectionTitle, SoftIcon, BottomSheetHandle
 } from '../components/CahuinUI';
 import CahuinModal from '../components/CahuinModal';
+import AdManagerModal from '../components/AdManagerModal';
 import { PLAN_PIOLA_O_SUPERIOR } from '../config/economia';
 
 const rouletteBanner = require('../assets/illustrations/roulette-banner.png');
@@ -41,14 +42,28 @@ export default function ExplorarScreen({ navigation }) {
   const [cargandoRuleta, setCargandoRuleta] = useState(false);
   const [uniendoId, setUniendoId] = useState(null);
   const [categoriaActiva, setCategoriaActiva] = useState(null);
-  const [modalInfo, setModalInfo] = useState(null);
   const [metricas, setMetricas] = useState({ ruleta: 0, comunidades: {} });
   const tienePiola = Boolean(usuario?.isPremium && PLAN_PIOLA_O_SUPERIOR.includes(usuario?.premiumPlan || 'gold'));
   const [trendingPerfiles, setTrendingPerfiles] = useState([]);
 
   const categoriasUnidas = useMemo(() => usuario?.categoriasExplorar || [], [usuario?.categoriasExplorar]);
+  const [modalInfo, setModalInfo] = useState(null);
+  const [modalAnuncioVisible, setModalAnuncioVisible] = useState(false);
+  const [anunciosRequeridos, setAnunciosRequeridos] = useState(1);
+  const [accionPendiente, setAccionPendiente] = useState(null);
+
+  const iniciarAnuncioYEjecutar = (accionFn, cantAds = 1) => {
+    if (usuario?.isPremium) {
+      accionFn();
+    } else {
+      setAccionPendiente(() => accionFn);
+      setAnunciosRequeridos(cantAds);
+      setModalAnuncioVisible(true);
+    }
+  };
+
   const totalUnidas = categoriasUnidas.length;
-  const avisar = (title, message, emoji = '🌶️', actions = [], extra = {}) => setModalInfo({ title, message, emoji, actions, ...extra });
+  const avisar = (title, message, emoji = 'ℹ️', actions = [], extra = {}) => setModalInfo({ title, message, emoji, actions, ...extra });
 
   const formatearConteo = (numero) => {
     if (!numero) return '0';
@@ -94,8 +109,8 @@ export default function ExplorarScreen({ navigation }) {
       [
         { label: 'Cancelar', variant: 'secondary', color: COLORS.primario, onPress: () => setModalInfo(null) },
         {
-          label: tienePiola ? 'Girar Ruleta' : 'Ver Premium',
-          icon: 'sparkles',
+          label: tienePiola ? 'Girar Ruleta' : 'Comprar Plan',
+          icon: tienePiola ? 'sparkles' : 'cart',
           color: COLORS.primario,
           onPress: async () => {
             if (!tienePiola) {
@@ -103,22 +118,34 @@ export default function ExplorarScreen({ navigation }) {
               navigation.navigate('Premium');
               return;
             }
-            setModalInfo(null);
-            setCargandoRuleta(true);
-            try {
-              const data = await matchService.jugarRuletaCiega();
-              avisar('Match ciego', data?.message || 'Ve a tus conversaciones. Tienes 1 hora para descubrir quien es.', '🎡', [], { accent: COLORS.primario });
-              navigation.navigate('Chat');
-            } catch (error) {
-              avisar('Error', error.message || 'No pudimos girar la ruleta.', '🌶️', [], { tone: 'danger' });
-            } finally {
-              setCargandoRuleta(false);
-            }
+            ejecutarRuletaBackend();
           },
         },
-      ],
-      { accent: COLORS.primario }
+        ...(!tienePiola ? [{
+          label: 'Ver 1 Anuncio',
+          icon: 'play',
+          variant: 'secondary',
+          color: COLORS.primario,
+          onPress: () => {
+            setModalInfo(null);
+            iniciarAnuncioYEjecutar(ejecutarRuletaBackend, 1);
+          }
+        }] : [])
+      ]
     );
+  };
+
+  const ejecutarRuletaBackend = async () => {
+    setModalInfo(null);
+    setCargandoRuleta(true);
+    try {
+      const data = await matchService.jugarRuletaCiega();
+      avisar('Match ciego', data?.message || 'Ve a tus conversaciones. Tienes 1 hora para descubrir quien es.', '🎡', [], { accent: COLORS.primario });
+    } catch (error) {
+      avisar('Ruleta a Ciegas', error.message || 'No se pudo contactar a nadie en este momento.', '🎭', [], { tone: 'warning' });
+    } finally {
+      setCargandoRuleta(false);
+    }
   };
 
   const abrirCategoria = (categoria) => {
@@ -338,6 +365,18 @@ export default function ExplorarScreen({ navigation }) {
         tone={modalInfo?.tone}
         details={modalInfo?.details}
         onClose={() => setModalInfo(null)}
+      />
+
+      <AdManagerModal
+        visible={modalAnuncioVisible}
+        requiredAdsCount={anunciosRequeridos}
+        onClose={() => setModalAnuncioVisible(false)}
+        onAdFinished={() => {
+          if (accionPendiente) {
+            accionPendiente();
+            setAccionPendiente(null);
+          }
+        }}
       />
     </ScreenScaffold>
   );
