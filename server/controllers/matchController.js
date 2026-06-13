@@ -1,4 +1,4 @@
-﻿const Match = require('../models/Match');
+const Match = require('../models/Match');
 const User  = require('../models/User');
 const Mensaje = require('../models/Mensaje');
 
@@ -78,9 +78,35 @@ exports.darLike = async (req, res) => {
     const hayLikeDeVuelta = await Match.findOne({
       remitente: receptorId, receptor: remitenteId, tipo: { $in: ['like', 'superlike'] }
     });
-    if (hayLikeDeVuelta) return res.json({ esMatch: true, message: '¡Match!' });
+
+    const receptor = await User.findById(receptorId);
+    const dbRemitente = await User.findById(remitenteId);
+
+    if (hayLikeDeVuelta) {
+      if (receptor && receptor.pushToken) {
+        await axios.post('https://exp.host/--/api/v2/push/send', {
+          to: receptor.pushToken,
+          sound: 'default',
+          title: `¡Boom! Tienes un nuevo Match 🌶️`,
+          body: `Tú y ${dbRemitente.nombre} se gustaron mutuamente. ¡Rompe el hielo!`,
+          data: { url: 'cahuin://matches' },
+        }).catch(() => {});
+      }
+      return res.json({ esMatch: true, message: '¡Match!' });
+    }
+
+    if (receptor && receptor.pushToken) {
+      await axios.post('https://exp.host/--/api/v2/push/send', {
+        to: receptor.pushToken,
+        sound: 'default',
+        title: `Alguien te dio like 🔥`,
+        body: `¡Entra a Cahuín para descubrir quién fue! 👀`,
+        data: { url: 'cahuin://likes' },
+      }).catch(() => {});
+    }
+
     res.json({ message: 'Like enviado', usuario: usuarioActualizado });
-  } catch (error) { res.status(500).json({ message: 'Error' }); }
+  } catch (error) { console.error(error); res.status(500).json({ message: 'Error' }); }
 };
 
 // ─────────────────────────────────────────────
@@ -98,9 +124,35 @@ exports.darSuperLike = async (req, res) => {
     const hayLikeDeVuelta = await Match.findOne({
       remitente: req.params.id, receptor: req.user._id, tipo: { $in: ['like', 'superlike'] }
     });
-    if (hayLikeDeVuelta) return res.json({ esMatch: true, message: '¡Match por Súper Like!' });
+
+    const receptor = await User.findById(req.params.id);
+    const dbRemitente = await User.findById(req.user._id);
+
+    if (hayLikeDeVuelta) {
+      if (receptor && receptor.pushToken) {
+        await axios.post('https://exp.host/--/api/v2/push/send', {
+          to: receptor.pushToken,
+          sound: 'default',
+          title: `¡Boom! Tienes un nuevo Match por Súper Like 🌶️`,
+          body: `Tú y ${dbRemitente.nombre} se gustaron mutuamente. ¡Aprovecha la chispa!`,
+          data: { url: 'cahuin://matches' },
+        }).catch(() => {});
+      }
+      return res.json({ esMatch: true, message: '¡Match por Súper Like!' });
+    }
+
+    if (receptor && receptor.pushToken) {
+      await axios.post('https://exp.host/--/api/v2/push/send', {
+        to: receptor.pushToken,
+        sound: 'default',
+        title: `¡Recibiste un Super Like! ⭐`,
+        body: `¡A alguien le gustas MUCHO! Entra para ver quién fue.`,
+        data: { url: 'cahuin://likes' },
+      }).catch(() => {});
+    }
+
     res.json({ message: 'Súper Like enviado' });
-  } catch (error) { res.status(500).json({ message: 'Error' }); }
+  } catch (error) { console.error(error); res.status(500).json({ message: 'Error' }); }
 };
 
 // ─────────────────────────────────────────────

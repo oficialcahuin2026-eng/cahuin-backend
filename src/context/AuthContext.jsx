@@ -1,7 +1,8 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth as useClerkAuth, useUser } from '@clerk/clerk-expo';
-import { api } from '../services/api';
+import { api, userService } from '../services/api';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 
 const AuthContext = createContext();
 
@@ -12,6 +13,7 @@ export const AuthProvider = ({ children }) => {
 
   const { isSignedIn, isLoaded, signOut: clerkSignOut } = useClerkAuth();
   const { user: clerkUser } = useUser();
+  const { expoPushToken } = usePushNotifications();
 
   const sincronizarConBackend = async () => {
     try {
@@ -38,6 +40,16 @@ export const AuthProvider = ({ children }) => {
         // 🌟 Lo guardamos con el nombre EXACTO que busca api.js (@cahuin_token)
         await AsyncStorage.setItem('@cahuin_token', localToken);
         await AsyncStorage.setItem('usuario', JSON.stringify(userData));
+
+        // 🌟 Si tenemos el push token de Expo, lo enviamos al backend para vincularlo a este usuario
+        if (expoPushToken) {
+          try {
+            await api.put('/users/actualizar', { pushToken: expoPushToken }, { headers: { Authorization: `Bearer ${localToken}` } });
+            console.log('Push Token sincronizado con el backend.');
+          } catch (e) {
+            console.warn('Error enviando push token al backend:', e);
+          }
+        }
         
       } else {
         setUsuario(null);
