@@ -22,6 +22,7 @@ import CahuinModal from '../components/CahuinModal';
 import MatchCelebrationModal from '../components/MatchCelebrationModal';
 import PreferenciasModal from '../components/PreferenciasModal';
 import AdManagerModal from '../components/AdManagerModal';
+import { useSuperLikesDiarios } from '../hooks/useSuperLikesDiarios';
 import { inferirRegionPorCiudad, normalizarCiudadChile, normalizarRegionChile } from '../utils/chileLocations';
 import { calcularCompatibilidad, emojiCompatibilidad } from '../hooks/useCompatibilidad';
 import { FONTS, SHADOWS, SPACING, RADIUS } from '../utils/theme';
@@ -55,9 +56,10 @@ export default function HomeScreen({ navigation }) {
   const [anunciosRequeridos, setAnunciosRequeridos] = useState(1);
   const [accionPendiente, setAccionPendiente] = useState(null);
   const [swipeCount, setSwipeCount] = useState(0);
+  const { usadosHoy, registrarSuperLike } = useSuperLikesDiarios();
 
   const iniciarAnuncioYEjecutar = (accionFn, cantAds = 1) => {
-    if (usuario?.isPremium) {
+    if (cantAds === 0) {
       accionFn();
     } else {
       setAccionPendiente(() => accionFn);
@@ -205,34 +207,62 @@ export default function HomeScreen({ navigation }) {
   };
 
   const deshacerUltimo = () => {
-    iniciarAnuncioYEjecutar(deshacerUltimoReal, 1);
+    const cantAds = usuario?.isPremium ? 0 : 1;
+    iniciarAnuncioYEjecutar(deshacerUltimoReal, cantAds);
   };
 
   const intentarSuperLike = () => {
-    if (usuario?.isPremium) {
+    const plan = usuario?.premiumPlan || 'free';
+    const isAFondo = plan === 'a_fondo' || plan === 'gold' || plan === 'platinum';
+    const isPiola = plan === 'piola';
+
+    const maxFree = isAFondo ? 3 : (isPiola ? 1 : 0);
+    const hasFree = usadosHoy < maxFree;
+
+    if (hasFree) {
+      registrarSuperLike();
       procesarInteraccion('superlike');
     } else {
+      const cantAds = isAFondo || isPiola ? 1 : 2;
       avisar('Super Like', 'Destaca tu perfil con una estrella azul vibrante.', {
         emoji: '⭐',
         tone: 'premium',
+        details: isAFondo ? `Super Likes diarios agotados (${maxFree}/${maxFree})` : (isPiola ? `Super Likes diarios agotados (${maxFree}/${maxFree})` : 'Cuesta 2 anuncios'),
         actions: [
-          { label: 'Comprar Plan', color: '#8B5CF6', onPress: () => { setModalInfo(null); navigation.navigate('Premium'); } },
-          { label: 'Ver 2 Anuncios', variant: 'secondary', onPress: () => { setModalInfo(null); iniciarAnuncioYEjecutar(() => procesarInteraccion('superlike'), 2); } }
+          { label: 'Cancelar', variant: 'secondary', color: '#8B5CF6', onPress: () => setModalInfo(null) },
+          { 
+            label: `Ver ${cantAds} Anuncio${cantAds > 1 ? 's' : ''}`, 
+            icon: 'play',
+            color: '#8B5CF6',
+            onPress: () => { 
+              setModalInfo(null); 
+              iniciarAnuncioYEjecutar(() => {
+                registrarSuperLike();
+                procesarInteraccion('superlike');
+              }, cantAds); 
+            } 
+          }
         ]
       });
     }
   };
 
   const activarBoost = () => {
+    const plan = usuario?.premiumPlan || 'free';
+    const isAFondo = plan === 'a_fondo' || plan === 'gold' || plan === 'platinum';
+    const isPiola = plan === 'piola';
+
+    const cantAds = isAFondo ? 0 : (isPiola ? 1 : 2);
+
     avisar('Modo Destacado', 'Aparece primero en el radar de tu ciudad durante 30 minutos.', {
       emoji: '🔥',
       tone: 'premium',
-      details: 'Incluido en Cahuin a Fondo',
+      details: isAFondo ? 'Incluido en tu plan A Fondo' : (isPiola ? 'Para ti solo cuesta 1 anuncio' : 'Cuesta 2 anuncios'),
       actions: [
         { label: 'Cancelar', variant: 'secondary', color: '#8B5CF6', onPress: () => setModalInfo(null) },
         {
-          label: usuario?.isPremium ? 'Activar' : 'Ver 2 Anuncios',
-          icon: usuario?.isPremium ? 'sparkles' : 'play',
+          label: isAFondo ? 'Activar' : `Ver ${cantAds} Anuncio${cantAds > 1 ? 's' : ''}`,
+          icon: isAFondo ? 'sparkles' : 'play',
           color: '#8B5CF6',
           onPress: () => {
             setModalInfo(null);
@@ -244,7 +274,7 @@ export default function HomeScreen({ navigation }) {
               } catch (error) {
                 avisar('Boost', error.message || 'No pudimos activar destacado.', { emoji: '💎', tone: 'danger' });
               }
-            }, 2);
+            }, cantAds);
           },
         },
       ],
