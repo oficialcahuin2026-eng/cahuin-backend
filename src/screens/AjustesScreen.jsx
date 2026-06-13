@@ -83,7 +83,12 @@ export default function AjustesScreen({ navigation }) {
     }, [])
   );
 
-  const abrirLegales = () => Linking.openURL('https://docs.google.com/document/d/e/2PACX-1vSFQabcCjiYmKv-KMq4qfRtG8YYxdLRdaDuhm9EPQaMWlXmrOSvtCH3fyCPxC2W_c4Wao9TiM3QGGp1/pub');
+  const URL_TERMINOS = 'https://docs.google.com/document/d/e/2PACX-1vSFQabcCjiYmKv-KMq4qfRtG8YYxdLRdaDuhm9EPQaMWlXmrOSvtCH3fyCPxC2W_c4Wao9TiM3QGGp1/pub';
+  const URL_PRIVACIDAD = 'https://docs.google.com/document/d/e/2PACX-1vQ7Giqj7fQCXdZZzoRzJGyJ5Mnm6u08QjBF0s75aXasShi8HIKYUGvou284w6e-HA1FAd9nQzf_Jh56/pub';
+  const URL_SEGURIDAD = 'https://docs.google.com/document/d/e/2PACX-1vT5rQjbC-H5ScVkXZuDLNCvYiS9r0hSPZRueBGNLlIgx6g9iMGtbonLn_z7wuuYs4w19uCSPHch8-ty/pub';
+  const URL_ELIMINACION = 'https://docs.google.com/document/d/e/2PACX-1vRtQDGTp0WaWHdkE6_XJ2LWGs86HfGaFWtHxvkXxxHTE02m05lE8cCZB9qOyX1fWUzXun30y-Kp2Hna/pub';
+
+  const abrirDocumento = (url) => Linking.openURL(url);
 
   const toggleModoRecuperacion = async () => {
     const nuevoEstado = !usuario?.modoRecuperacion;
@@ -277,9 +282,11 @@ export default function AjustesScreen({ navigation }) {
             />
           </SettingsSection>
 
-          <SettingsSection title="LEGAL Y SOPORTE" COLORS={COLORS} isDarkMode={isDarkMode}>
-            <SettingsRow COLORS={COLORS} isDarkMode={isDarkMode} icon="document-text" iconColor="#9CA3AF" bg={isDarkMode ? "rgba(156,163,175,0.15)" : "#F3F4F6"} title="Términos y Condiciones" onPress={abrirLegales} />
-            <SettingsRow COLORS={COLORS} isDarkMode={isDarkMode} icon="lock-closed" iconColor="#9CA3AF" bg={isDarkMode ? "rgba(156,163,175,0.15)" : "#F3F4F6"} title="Políticas de Privacidad" onPress={abrirLegales} isLast />
+          <SettingsSection title="LEGAL Y SEGURIDAD" COLORS={COLORS} isDarkMode={isDarkMode}>
+            <SettingsRow COLORS={COLORS} isDarkMode={isDarkMode} icon="document-text" iconColor="#9CA3AF" bg={isDarkMode ? "rgba(156,163,175,0.15)" : "#F3F4F6"} title="Términos y Condiciones" onPress={() => abrirDocumento(URL_TERMINOS)} />
+            <SettingsRow COLORS={COLORS} isDarkMode={isDarkMode} icon="lock-closed" iconColor="#9CA3AF" bg={isDarkMode ? "rgba(156,163,175,0.15)" : "#F3F4F6"} title="Política de Privacidad" onPress={() => abrirDocumento(URL_PRIVACIDAD)} />
+            <SettingsRow COLORS={COLORS} isDarkMode={isDarkMode} icon="shield-checkmark" iconColor="#9CA3AF" bg={isDarkMode ? "rgba(156,163,175,0.15)" : "#F3F4F6"} title="Estándares de Seguridad Infantil" onPress={() => abrirDocumento(URL_SEGURIDAD)} />
+            <SettingsRow COLORS={COLORS} isDarkMode={isDarkMode} icon="trash-bin" iconColor="#9CA3AF" bg={isDarkMode ? "rgba(156,163,175,0.15)" : "#F3F4F6"} title="Eliminación de cuenta y datos" onPress={() => abrirDocumento(URL_ELIMINACION)} isLast />
           </SettingsSection>
 
           <View style={styles.dangerZone}>
