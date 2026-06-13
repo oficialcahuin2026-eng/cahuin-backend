@@ -19,6 +19,10 @@ const userSchema = new mongoose.Schema({
   preferencia:        { type: String, default: 'Todxs' },
   queBuscas:          { type: String, default: 'Lo sigo pensando' },
   distanciaMax:       { type: Number, default: 50 },
+  distanciaFlexible:  { type: Boolean, default: true },
+  edadMin:            { type: Number, default: 18 },
+  edadMax:            { type: Number, default: 60 },
+  edadFlexible:       { type: Boolean, default: true },
 
   isPremium:   { type: Boolean, default: false },
   premiumPlan: { type: String, enum: ['free', 'piola', 'a_fondo', 'plus', 'gold', 'platinum'], default: 'free' },

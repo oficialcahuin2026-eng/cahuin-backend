@@ -20,6 +20,8 @@ import { useTheme } from '../context/ThemeContext';
 import { EmptyState, ExpandableSection, GradientButton, InterestChip, SoftCard } from '../components/CahuinUI';
 import CahuinModal from '../components/CahuinModal';
 import MatchCelebrationModal from '../components/MatchCelebrationModal';
+import PreferenciasModal from '../components/PreferenciasModal';
+import SimulatedAdModal from '../components/SimulatedAdModal';
 import { inferirRegionPorCiudad, normalizarCiudadChile, normalizarRegionChile } from '../utils/chileLocations';
 import { calcularCompatibilidad, emojiCompatibilidad } from '../hooks/useCompatibilidad';
 import { FONTS, SHADOWS, SPACING, RADIUS } from '../utils/theme';
@@ -48,6 +50,18 @@ export default function HomeScreen({ navigation }) {
   const [matchCelebrado, setMatchCelebrado] = useState(null);
   const [procesandoAccion, setProcesandoAccion] = useState(false);
   const [modalInfo, setModalInfo] = useState(null);
+  const [modalPreferencias, setModalPreferencias] = useState(false);
+  const [modalAnuncio, setModalAnuncio] = useState(false);
+  const [accionPendiente, setAccionPendiente] = useState(null);
+
+  const iniciarAnuncioYEjecutar = (accionFn) => {
+    if (usuario?.isPremium) {
+      accionFn();
+    } else {
+      setAccionPendiente(() => accionFn);
+      setModalAnuncio(true);
+    }
+  };
 
   const avisar = (title, message, extra = {}) => setModalInfo({ title, message, ...extra });
 
@@ -84,8 +98,22 @@ export default function HomeScreen({ navigation }) {
   const cargarPerfilesConFiltros = async () => {
     try {
       const data = await userService.descubrir({});
-      // 🌟 SOLUCIÓN AL BUG: Extraemos tanto 'perfiles' como 'usuarios' para atrapar los perfiles falsos.
       const recibidos = data.perfiles || data.usuarios || [];
+      
+      if (!usuario?.isPremium && recibidos.length > 2) {
+        recibidos.splice(2, 0, {
+          _id: 'AD_MOCK_' + Date.now(),
+          nombre: 'Oferta Especial',
+          edad: 99,
+          ciudad: 'Publicidad',
+          foto: 'https://i.imgur.com/vHqJk6K.jpeg',
+          fotos: ['https://i.imgur.com/vHqJk6K.jpeg'],
+          descripcion: '¡🍔 + 🥤 Envío sin costo! Desliza a la derecha para reclamar tu código en la App.',
+          intereses: ['Promoción', 'Descuento'],
+          isAd: true
+        });
+      }
+
       setPerfiles(recibidos);
     } catch {
       setPerfiles([]);
@@ -101,7 +129,11 @@ export default function HomeScreen({ navigation }) {
     setPerfilActual((prev) => prev + 1);
 
     try {
-      if (tipo === 'like') {
+      if (perfilVisto.isAd) {
+        if (tipo === 'like' || tipo === 'superlike') {
+          avisar('Oferta', 'Aquí se abriría la página del anunciante.', { emoji: '🍔', accent: '#F59E0B' });
+        }
+      } else if (tipo === 'like') {
         const data = await matchService.darLike(perfilVisto._id);
         if (data?.usuario) actualizarUsuario(data.usuario);
         if (data?.esMatch) {
@@ -123,7 +155,7 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  const deshacerUltimo = async () => {
+  const deshacerUltimoReal = async () => {
     if (procesandoAccion) return;
     setProcesandoAccion(true);
     try {
@@ -144,6 +176,10 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
+  const deshacerUltimo = () => {
+    iniciarAnuncioYEjecutar(deshacerUltimoReal);
+  };
+
   const activarBoost = () => {
     avisar('Modo Destacado', 'Aparece primero en el radar de tu ciudad durante 30 minutos.', {
       emoji: '🔥',
@@ -155,15 +191,17 @@ export default function HomeScreen({ navigation }) {
           label: 'Activar',
           icon: 'sparkles',
           color: '#8B5CF6',
-          onPress: async () => {
+          onPress: () => {
             setModalInfo(null);
-            try {
-              const data = await userService.activarBoost();
-              if (data?.usuario) actualizarUsuario(data.usuario);
-              avisar('Prendido', data?.message || 'Tu perfil queda destacado por 30 minutos.', { emoji: '🔥', accent: '#8B5CF6' });
-            } catch (error) {
-              avisar('Boost', error.message || 'No pudimos activar destacado.', { emoji: '💎', tone: 'danger' });
-            }
+            iniciarAnuncioYEjecutar(async () => {
+              try {
+                const data = await userService.activarBoost();
+                if (data?.usuario) actualizarUsuario(data.usuario);
+                avisar('Prendido', data?.message || 'Tu perfil queda destacado por 30 minutos.', { emoji: '🔥', accent: '#8B5CF6' });
+              } catch (error) {
+                avisar('Boost', error.message || 'No pudimos activar destacado.', { emoji: '💎', tone: 'danger' });
+              }
+            });
           },
         },
       ],
@@ -237,7 +275,10 @@ export default function HomeScreen({ navigation }) {
           {/* Header integrado a la tarjeta */}
           <LinearGradient colors={['rgba(0,0,0,0.6)', 'transparent']} style={styles.topGradient}>
             <View style={styles.innerHeader}>
-              <Text style={styles.innerHeaderTitle}>Radar</Text>
+              <TouchableOpacity onPress={() => setModalPreferencias(true)} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="options-outline" size={24} color="#FFF" style={{ marginRight: 8 }} />
+                <Text style={styles.innerHeaderTitle}>Radar</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={styles.planPill} onPress={() => navigation.navigate('Premium')} activeOpacity={0.85}>
                 <Ionicons name="sparkles" size={16} color="#F59E0B" />
               </TouchableOpacity>
@@ -395,6 +436,22 @@ export default function HomeScreen({ navigation }) {
         compatibilidad={compatPorcentaje}
       />
       <CahuinModal visible={!!modalInfo} title={modalInfo?.title} message={modalInfo?.message} emoji={modalInfo?.emoji} actions={modalInfo?.actions || []} accent={modalInfo?.accent} tone={modalInfo?.tone} details={modalInfo?.details} onClose={() => setModalInfo(null)} />
+      <PreferenciasModal 
+        visible={modalPreferencias} 
+        onClose={() => setModalPreferencias(false)} 
+        onSave={() => cargarPerfilesConFiltros()} 
+      />
+
+      <SimulatedAdModal
+        visible={modalAnuncio}
+        onClose={() => setModalAnuncio(false)}
+        onAdFinished={() => {
+          if (accionPendiente) {
+            accionPendiente();
+            setAccionPendiente(null);
+          }
+        }}
+      />
     </SafeAreaView>
   );
 }

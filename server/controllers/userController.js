@@ -1,4 +1,4 @@
-﻿const User = require('../models/User');
+const User = require('../models/User');
 const Match = require('../models/Match');
 
 const PLAN_PIOLA_O_SUPERIOR = ['piola', 'a_fondo', 'plus', 'gold', 'platinum'];
@@ -179,10 +179,19 @@ exports.descubrir = async (req, res) => {
     }
     const terminosUbicacion = [...new Set([ciudadBusqueda, regionBusqueda].filter(Boolean))];
 
+    const minAge = miUsuario.edadMin || 18;
+    const maxAge = miUsuario.edadMax || 60;
+
     let query = {
       _id: { $nin: ignorarIds },
       cuentaPausada: { $ne: true },
     };
+
+    if (miUsuario.edadFlexible === false) {
+      query.edad = { $gte: minAge, $lte: maxAge };
+    } else {
+      query.edad = { $gte: Math.max(18, minAge - 3), $lte: maxAge + 3 };
+    }
 
     if (terminosUbicacion.length > 0) {
       query.$or = [
@@ -227,6 +236,7 @@ exports.descubrir = async (req, res) => {
 
     const perfiles = [];
     const limiteDistancia = miUsuario.distanciaMax || 50;
+    const distanciaFlex = miUsuario.distanciaFlexible !== false; // por defecto true
 
     for (let perfil of usuarios) {
       const esVisitante = perfil.viaje && perfil.viaje.ciudadDestino && new Date() < new Date(perfil.viaje.fechaFin);
@@ -235,7 +245,9 @@ exports.descubrir = async (req, res) => {
       const mismaCiudad = ciudadBusqueda && perfil.ciudad === ciudadBusqueda;
       const ubicacionCompatibleSinGps = dist === null && (mismaCiudad || mismaRegion);
 
-      if (esVisitante || (dist !== null && dist <= limiteDistancia) || ubicacionCompatibleSinGps) {
+      const maxPermitida = distanciaFlex ? limiteDistancia + 40 : limiteDistancia;
+
+      if (esVisitante || (dist !== null && dist <= maxPermitida) || ubicacionCompatibleSinGps) {
         const obj = perfil.toObject();
         obj.distanciaKm = esVisitante ? 'Modo Viajero' : (dist !== null ? dist : 'Cerca');
         obj.esVisitante = esVisitante;
