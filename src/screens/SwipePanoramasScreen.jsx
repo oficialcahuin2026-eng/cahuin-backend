@@ -12,9 +12,9 @@ import { FONTS, SHADOWS, SPACING } from '../utils/theme';
 const fallback = 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?q=80&w=1000';
 
 export default function SwipePanoramasScreen({ navigation }) {
-  const { COLORS } = useTheme();
+  const { COLORS, isDarkMode } = useTheme();
   const { usuario } = useAuth();
-  const styles = getStyles(COLORS);
+  const styles = getStyles(COLORS, isDarkMode);
   const [panoramas, setPanoramas] = useState([]);
   const [index, setIndex] = useState(0);
   const [cargando, setCargando] = useState(true);
@@ -85,7 +85,7 @@ export default function SwipePanoramasScreen({ navigation }) {
 
       {cargando ? <ActivityIndicator color={COLORS.primario} style={{ marginTop: 40 }} /> : panorama ? (
         <ImageBackground source={{ uri: panorama.imagen || fallback }} style={styles.card} imageStyle={styles.cardImage}>
-          <LinearGradient colors={['rgba(0,0,0,0.12)', 'rgba(0,0,0,0.82)']} style={styles.overlay}>
+          <LinearGradient colors={['rgba(0,0,0,0.12)', 'rgba(0,0,0,0.85)']} style={styles.overlay}>
             <Text style={styles.emoji}>{panorama.emoji || '🎟️'}</Text>
             <Text style={styles.cardTitle}>{panorama.titulo}</Text>
             <Text style={styles.desc}>{panorama.descripcion}</Text>
@@ -119,23 +119,24 @@ export default function SwipePanoramasScreen({ navigation }) {
         emoji={modalInfo?.emoji}
         actions={modalInfo?.actions || []}
         accent={modalInfo?.accent}
+        tone={modalInfo?.tone}
         onClose={() => setModalInfo(null)}
       />
     </SafeAreaView>
   );
 }
 
-const getStyles = (COLORS) => StyleSheet.create({
+const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg, padding: SPACING[5] },
-  back: { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.tarjeta, alignItems: 'center', justifyContent: 'center', marginBottom: SPACING[4], ...SHADOWS.light },
+  back: { width: 44, height: 44, borderRadius: 22, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : COLORS.tarjeta, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : COLORS.border, alignItems: 'center', justifyContent: 'center', marginBottom: SPACING[4], ...(isDarkMode ? {} : SHADOWS.light) },
   title: { color: COLORS.textPrimary, fontSize: 34, fontWeight: '900', fontFamily: FONTS.display },
   subtitle: { color: COLORS.textMuted, fontSize: 16, lineHeight: 23, marginTop: 8, marginBottom: SPACING[5] },
-  card: { flex: 1, minHeight: 560, borderRadius: 32, overflow: 'hidden', ...SHADOWS.dark },
+  card: { flex: 1, minHeight: 560, borderRadius: 32, overflow: 'hidden', ...(isDarkMode ? SHADOWS.dark : SHADOWS.medium) },
   cardImage: { borderRadius: 32 },
   overlay: { flex: 1, justifyContent: 'flex-end', padding: SPACING[5] },
   emoji: { fontSize: 54, marginBottom: 10 },
   cardTitle: { color: '#FFF', fontSize: 36, lineHeight: 42, fontWeight: '900', fontFamily: FONTS.display },
-  desc: { color: '#E5E7EB', fontSize: 17, lineHeight: 24, marginTop: 8 },
+  desc: { color: 'rgba(255,255,255,0.9)', fontSize: 17, lineHeight: 24, marginTop: 8 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: SPACING[3] },
   meta: { color: '#FFF', flex: 1, fontWeight: '800' },
   actions: { flexDirection: 'row', justifyContent: 'center', gap: 26, marginTop: SPACING[6] },

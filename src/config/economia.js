@@ -8,7 +8,7 @@ export const PLANES_CAHUIN = [
     storeProductId: 'cahuin_piola',
     basePlanId: 'mensual',
     googleProductId: 'cahuin_piola:mensual',
-    productAliases: ['cahuin_piola', 'cahuin_piola_mensual', 'cahuin_piola:mensual'],
+    productAliases: ['cahuin_piola', 'cahuin_piola_mensual', 'cahuin_piola:mensual', 'cahuin_piola_mensual:mensual'],
     revenueCatEntitlement: 'cahuin_premium',
     color: '#7A1518',
     accent: '#FF6B5E',

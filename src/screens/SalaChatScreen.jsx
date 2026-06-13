@@ -296,7 +296,7 @@ export default function SalaChatScreen({ route, navigation }) {
   );
 
   const renderMensaje = ({ item }) => {
-    const esMio = item.remitente?._id === miUsuario._id || item.remitente === miUsuario._id;
+    const esMio = item.remitente?._id === miUsuario?._id || item.remitente === miUsuario?._id || item.remitente === 'me';
     const esInvitacion = item.texto?.startsWith('Te invito a este panorama:');
     const esKaraoke = item.texto?.startsWith('🎤 Cahuín Karaoke:');
     if (esKaraoke) {
@@ -366,7 +366,7 @@ export default function SalaChatScreen({ route, navigation }) {
         )}
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 80}>
         <FlatList
           ref={flatListRef}
           data={mensajes}

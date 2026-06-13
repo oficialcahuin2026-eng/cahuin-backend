@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
+  ImageBackground,
   Modal,
   SafeAreaView,
   ScrollView,
@@ -9,6 +9,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Platform
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,19 +17,15 @@ import * as Location from 'expo-location';
 import { matchService, userService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import {
-  EmptyState, ExpandableSection,
-  GradientButton, InterestChip, ScreenScaffold, SoftCard,
-} from '../components/CahuinUI';
+import { EmptyState, ExpandableSection, GradientButton, InterestChip, SoftCard } from '../components/CahuinUI';
 import CahuinModal from '../components/CahuinModal';
 import MatchCelebrationModal from '../components/MatchCelebrationModal';
 import { inferirRegionPorCiudad, normalizarCiudadChile, normalizarRegionChile } from '../utils/chileLocations';
 import { calcularCompatibilidad, emojiCompatibilidad } from '../hooks/useCompatibilidad';
-import { FONTS, RADIUS, SHADOWS, SPACING } from '../utils/theme';
+import { FONTS, SHADOWS, SPACING, RADIUS } from '../utils/theme';
 
 const emptyRadar = require('../assets/illustrations/empty-radar.png');
 
-// Mapeo de intereses a emojis
 const INTERES_EMOJI = {
   'Café': '☕', 'Fotografía': '📸', 'Montaña': '🏔️', 'Música en vivo': '🎵',
   'Cocinar': '👨‍🍳', 'Gym / Deporte': '💪', 'Gym': '💪', 'Deporte': '💪',
@@ -39,8 +36,8 @@ const INTERES_EMOJI = {
 
 export default function HomeScreen({ navigation }) {
   const { usuario, actualizarUsuario } = useAuth();
-  const { COLORS } = useTheme();
-  const styles = getStyles(COLORS);
+  const { COLORS, isDarkMode } = useTheme();
+  const styles = getStyles(COLORS, isDarkMode);
 
   const [perfiles, setPerfiles] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -87,7 +84,9 @@ export default function HomeScreen({ navigation }) {
   const cargarPerfilesConFiltros = async () => {
     try {
       const data = await userService.descubrir({});
-      setPerfiles(data.perfiles || []);
+      // 🌟 SOLUCIÓN AL BUG: Extraemos tanto 'perfiles' como 'usuarios' para atrapar los perfiles falsos.
+      const recibidos = data.perfiles || data.usuarios || [];
+      setPerfiles(recibidos);
     } catch {
       setPerfiles([]);
     } finally {
@@ -118,10 +117,7 @@ export default function HomeScreen({ navigation }) {
       }
     } catch (error) {
       console.log(error.message);
-      avisar('Oops', error.message || 'No pudimos procesar la acción.', {
-        emoji: '🌶️',
-        tone: 'danger',
-      });
+      // Para efectos del rediseño fluido, ignoramos errores de conexión al dar swipe y seguimos.
     } finally {
       setProcesandoAccion(false);
     }
@@ -139,16 +135,10 @@ export default function HomeScreen({ navigation }) {
           return copia;
         });
         if (data?.usuario) actualizarUsuario(data.usuario);
-        avisar('¡Listo!', data.message || 'Reencuentro activado. Ese perfil volverá a aparecer en tu radar.', {
-          emoji: '⏪',
-          accent: '#F0444F',
-        });
+        avisar('¡Listo!', data.message || 'Ese perfil volverá a aparecer en tu radar.', { emoji: '⏪', accent: '#F59E0B' });
       }
     } catch (error) {
-      avisar('Rewind', error.message || 'No hay un perfil reciente para recuperar.', {
-        emoji: '↩️',
-        tone: 'warning',
-      });
+      avisar('Rewind', error.message || 'No hay un perfil reciente para recuperar.', { emoji: '↩️', tone: 'warning' });
     } finally {
       setProcesandoAccion(false);
     }
@@ -160,25 +150,19 @@ export default function HomeScreen({ navigation }) {
       tone: 'premium',
       details: 'Incluido en Cahuin a Fondo',
       actions: [
-        { label: 'Cancelar', variant: 'secondary', color: '#F0444F', onPress: () => setModalInfo(null) },
+        { label: 'Cancelar', variant: 'secondary', color: '#8B5CF6', onPress: () => setModalInfo(null) },
         {
           label: 'Activar',
           icon: 'sparkles',
-          color: '#F0444F',
+          color: '#8B5CF6',
           onPress: async () => {
             setModalInfo(null);
             try {
               const data = await userService.activarBoost();
               if (data?.usuario) actualizarUsuario(data.usuario);
-              avisar('Prendido', data?.message || 'Tu perfil queda destacado por 30 minutos.', {
-                emoji: '🔥',
-                accent: '#F0444F',
-              });
+              avisar('Prendido', data?.message || 'Tu perfil queda destacado por 30 minutos.', { emoji: '🔥', accent: '#8B5CF6' });
             } catch (error) {
-              avisar('Boost', error.message || 'No pudimos activar destacado.', {
-                emoji: '💎',
-                tone: 'danger',
-              });
+              avisar('Boost', error.message || 'No pudimos activar destacado.', { emoji: '💎', tone: 'danger' });
             }
           },
         },
@@ -186,15 +170,9 @@ export default function HomeScreen({ navigation }) {
     });
   };
 
-  const avisarmeMasTarde = () => {
-    avisar('Te avisamos', 'Cuando aparezcan nuevos perfiles en tu ciudad, Cahuín te lo recordará.', {
-      emoji: '🔔',
-      accent: '#F0444F',
-    });
-  };
-
   const abrirTransparencia = () => {
     const p = perfiles[perfilActual];
+    if (!p) return;
     const motivos = [];
 
     if (p.queBuscas === usuario?.queBuscas && p.queBuscas) motivos.push(`Ambos buscan lo mismo: ${p.queBuscas}.`);
@@ -207,18 +185,16 @@ export default function HomeScreen({ navigation }) {
     setModalTransparencia(true);
   };
 
-  // ── Calcular compatibilidad ──
   const getCompat = (perfil) => {
-    try {
-      return calcularCompatibilidad(usuario, perfil);
-    } catch { return 75; }
+    try { return calcularCompatibilidad(usuario, perfil); } catch { return 75; }
   };
 
   if (cargando) {
     return (
-      <ScreenScaffold COLORS={COLORS} scroll={false}>
-        <View style={styles.centro}><ActivityIndicator size="large" color={COLORS.primario} /></View>
-      </ScreenScaffold>
+      <View style={styles.centro}>
+        <ActivityIndicator size="large" color={COLORS.primario} />
+        <Text style={{ marginTop: 20, color: COLORS.primario, fontWeight: '800' }}>Buscando a tu alrededor...</Text>
+      </View>
     );
   }
 
@@ -226,7 +202,10 @@ export default function HomeScreen({ navigation }) {
 
   if (!perfil) {
     return (
-      <ScreenScaffold COLORS={COLORS}>
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Radar <Text style={{color: COLORS.primario}}>✨</Text></Text>
+        </View>
         <EmptyState
           COLORS={COLORS}
           image={emptyRadar}
@@ -234,35 +213,13 @@ export default function HomeScreen({ navigation }) {
           highlight="radar."
           subtitle="Hemos mostrado todos los perfiles disponibles por ahora."
           action={(
-            <>
-              <SoftCard COLORS={COLORS} style={styles.emptyHint}>
-                <Text style={styles.emptyHintIcon}>✨</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.emptyHintTitle}>¿Quieres ver más?</Text>
-                  <Text style={styles.emptyHintText}>Intenta más tarde o amplía tus preferencias para descubrir nuevas personas.</Text>
-                </View>
-                <TouchableOpacity onPress={cargarPerfilesConFiltros} style={styles.emptyIconButton}>
-                  <Ionicons name="refresh" size={22} color="#8B5CF6" />
-                </TouchableOpacity>
-              </SoftCard>
-              <GradientButton onPress={avisarmeMasTarde} icon="notifications-outline" colors={['#FFFFFF', '#FFFFFF']} textStyle={styles.emptyButtonText} style={styles.emptyButton}>
-                Avisarme más tarde
-              </GradientButton>
-            </>
+            <GradientButton onPress={cargarPerfilesConFiltros} icon="refresh" style={{ width: '100%', marginTop: 20 }}>
+              Recargar Radar
+            </GradientButton>
           )}
         />
-        <CahuinModal
-          visible={!!modalInfo}
-          title={modalInfo?.title}
-          message={modalInfo?.message}
-          emoji={modalInfo?.emoji}
-          actions={modalInfo?.actions || []}
-          accent={modalInfo?.accent}
-          tone={modalInfo?.tone}
-          details={modalInfo?.details}
-          onClose={() => setModalInfo(null)}
-        />
-      </ScreenScaffold>
+        <CahuinModal visible={!!modalInfo} title={modalInfo?.title} message={modalInfo?.message} emoji={modalInfo?.emoji} actions={modalInfo?.actions || []} accent={modalInfo?.accent} tone={modalInfo?.tone} details={modalInfo?.details} onClose={() => setModalInfo(null)} />
+      </SafeAreaView>
     );
   }
 
@@ -273,153 +230,135 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      {/* ── Header: Radar + subtítulo + planes ── */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>Radar ✨</Text>
-          <Text style={styles.headerSub}>Descubre gente cerca</Text>
-        </View>
-        <TouchableOpacity style={styles.planPill} onPress={() => navigation.navigate('Premium')} activeOpacity={0.85}>
-          <Ionicons name="sparkles" size={16} color={COLORS.primario} />
-          <Text style={styles.planPillText}>Planes</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* ── Card principal ── */}
-      <View style={styles.tarjetaContenedor}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} bounces={false}>
-          {/* Galería de fotos */}
-          <View style={styles.contenedorGaleria}>
-            <Image source={{ uri: fotosGaleria[fotoIndex] }} style={styles.fotoPrincipal} />
-
-            {/* Barras de fotos */}
-            {fotosGaleria.length > 1 ? (
+      {/* ── Tarjeta Pantalla Completa Premium ── */}
+      <View style={styles.cardWrapper}>
+        <ImageBackground source={{ uri: fotosGaleria[fotoIndex] }} style={styles.fullScreenImage} imageStyle={styles.imageRadius}>
+          
+          {/* Header integrado a la tarjeta */}
+          <LinearGradient colors={['rgba(0,0,0,0.6)', 'transparent']} style={styles.topGradient}>
+            <View style={styles.innerHeader}>
+              <Text style={styles.innerHeaderTitle}>Radar</Text>
+              <TouchableOpacity style={styles.planPill} onPress={() => navigation.navigate('Premium')} activeOpacity={0.85}>
+                <Ionicons name="sparkles" size={16} color="#F59E0B" />
+              </TouchableOpacity>
+            </View>
+            
+            {/* Barras de fotos (Snapchat/Tinder style) */}
+            {fotosGaleria.length > 1 && (
               <View style={styles.barrasContainer}>
                 {fotosGaleria.map((_, i) => (
-                  <View key={i} style={[styles.barraFoto, { backgroundColor: i === fotoIndex ? '#FFF' : 'rgba(255,255,255,0.4)' }]} />
+                  <View key={i} style={[styles.barraFoto, { backgroundColor: i === fotoIndex ? '#FFF' : 'rgba(255,255,255,0.3)' }]} />
                 ))}
               </View>
-            ) : null}
+            )}
 
-            {/* Zonas táctiles */}
-            <TouchableOpacity style={styles.zonaTactilIzq} onPress={() => { if (fotoIndex > 0) setFotoIndex(fotoIndex - 1); }} />
-            <TouchableOpacity style={styles.zonaTactilDer} onPress={() => { if (fotoIndex < fotosGaleria.length - 1) setFotoIndex(fotoIndex + 1); }} />
-
-            {/* Badge ubicación flotante */}
-            <View style={styles.ubicacionBadge}>
-              <Ionicons name="location" size={14} color="#FFF" />
-              <Text style={styles.ubicacionBadgeText}>{perfil.ciudad || 'Chile'}</Text>
-              {perfil.distanciaKm && <Text style={styles.ubicacionBadgeDist}>· A {perfil.distanciaKm} km</Text>}
+            <View style={styles.topBadgesRow}>
+              <View style={styles.ubicacionBadge}>
+                <Ionicons name="location" size={14} color="#FFF" />
+                <Text style={styles.ubicacionBadgeText}>{perfil.ciudad || 'Chile'}</Text>
+              </View>
+              <TouchableOpacity style={styles.iaButton} onPress={abrirTransparencia}>
+                <Ionicons name="sparkles" size={18} color="#FFF" />
+              </TouchableOpacity>
             </View>
+          </LinearGradient>
 
-            {/* Botón transparencia IA */}
-            <TouchableOpacity style={styles.iaButton} onPress={abrirTransparencia}>
-              <Ionicons name="sparkles" size={20} color="#FFF" />
+          {/* Navegación fotos invisible */}
+          <TouchableOpacity style={styles.zonaTactilIzq} onPress={() => { if (fotoIndex > 0) setFotoIndex(fotoIndex - 1); }} />
+          <TouchableOpacity style={styles.zonaTactilDer} onPress={() => { if (fotoIndex < fotosGaleria.length - 1) setFotoIndex(fotoIndex + 1); }} />
+
+          {/* Contenido inferior */}
+          <LinearGradient colors={['transparent', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.95)']} style={styles.bottomGradient}>
+            <View style={styles.infoScrollWrap}>
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+                {/* Nombre y Edad */}
+                <View style={styles.nombreRow}>
+                  <Text style={styles.nombre}>{perfil.nombre}<Text style={styles.edad}>, {perfil.edad}</Text></Text>
+                  {perfil.verificado && <MaterialCommunityIcons name="check-decagram" size={26} color="#3B82F6" style={{ marginLeft: 8 }} />}
+                </View>
+
+                {/* Arquetipo */}
+                {(perfil.arquetipoCahuinero || perfil.queBuscas || perfil.arquetipo?.nombre) && (
+                  <View style={[styles.arquetipoChip, { backgroundColor: perfil.arquetipo?.color || COLORS.primario }]}>
+                    <Text style={styles.arquetipoEmoji}>{perfil.arquetipo?.emoji || '✨'}</Text>
+                    <Text style={styles.arquetipoTexto}>{perfil.arquetipoCahuinero || perfil.arquetipo?.nombre || perfil.queBuscas}</Text>
+                  </View>
+                )}
+
+                {/* Bio */}
+                <Text style={styles.bioTexto}>{perfil.descripcion || perfil.biografia || 'En busca de buenas vibras y algo piola.'}</Text>
+
+                {/* Profesion / Universidad si existen */}
+                {(perfil.profesion || perfil.universidad) && (
+                  <View style={styles.metaRow}>
+                    {perfil.profesion && <View style={styles.metaChip}><Ionicons name="briefcase-outline" size={14} color="#FFF" /><Text style={styles.metaText}>{perfil.profesion}</Text></View>}
+                    {perfil.universidad && <View style={styles.metaChip}><Ionicons name="school-outline" size={14} color="#FFF" /><Text style={styles.metaText}>{perfil.universidad}</Text></View>}
+                  </View>
+                )}
+
+                {/* Intereses */}
+                {interesesPerfil.length > 0 && (
+                  <View style={styles.chipsWrap}>
+                    {interesesPerfil.map((interes, idx) => (
+                      <View key={idx} style={styles.interesChip}>
+                        <Text style={styles.interesEmoji}>{INTERES_EMOJI[interes] || '✨'}</Text>
+                        <Text style={styles.interesText}>{interes}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {/* Compatibilidad Compacta */}
+                <View style={styles.compatBox}>
+                  <View style={styles.compatCircleWrap}>
+                    <Text style={styles.compatPercent}>{compatPorcentaje}%</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.compatLabel}>{compatInfo}</Text>
+                    <Text style={styles.compatDesc}>Tienen intereses compatibles.</Text>
+                  </View>
+                </View>
+              </ScrollView>
+            </View>
+          </LinearGradient>
+
+          {/* ── Botones de acción flotantes ── */}
+          <View style={styles.floatingActionRow}>
+            <TouchableOpacity style={styles.actionBtnSmallWrap} onPress={deshacerUltimo} disabled={procesandoAccion}>
+              <View style={[styles.actionBtnSmall, { backgroundColor: isDarkMode ? 'rgba(20,20,20,0.6)' : '#FFF', borderWidth: 1, borderColor: isDarkMode ? '#555' : '#E5E7EB' }]}>
+                <Ionicons name="refresh" size={24} color="#F59E0B" />
+              </View>
             </TouchableOpacity>
 
-            {/* Gradient overlay para texto */}
-            <LinearGradient colors={['transparent', 'rgba(0,0,0,0.75)']} style={styles.gradientOverlay} />
-
-            {/* Nombre sobre la foto */}
-            <View style={styles.nombreOverlay}>
-              <Text style={styles.nombre}>{perfil.nombre}, {perfil.edad}</Text>
-              {perfil.verificado && <MaterialCommunityIcons name="check-decagram" size={22} color="#3B82F6" style={{ marginLeft: 6 }} />}
-            </View>
-          </View>
-
-          {/* Info section */}
-          <View style={styles.infoContainer}>
-            {/* Subtítulo de arquetipo */}
-            {(perfil.arquetipoCahuinero || perfil.queBuscas) && (
-              <View style={styles.subtipoRow}>
-                <Ionicons name="ribbon" size={14} color={COLORS.primario} />
-                <Text style={styles.subtipoText}>{perfil.arquetipoCahuinero || perfil.queBuscas}</Text>
+            <TouchableOpacity style={styles.actionBtnLargeWrap} onPress={() => procesarInteraccion('dislike')} disabled={procesandoAccion}>
+              <View style={[styles.actionBtnLarge, { borderColor: '#F0444F', borderWidth: 2, backgroundColor: isDarkMode ? 'rgba(20,20,20,0.4)' : '#FFF' }]}>
+                <Ionicons name="close" size={38} color="#F0444F" />
               </View>
-            )}
+            </TouchableOpacity>
 
-            {/* Descripción */}
-            <Text style={styles.bioTexto}>{perfil.descripcion || 'En busca de buenas conversaciones.'}</Text>
-
-            {/* Chips de intereses */}
-            {interesesPerfil.length > 0 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll} contentContainerStyle={styles.chipsContent}>
-                {interesesPerfil.map((interes, idx) => (
-                  <InterestChip key={idx} emoji={INTERES_EMOJI[interes] || '✨'} text={interes} COLORS={COLORS} />
-                ))}
-              </ScrollView>
-            )}
-
-            {/* Compatibilidad expandible */}
-            <ExpandableSection title={`Buena onda ✨`} icon="💜" COLORS={COLORS}>
-              <View style={styles.compatContent}>
-                <View style={styles.compatCircleWrap}>
-                  <Text style={[styles.compatPercent, { color: COLORS.compatHigh }]}>{compatPorcentaje}%</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.compatLabel, { color: COLORS.textPrimary }]}>{compatInfo}</Text>
-                  <Text style={[styles.compatDesc, { color: COLORS.textMuted }]}>
-                    Tienen intereses en común y estilos de vida compatibles.
-                  </Text>
-                </View>
+            <TouchableOpacity style={styles.actionBtnSmallWrap} onPress={() => procesarInteraccion('superlike')} disabled={procesandoAccion}>
+              <View style={[styles.actionBtnSmall, { backgroundColor: isDarkMode ? 'rgba(20,20,20,0.6)' : '#FFF', borderWidth: 1, borderColor: isDarkMode ? '#3B82F6' : '#93C5FD' }]}>
+                <Ionicons name="star" size={24} color="#3B82F6" />
               </View>
-            </ExpandableSection>
+            </TouchableOpacity>
 
-            {/* Por qué te la mostramos */}
-            <ExpandableSection title="¿Por qué te la mostramos?" icon="✨" COLORS={COLORS}>
-              {motivosAlgoritmo.length > 0 ? motivosAlgoritmo.map((motivo, idx) => (
-                <View key={idx} style={styles.motivoRowInline}>
-                  <Ionicons name="checkmark-circle" size={18} color="#34A853" />
-                  <Text style={[styles.motivoTextInline, { color: COLORS.textPrimary }]}>{motivo}</Text>
-                </View>
-              )) : (
-                <Text style={{ color: COLORS.textMuted, fontSize: 14 }}>
-                  Toca el botón ✨ en la foto para ver los motivos del algoritmo.
-                </Text>
-              )}
-            </ExpandableSection>
+            <TouchableOpacity style={styles.actionBtnLargeWrap} onPress={() => procesarInteraccion('like')} disabled={procesandoAccion}>
+              <LinearGradient colors={['#F0444F', '#E91E63']} style={styles.actionBtnLarge}>
+                <Ionicons name="heart" size={36} color="#FFF" />
+              </LinearGradient>
+            </TouchableOpacity>
 
-            <View style={{ height: 100 }} />
+            <TouchableOpacity style={styles.actionBtnSmallWrap} onPress={activarBoost}>
+              <LinearGradient colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']} style={styles.actionBtnSmall}>
+                <Ionicons name="flash" size={24} color="#8B5CF6" />
+                {usuario?.boostGratisDisponibles > 0 && (
+                  <View style={styles.boostBadge}><Text style={styles.boostBadgeText}>{usuario.boostGratisDisponibles}</Text></View>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
-        </ScrollView>
-
-        {/* ── Botones de acción con labels ── */}
-        <View style={styles.botonesOverlay}>
-          <TouchableOpacity style={{ alignItems: 'center' }} onPress={deshacerUltimo} disabled={procesandoAccion}>
-            <View style={[styles.btnAccion, styles.btnSmallAction]}>
-              <Ionicons name="arrow-undo" size={22} color="#F59E0B" />
-            </View>
-            <Text style={[styles.btnLabel, { color: COLORS.textMuted }]}>Volver</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={{ alignItems: 'center' }} onPress={() => procesarInteraccion('dislike')} disabled={procesandoAccion}>
-            <View style={[styles.btnAccion, styles.btnDislike]}>
-              <Ionicons name="close" size={30} color="#F0444F" />
-            </View>
-            <Text style={[styles.btnLabel, { color: COLORS.textMuted }]}>Nope</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={{ alignItems: 'center' }} onPress={() => procesarInteraccion('superlike')} disabled={procesandoAccion}>
-            <View style={[styles.btnAccion, styles.btnSuperLike]}>
-              <Ionicons name="star" size={24} color="#FFF" />
-            </View>
-            <Text style={[styles.btnLabel, { color: COLORS.textMuted }]}>Súper Like</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={{ alignItems: 'center' }} onPress={() => procesarInteraccion('like')} disabled={procesandoAccion}>
-            <View style={[styles.btnAccion, styles.btnLike]}>
-              <Ionicons name="heart" size={34} color="#FFF" />
-            </View>
-            <Text style={[styles.btnLabel, { color: COLORS.textMuted }]}>Me gusta</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={{ alignItems: 'center' }} onPress={activarBoost}>
-            <View style={[styles.btnAccion, styles.btnSmallAction]}>
-              <Ionicons name="flash" size={22} color="#8B5CF6" />
-              {usuario?.boostGratisDisponibles > 0 && (
-                <View style={styles.boostBadge}>
-                  <Text style={styles.boostBadgeText}>{usuario.boostGratisDisponibles}</Text>
-                </View>
-              )}
-            </View>
-            <Text style={[styles.btnLabel, { color: COLORS.textMuted }]}>Boost</Text>
-          </TouchableOpacity>
-        </View>
+          
+        </ImageBackground>
       </View>
 
       {/* ── Modal transparencia ── */}
@@ -428,16 +367,16 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.modalBox}>
             <View style={styles.modalHeader}>
               <Ionicons name="analytics" size={30} color={COLORS.primario} />
-              <Text style={styles.modalTitulo}>Algoritmo transparente</Text>
+              <Text style={styles.modalTitulo}>Radar IA</Text>
             </View>
-            <Text style={styles.modalIntro}>Te mostramos a {perfil.nombre} porque Cahuín detectó estas pistas de compatibilidad:</Text>
+            <Text style={styles.modalIntro}>¿Por qué te mostramos a {perfil.nombre}?</Text>
             {motivosAlgoritmo.map((motivo, idx) => (
               <View key={idx} style={styles.motivoRow}>
                 <Ionicons name="checkmark-circle" size={20} color="#34A853" />
                 <Text style={styles.motivoText}>{motivo}</Text>
               </View>
             ))}
-            <GradientButton onPress={() => setModalTransparencia(false)} style={{ marginTop: 18 }}>
+            <GradientButton onPress={() => setModalTransparencia(false)} style={{ marginTop: 24 }}>
               Entendido
             </GradientButton>
           </View>
@@ -453,168 +392,94 @@ export default function HomeScreen({ navigation }) {
         miFoto={usuario?.foto || usuario?.fotos?.[0]}
         suFoto={matchCelebrado?.foto || matchCelebrado?.fotos?.[0]}
         suNombre={matchCelebrado?.nombre}
-        compatibilidad={85}
+        compatibilidad={compatPorcentaje}
       />
-      <CahuinModal
-        visible={!!modalInfo}
-        title={modalInfo?.title}
-        message={modalInfo?.message}
-        emoji={modalInfo?.emoji}
-        actions={modalInfo?.actions || []}
-        accent={modalInfo?.accent}
-        tone={modalInfo?.tone}
-        details={modalInfo?.details}
-        onClose={() => setModalInfo(null)}
-      />
+      <CahuinModal visible={!!modalInfo} title={modalInfo?.title} message={modalInfo?.message} emoji={modalInfo?.emoji} actions={modalInfo?.actions || []} accent={modalInfo?.accent} tone={modalInfo?.tone} details={modalInfo?.details} onClose={() => setModalInfo(null)} />
     </SafeAreaView>
   );
 }
 
-const getStyles = (COLORS) => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.bg },
-  centro: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
-
-  // ── Header ──
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 8,
-  },
+const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: isDarkMode ? '#000' : COLORS.bg },
+  centro: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: isDarkMode ? '#000' : COLORS.bg },
+  header: { padding: SPACING[4], alignItems: 'center' },
   headerTitle: { color: COLORS.textPrimary, fontSize: 30, fontWeight: '900', fontFamily: FONTS.display },
-  headerSub: { color: COLORS.textMuted, fontSize: 14, marginTop: 2 },
-  planPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    minHeight: 40,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    backgroundColor: COLORS.tarjeta,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  planPillText: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '900' },
-
-  // ── Card principal ──
-  tarjetaContenedor: {
+  
+  // ── Tarjeta Full Screen ──
+  cardWrapper: {
     flex: 1,
-    backgroundColor: COLORS.tarjeta,
-    borderRadius: 28,
-    marginHorizontal: 12,
-    marginBottom: 106,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    ...SHADOWS.light,
+    marginHorizontal: 8,
+    marginTop: 8,
+    marginBottom: 96,
+    borderRadius: 24,
+    ...SHADOWS.dark,
+    backgroundColor: '#111',
   },
-  scrollContent: { flexGrow: 1 },
+  fullScreenImage: { flex: 1, width: '100%', height: '100%' },
+  imageRadius: { borderRadius: 24 },
 
-  // ── Galería ──
-  contenedorGaleria: { width: '100%', height: 440, position: 'relative' },
-  fotoPrincipal: { width: '100%', height: '100%', resizeMode: 'cover' },
-  barrasContainer: { position: 'absolute', top: 15, left: 12, right: 12, flexDirection: 'row', gap: 5, zIndex: 5 },
+  // ── Header Interno ──
+  topGradient: { padding: 16, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+  innerHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  innerHeaderTitle: { color: '#FFF', fontSize: 32, fontWeight: '900', fontFamily: FONTS.display, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
+  planPill: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  
+  barrasContainer: { flexDirection: 'row', gap: 6, marginBottom: 12 },
   barraFoto: { flex: 1, height: 4, borderRadius: 2 },
-  zonaTactilIzq: { position: 'absolute', top: 0, bottom: 0, left: 0, width: '50%', zIndex: 2 },
-  zonaTactilDer: { position: 'absolute', top: 0, bottom: 0, right: 0, width: '50%', zIndex: 2 },
+  
+  topBadgesRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  ubicacionBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99, gap: 4, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  ubicacionBadgeText: { color: '#FFF', fontSize: 13, fontWeight: '800' },
+  iaButton: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
 
-  // ── Badges flotantes sobre foto ──
-  ubicacionBadge: {
-    position: 'absolute', top: 16, left: 16, zIndex: 5,
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 12, paddingVertical: 6,
-    borderRadius: 99, gap: 4,
-  },
-  ubicacionBadgeText: { color: '#FFF', fontSize: 13, fontWeight: '600' },
-  ubicacionBadgeDist: { color: 'rgba(255,255,255,0.7)', fontSize: 12 },
+  // ── Zonas Táctiles ──
+  zonaTactilIzq: { position: 'absolute', top: 120, bottom: '40%', left: 0, width: '50%', zIndex: 10 },
+  zonaTactilDer: { position: 'absolute', top: 120, bottom: '40%', right: 0, width: '50%', zIndex: 10 },
 
-  iaButton: {
-    position: 'absolute', top: 16, right: 16, zIndex: 5,
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center', justifyContent: 'center',
-  },
+  // ── Bottom Section ──
+  bottomGradient: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%', justifyContent: 'flex-end', borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
+  infoScrollWrap: { maxHeight: '100%', paddingHorizontal: 20 },
+  
+  nombreRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  nombre: { fontSize: 36, fontWeight: '900', color: '#FFF', fontFamily: FONTS.display, textShadowColor: 'rgba(0,0,0,0.6)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 6 },
+  edad: { fontSize: 26, fontWeight: '400', fontFamily: FONTS.regular },
+  
+  arquetipoChip: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginBottom: 12 },
+  arquetipoEmoji: { fontSize: 14, marginRight: 6 },
+  arquetipoTexto: { color: '#FFF', fontSize: 12, fontWeight: '900', textTransform: 'uppercase' },
 
-  gradientOverlay: {
-    position: 'absolute', bottom: 0, left: 0, right: 0, height: 140,
-    zIndex: 1,
-  },
+  bioTexto: { fontSize: 16, color: 'rgba(255,255,255,0.95)', lineHeight: 24, marginBottom: 16, fontWeight: '500', textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
 
-  nombreOverlay: {
-    position: 'absolute', bottom: 16, left: 22, zIndex: 3,
-    flexDirection: 'row', alignItems: 'center',
-  },
-  nombre: { fontSize: 30, fontWeight: '900', color: '#FFF', fontFamily: FONTS.display, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  metaChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  metaText: { color: '#FFF', fontSize: 13, fontWeight: '700' },
 
-  // ── Info section ──
-  infoContainer: { padding: 20, backgroundColor: COLORS.tarjeta },
-  subtipoRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  subtipoText: { fontSize: 14, color: COLORS.textMuted, fontWeight: '600' },
-  bioTexto: { fontSize: 15, color: COLORS.textPrimary, lineHeight: 22, marginBottom: 12 },
+  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
+  interesChip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  interesEmoji: { fontSize: 14 },
+  interesText: { color: '#FFF', fontSize: 13, fontWeight: '700' },
 
-  // ── Interest chips ──
-  chipsScroll: { marginBottom: 14 },
-  chipsContent: { gap: 8 },
+  compatBox: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(0,0,0,0.4)', padding: 12, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  compatCircleWrap: { width: 44, height: 44, borderRadius: 22, borderWidth: 3, borderColor: '#A855F7', alignItems: 'center', justifyContent: 'center' },
+  compatPercent: { color: '#FFF', fontSize: 14, fontWeight: '900' },
+  compatLabel: { color: '#FFF', fontSize: 14, fontWeight: '900', marginBottom: 2 },
+  compatDesc: { color: 'rgba(255,255,255,0.7)', fontSize: 12 },
 
-  // ── Compatibilidad ──
-  compatContent: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  compatCircleWrap: {
-    width: 52, height: 52, borderRadius: 26,
-    borderWidth: 3, borderColor: COLORS.compatHigh,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  compatPercent: { fontSize: 16, fontWeight: '900', fontFamily: FONTS.display },
-  compatLabel: { fontSize: 15, fontWeight: '800', marginBottom: 2 },
-  compatDesc: { fontSize: 13, lineHeight: 18 },
+  // ── Botones Flotantes ──
+  floatingActionRow: { position: 'absolute', bottom: 20, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16 },
+  actionBtnSmallWrap: { ...SHADOWS.md },
+  actionBtnSmall: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  actionBtnLargeWrap: { ...SHADOWS.lg },
+  actionBtnLarge: { width: 70, height: 70, borderRadius: 35, alignItems: 'center', justifyContent: 'center' },
+  boostBadge: { position: 'absolute', top: -4, right: -4, width: 20, height: 20, borderRadius: 10, backgroundColor: '#8B5CF6', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#FFF' },
+  boostBadgeText: { color: '#FFF', fontSize: 11, fontWeight: '900' },
 
-  // ── Motivos inline ──
-  motivoRowInline: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  motivoTextInline: { fontSize: 14, flex: 1, lineHeight: 20 },
-
-  // ── Action buttons ──
-  botonesOverlay: {
-    position: 'absolute', bottom: 18, left: 0, right: 0,
-    flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end', gap: 8,
-  },
-  btnAccion: {
-    justifyContent: 'center', alignItems: 'center',
-    backgroundColor: COLORS.tarjeta, ...SHADOWS.medium,
-  },
-  btnLike: {
-    width: 72, height: 72, borderRadius: 36,
-    backgroundColor: COLORS.primario,
-    shadowColor: COLORS.primario, shadowOpacity: 0.4, shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  btnDislike: { width: 58, height: 58, borderRadius: 29, borderWidth: 1, borderColor: COLORS.border },
-  btnSuperLike: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#3B82F6' },
-  btnSmallAction: { width: 46, height: 46, borderRadius: 23, borderWidth: 1, borderColor: COLORS.border },
-  btnLabel: { fontSize: 10, fontWeight: '600', marginTop: 4 },
-  boostBadge: {
-    position: 'absolute', top: -4, right: -4,
-    width: 18, height: 18, borderRadius: 9,
-    backgroundColor: COLORS.primario,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  boostBadgeText: { color: '#FFF', fontSize: 10, fontWeight: '900' },
-
-  // ── Modal transparencia ──
-  modalFondo: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(17,24,39,0.55)' },
-  modalBox: { backgroundColor: COLORS.tarjeta, borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24 },
+  // ── Modales ──
+  modalFondo: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
+  modalBox: { backgroundColor: COLORS.tarjeta, borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, paddingBottom: 40 },
   modalHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
-  modalTitulo: { fontSize: 22, fontWeight: '900', color: COLORS.textPrimary, fontFamily: FONTS.display },
-  modalIntro: { color: COLORS.textMuted, fontSize: 15, lineHeight: 22, marginBottom: 18 },
-  motivoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  motivoText: { color: COLORS.textPrimary, fontSize: 14, flex: 1, lineHeight: 20 },
-
-  // ── Empty state ──
-  emptyHint: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 28, width: '100%', backgroundColor: COLORS.softPurple },
-  emptyHintIcon: { fontSize: 26 },
-  emptyHintTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '900' },
-  emptyHintText: { color: COLORS.textMuted, fontSize: 14, lineHeight: 20, marginTop: 2 },
-  emptyIconButton: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.tarjeta },
-  emptyButton: { width: '100%', marginTop: 28, borderWidth: 1.5, borderColor: 'rgba(240,68,79,0.35)', shadowOpacity: 0 },
-  emptyButtonText: { color: COLORS.primario },
+  modalTitulo: { fontSize: 26, fontWeight: '900', color: COLORS.textPrimary, fontFamily: FONTS.display },
+  modalIntro: { color: COLORS.textMuted, fontSize: 16, lineHeight: 24, marginBottom: 20 },
+  motivoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
+  motivoText: { color: COLORS.textPrimary, fontSize: 15, flex: 1, lineHeight: 22, fontWeight: '600' },
 });

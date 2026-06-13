@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -17,9 +17,9 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { matchService, userService } from '../services/api';
 import { EXPLORAR_CATEGORIAS } from '../data/explorarCategorias';
-import { FONTS, SHADOWS, SPACING } from '../utils/theme';
+import { FONTS, SHADOWS, SPACING, RADIUS } from '../utils/theme';
 import {
-  GradientButton, ScreenScaffold, SectionTitle, SoftIcon,
+  GradientButton, ScreenScaffold, SectionTitle, SoftIcon, BottomSheetHandle
 } from '../components/CahuinUI';
 import CahuinModal from '../components/CahuinModal';
 import { PLAN_PIOLA_O_SUPERIOR } from '../config/economia';
@@ -27,17 +27,17 @@ import { PLAN_PIOLA_O_SUPERIOR } from '../config/economia';
 const rouletteBanner = require('../assets/illustrations/roulette-banner.png');
 
 const features = [
-  { title: 'Historias culturales', text: 'Fotos y momentos por 24h.', icon: 'camera', route: 'HistoriasCulturales', emoji: 'ðŸ“¸' },
-  { title: 'CahuÃ­n del DÃ­a', text: 'Vota a las 20:00.', icon: 'chatbubble-ellipses', route: 'CahuinDelDia', emoji: 'ðŸ’¬' },
-  { title: 'Swipe Panoramas', text: 'Match por destino.', icon: 'ticket', route: 'SwipePanoramas', emoji: 'ðŸŽ«' },
-  { title: 'Historias de Ã©xito', text: 'Parejas verificadas.', icon: 'heart', route: 'HistoriasExito', emoji: 'â¤ï¸' },
-  { title: 'Botella digital', text: 'Mensaje anÃ³nimo.', icon: 'mail-open', route: 'Botellas', emoji: 'ðŸ¾' },
+  { title: 'Historias', text: 'Fotos por 24h.', icon: 'camera', route: 'HistoriasCulturales', emoji: '📸', color: '#F472B6' },
+  { title: 'Cahuín', text: 'Vota diario.', icon: 'chatbubble-ellipses', route: 'CahuinDelDia', emoji: '💬', color: '#3B82F6' },
+  { title: 'Panoramas', text: 'Haz match.', icon: 'ticket', route: 'SwipePanoramas', emoji: '🎟️', color: '#8B5CF6' },
+  { title: 'Éxito', text: 'Parejas.', icon: 'heart', route: 'HistoriasExito', emoji: '❤️', color: '#EF4444' },
+  { title: 'Botella', text: 'Anónimo.', icon: 'mail-open', route: 'Botellas', emoji: '🍾', color: '#F59E0B' },
 ];
 
 export default function ExplorarScreen({ navigation }) {
   const { usuario, actualizarUsuario } = useAuth();
-  const { COLORS } = useTheme();
-  const styles = getStyles(COLORS);
+  const { COLORS, isDarkMode } = useTheme();
+  const styles = getStyles(COLORS, isDarkMode);
   const [cargandoRuleta, setCargandoRuleta] = useState(false);
   const [uniendoId, setUniendoId] = useState(null);
   const [categoriaActiva, setCategoriaActiva] = useState(null);
@@ -48,7 +48,7 @@ export default function ExplorarScreen({ navigation }) {
 
   const categoriasUnidas = useMemo(() => usuario?.categoriasExplorar || [], [usuario?.categoriasExplorar]);
   const totalUnidas = categoriasUnidas.length;
-  const avisar = (title, message, emoji = 'ðŸŒ¶ï¸', actions = [], extra = {}) => setModalInfo({ title, message, emoji, actions, ...extra });
+  const avisar = (title, message, emoji = '🌶️', actions = [], extra = {}) => setModalInfo({ title, message, emoji, actions, ...extra });
 
   const formatearConteo = (numero) => {
     if (!numero) return '0';
@@ -59,14 +59,14 @@ export default function ExplorarScreen({ navigation }) {
   const cargarMetricas = useCallback(async () => {
     try {
       const radar = await userService.descubrir({});
-      const perfilesRadar = radar.perfiles || [];
+      const perfilesRadar = radar.usuarios || radar.perfiles || [];
       setTrendingPerfiles(perfilesRadar.slice(0, 6));
 
       const respuestas = await Promise.all(
         EXPLORAR_CATEGORIAS.map(async (categoria) => {
           try {
             const data = await userService.descubrir({ categoria: categoria.id });
-            return [categoria.id, data.perfiles?.length || 0];
+            return [categoria.id, (data.usuarios || data.perfiles)?.length || 0];
           } catch {
             return [categoria.id, 0];
           }
@@ -86,34 +86,15 @@ export default function ExplorarScreen({ navigation }) {
     }, [cargarMetricas, usuario?.distanciaMax, usuario?.ciudad, usuario?.region, usuario?.categoriasExplorar])
   );
 
-  React.useEffect(() => {
-    import('socket.io-client').then(({ default: io }) => {
-      const socket = io((process.env.CAHUIN_API_PUBLIC_URL || 'http://localhost:5000').replace(/\/api\/?$/, '').replace(/\/+$/, ''));
-      if (usuario?.region) {
-        socket.emit('registrarRegion', usuario.region);
-      }
-      socket.on('statsRegiones', (stats) => {
-        if (usuario?.region && stats[usuario.region]) {
-          // Add online users to ruleta count for more dynamic feeling
-          setMetricas(prev => ({
-            ...prev,
-            activosRegion: stats[usuario.region]
-          }));
-        }
-      });
-      return () => socket.disconnect();
-    });
-  }, [usuario?.region]);
-
   const girarRuleta = async () => {
     avisar(
       'Ruleta a Ciegas',
       'Te empareja al azar con alguien por 1 hora de chat sin fotos. Incluida en Cahuin Piola y A Fondo.',
-      'ðŸŽ­',
+      '🎭',
       [
         { label: 'Cancelar', variant: 'secondary', color: COLORS.primario, onPress: () => setModalInfo(null) },
         {
-          label: tienePiola ? 'Girar' : 'Ver planes',
+          label: tienePiola ? 'Girar Ruleta' : 'Ver Premium',
           icon: 'sparkles',
           color: COLORS.primario,
           onPress: async () => {
@@ -126,10 +107,10 @@ export default function ExplorarScreen({ navigation }) {
             setCargandoRuleta(true);
             try {
               const data = await matchService.jugarRuletaCiega();
-              avisar('Match ciego', data?.message || 'Ve a tus conversaciones. Tienes 1 hora para descubrir quien es.', 'ðŸŽ­', [], { accent: COLORS.primario });
+              avisar('Match ciego', data?.message || 'Ve a tus conversaciones. Tienes 1 hora para descubrir quien es.', '🎡', [], { accent: COLORS.primario });
               navigation.navigate('Chat');
             } catch (error) {
-              avisar('Error', error.message || 'No pudimos girar la ruleta.', 'ðŸŒ¶ï¸', [], { tone: 'danger' });
+              avisar('Error', error.message || 'No pudimos girar la ruleta.', '🌶️', [], { tone: 'danger' });
             } finally {
               setCargandoRuleta(false);
             }
@@ -165,10 +146,9 @@ export default function ExplorarScreen({ navigation }) {
 
   return (
     <ScreenScaffold COLORS={COLORS}>
-      {/* â”€â”€ Header con subtÃ­tulo â”€â”€ */}
       <View style={styles.headerWrap}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Explorar âœ¨</Text>
+          <Text style={styles.headerTitle}>Explorar <Text style={{color: COLORS.primario}}>✨</Text></Text>
           <Text style={styles.headerSub}>Descubre personas, panoramas y conexiones que te mueven</Text>
         </View>
         <View style={styles.avatarWrap}>
@@ -177,149 +157,163 @@ export default function ExplorarScreen({ navigation }) {
         </View>
       </View>
 
-      {/* â”€â”€ Banner Ruleta a Ciegas Premium â”€â”€ */}
-      <TouchableOpacity activeOpacity={0.92} onPress={girarRuleta} disabled={cargandoRuleta} style={[styles.heroCard, SHADOWS.dark]}>
-        <ImageBackground source={rouletteBanner} style={styles.heroImage} imageStyle={styles.heroImageStyle}>
-          <LinearGradient colors={['rgba(10,14,24,0.08)', 'rgba(10,14,24,0.85)']} style={styles.heroOverlay}>
-            {/* Badge destacado */}
-            <View style={styles.destacadoBadge}>
-              <Ionicons name="sparkles" size={12} color="#FFD166" />
-              <Text style={styles.destacadoText}>DESTACADO</Text>
-            </View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        
+        {/* ── Banner Ruleta a Ciegas Premium ── */}
+        <TouchableOpacity activeOpacity={0.92} onPress={girarRuleta} disabled={cargandoRuleta} style={[styles.heroCard, isDarkMode ? {} : SHADOWS.large]}>
+          <ImageBackground source={rouletteBanner} style={styles.heroImage} imageStyle={styles.heroImageStyle}>
+            <LinearGradient colors={isDarkMode ? ['rgba(10,14,24,0.1)', 'rgba(10,14,24,0.9)'] : ['rgba(255,255,255,0.1)', 'rgba(0,0,0,0.7)']} style={styles.heroOverlay}>
+              <View style={styles.destacadoBadge}>
+                <Ionicons name="sparkles" size={12} color="#F59E0B" />
+                <Text style={styles.destacadoText}>DESTACADO</Text>
+              </View>
 
-            {cargandoRuleta ? (
-              <ActivityIndicator size="large" color="#FFF" />
-            ) : (
-              <>
-                <View style={{ flex: 1, justifyContent: 'flex-end', width: '100%' }}>
-                  <Text style={styles.heroTitle}>Ruleta a Ciegas</Text>
-                  <Text style={styles.heroSubtitle}>1 hora de chat sin fotos. Puro bla bla.</Text>
+              {cargandoRuleta ? (
+                <ActivityIndicator size="large" color="#FFF" style={{ alignSelf: 'center', marginVertical: 40 }} />
+              ) : (
+                <>
+                  <View style={{ flex: 1, justifyContent: 'flex-end', width: '100%', marginBottom: 16 }}>
+                    <Text style={styles.heroTitle}>Ruleta a Ciegas</Text>
+                    <Text style={styles.heroSubtitle}>1 hora de chat sin fotos. Puro bla bla.</Text>
 
-                  {/* Live counter */}
-                  <View style={styles.liveRow}>
-                    <View style={styles.avatarStack}>
-                      {[0, 1, 2].map((item) => (
-                        <View key={item} style={[styles.liveAvatar, { marginLeft: item === 0 ? 0 : -10 }]}>
-                          <Ionicons name="person" size={14} color="#FFF" />
-                        </View>
-                      ))}
+                    <View style={styles.liveRow}>
+                      <View style={styles.avatarStack}>
+                        {[0, 1, 2].map((item) => (
+                          <View key={item} style={[styles.liveAvatar, { marginLeft: item === 0 ? 0 : -10 }]}>
+                            <Ionicons name="person" size={12} color="#FFF" />
+                          </View>
+                        ))}
+                      </View>
+                      <Text style={styles.liveCount}>{formatearConteo(metricas.ruleta + (metricas.activosRegion || 0))} conectando</Text>
                     </View>
-                    <Text style={styles.liveCount}>{formatearConteo(metricas.ruleta + (metricas.activosRegion || 0))} conectando ahora</Text>
                   </View>
+
+                  <LinearGradient colors={['#FFD166', '#F59E0B']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.playButtonGradient}>
+                    <View style={styles.playButtonInner}>
+                      <Ionicons name="sparkles" size={18} color="#FFF" />
+                      <Text style={styles.playButtonText}>JUGAR AHORA</Text>
+                      <View style={styles.playButtonPricePill}>
+                        <Text style={styles.playButtonPrice}>{tienePiola ? 'GRATIS' : 'PREMIUM'}</Text>
+                      </View>
+                    </View>
+                  </LinearGradient>
+                </>
+              )}
+            </LinearGradient>
+          </ImageBackground>
+        </TouchableOpacity>
+
+        {/* ── Funciones destacadas (grid) ── */}
+        <View style={styles.featureRowScrollWrapper}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.featureRowContent}>
+            {features.map((item) => (
+              <TouchableOpacity key={item.title} style={styles.featurePill} onPress={() => navigation.navigate(item.route)} activeOpacity={0.85}>
+                <View style={[styles.featureIconWrap, { backgroundColor: item.color + '20' }]}>
+                  <Text style={{ fontSize: 16 }}>{item.emoji}</Text>
                 </View>
-
-                {/* BotÃ³n jugar */}
-                <TouchableOpacity style={styles.playButton} onPress={girarRuleta} activeOpacity={0.9}>
-                  <Ionicons name="sparkles" size={18} color="#FFF" />
-                  <Text style={styles.playButtonText}>JUGAR AHORA</Text>
-                  <Text style={styles.playButtonPrice}>{tienePiola ? 'PIOLA' : 'PLAN'}</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </LinearGradient>
-        </ImageBackground>
-      </TouchableOpacity>
-
-      {/* â”€â”€ Comunidades en scroll horizontal â”€â”€ */}
-      <SectionTitle
-        title="Comunidades CahuÃ­n"
-        subtitle={totalUnidas > 0 ? `${totalUnidas} categorÃ­as activas` : 'Ãšnete segÃºn lo que buscas'}
-        COLORS={COLORS}
-      />
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.comunidadesScroll} contentContainerStyle={styles.comunidadesContent}>
-        {EXPLORAR_CATEGORIAS.map((item) => {
-          const joined = categoriasUnidas.includes(item.id);
-          const count = metricas.comunidades[item.id] || 0;
-          return (
-            <TouchableOpacity
-              key={item.id}
-              activeOpacity={0.9}
-              onPress={() => abrirCategoria(item)}
-              style={[styles.comunidadCard, { borderColor: joined ? item.color : COLORS.border, backgroundColor: COLORS.tarjeta }]}
-            >
-              <View style={[styles.cardAccent, { backgroundColor: item.bg }]} />
-              <View style={styles.comunidadTop}>
-                <SoftIcon name={item.icon} emoji={item.emoji} color={item.color} bg={item.bg} size={50} rounded={25} iconSize={22} />
-                {joined && (
-                  <View style={[styles.activeBadge, { backgroundColor: item.color }]}>
-                    <Text style={styles.activeBadgeText}>Activa</Text>
-                  </View>
-                )}
-              </View>
-              <Text style={styles.comunidadTitle} numberOfLines={1}>{item.title}</Text>
-              <Text style={styles.comunidadSub} numberOfLines={2}>{item.subtitle}</Text>
-              <View style={styles.comunidadBottom}>
-                <View style={[styles.memberDot, { backgroundColor: item.color }]} />
-                <Text style={styles.memberText}>{formatearConteo(count)} miembros</Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-
-      {/* â”€â”€ Funciones destacadas (grid compacto) â”€â”€ */}
-      <SectionTitle
-        title="Funciones destacadas"
-        icon="âœ¨"
-        COLORS={COLORS}
-      />
-
-      <View style={styles.featureGrid}>
-        {features.map((item) => (
-          <TouchableOpacity key={item.title} style={styles.featureCard} onPress={() => navigation.navigate(item.route)} activeOpacity={0.85}>
-            <View style={styles.featureIcon}>
-              <Text style={{ fontSize: 20 }}>{item.emoji}</Text>
-            </View>
-            <Text style={styles.featureTitle} numberOfLines={1}>{item.title}</Text>
-            <Text style={styles.featureText} numberOfLines={1}>{item.text}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* â”€â”€ Perfiles trending â”€â”€ */}
-      {trendingPerfiles.length > 0 && (
-        <>
-          <SectionTitle
-            title="Perfiles trending"
-            icon="ðŸ”¥"
-            COLORS={COLORS}
-            actionText="Ver mÃ¡s"
-            onAction={() => navigation.navigate('Trending')}
-          />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.trendingContent}>
-            {trendingPerfiles.map((p, idx) => (
-              <TouchableOpacity key={p._id || idx} style={styles.trendingCard} activeOpacity={0.85} onPress={() => navigation.navigate('OtroPerfil', { userId: p._id })}>
-                <Image source={{ uri: p.foto || p.fotos?.[0] || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200' }} style={styles.trendingAvatar} />
-                <Text style={styles.trendingName} numberOfLines={1}>{p.nombre}</Text>
-                {p.arquetipoCahuinero && (
-                  <View style={styles.trendingChip}>
-                    <Text style={styles.trendingChipText} numberOfLines={1}>{p.arquetipoCahuinero}</Text>
-                  </View>
-                )}
+                <Text style={styles.featureTitle} numberOfLines={1}>{item.title}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
-        </>
-      )}
+        </View>
 
-      <View style={{ height: 120 }} />
+        {/* ── Comunidades Cahuín ── */}
+        <View style={styles.sectionHeader}>
+          <View>
+            <Text style={styles.sectionTitle}>Comunidades</Text>
+            <Text style={styles.sectionSub}>{totalUnidas > 0 ? `${totalUnidas} activas` : 'Únete según lo que buscas'}</Text>
+          </View>
+        </View>
 
-      {/* â”€â”€ Modal unirse a categorÃ­a â”€â”€ */}
-      <Modal visible={!!categoriaActiva} transparent animationType="fade" onRequestClose={() => setCategoriaActiva(null)}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.comunidadesScroll} contentContainerStyle={styles.comunidadesContent}>
+          {EXPLORAR_CATEGORIAS.map((item) => {
+            const joined = categoriasUnidas.includes(item.id);
+            const count = metricas.comunidades[item.id] || 0;
+            return (
+              <TouchableOpacity
+                key={item.id}
+                activeOpacity={0.9}
+                onPress={() => abrirCategoria(item)}
+                style={[styles.comunidadCard, { borderColor: joined ? item.color : (isDarkMode ? 'rgba(255,255,255,0.05)' : COLORS.border) }]}
+              >
+                <LinearGradient 
+                  colors={isDarkMode ? ['rgba(255,255,255,0.03)', 'rgba(255,255,255,0.01)'] : ['#FFFFFF', '#F9FAFB']} 
+                  style={StyleSheet.absoluteFillObject} 
+                />
+                <View style={[styles.cardAccent, { backgroundColor: item.color, opacity: 0.1 }]} />
+                <View style={styles.comunidadTop}>
+                  <SoftIcon name={item.icon} emoji={item.emoji} color={item.color} bg={item.color + '20'} size={48} rounded={18} iconSize={22} />
+                  {joined && (
+                    <View style={[styles.activeBadge, { backgroundColor: item.color }]}>
+                      <Text style={styles.activeBadgeText}>Activa</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.comunidadTitle} numberOfLines={1}>{item.title}</Text>
+                <Text style={styles.comunidadSub} numberOfLines={2}>{item.subtitle}</Text>
+                <View style={styles.comunidadBottom}>
+                  <View style={[styles.memberDot, { backgroundColor: item.color }]} />
+                  <Text style={styles.memberText}>{formatearConteo(count)} miembros</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        {/* ── Perfiles trending ── */}
+        {trendingPerfiles.length > 0 && (
+          <>
+            <View style={[styles.sectionHeader, { marginTop: 10 }]}>
+              <View>
+                <Text style={styles.sectionTitle}>En tendencia 🔥</Text>
+                <Text style={styles.sectionSub}>Perfiles populares en tu zona</Text>
+              </View>
+              <TouchableOpacity onPress={() => navigation.navigate('Trending')} style={styles.verMasBtn}>
+                <Text style={styles.verMasText}>Ver más</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.trendingContent}>
+              {trendingPerfiles.map((p, idx) => (
+                <TouchableOpacity key={p._id || idx} style={styles.trendingCard} activeOpacity={0.85} onPress={() => navigation.navigate('OtroPerfil', { userId: p._id })}>
+                  <Image source={{ uri: p.foto || p.fotos?.[0] || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200' }} style={styles.trendingAvatar} />
+                  <View style={styles.trendingOverlay}>
+                    <Text style={styles.trendingName} numberOfLines={1}>{p.nombre}</Text>
+                    {p.arquetipoCahuinero && (
+                      <View style={[styles.trendingChip, { backgroundColor: p.arquetipo?.color || COLORS.primario }]}>
+                        <Text style={styles.trendingChipText} numberOfLines={1}>{p.arquetipoCahuinero}</Text>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </>
+        )}
+
+        <View style={{ height: 100 }} />
+      </ScrollView>
+
+      {/* ── Modal unirse a categoría ── */}
+      <Modal visible={!!categoriaActiva} transparent animationType="slide" onRequestClose={() => setCategoriaActiva(null)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.joinModal}>
+            <BottomSheetHandle />
             {categoriaActiva ? (
               <>
                 <View style={styles.modalTop}>
-                  <SoftIcon name={categoriaActiva.icon} emoji={categoriaActiva.emoji} bg={categoriaActiva.bg} color={categoriaActiva.color} size={68} rounded={34} iconSize={30} />
+                  <SoftIcon name={categoriaActiva.icon} emoji={categoriaActiva.emoji} bg={categoriaActiva.color + '20'} color={categoriaActiva.color} size={70} rounded={24} iconSize={34} />
                   <TouchableOpacity onPress={() => setCategoriaActiva(null)} style={styles.closeButton}>
                     <Ionicons name="close" size={24} color={COLORS.textPrimary} />
                   </TouchableOpacity>
                 </View>
                 <Text style={styles.modalTitle}>Unirte a {categoriaActiva.title}</Text>
                 <Text style={styles.modalText}>{categoriaActiva.prompt}</Text>
-                <Text style={styles.modalHint}>Te mostraremos perfiles de tu regiÃ³n y dentro de tu distancia configurada. Puedes salir o unirte a mÃ¡s categorÃ­as cuando quieras.</Text>
+                
+                <View style={styles.modalInfoBox}>
+                  <Ionicons name="information-circle" size={20} color={COLORS.primario} />
+                  <Text style={styles.modalHint}>Te mostraremos perfiles de tu región y dentro de tu distancia. Puedes salir cuando quieras.</Text>
+                </View>
+
                 <TouchableOpacity
                   activeOpacity={0.9}
                   disabled={uniendoId === categoriaActiva.id}
@@ -333,6 +327,7 @@ export default function ExplorarScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
       <CahuinModal
         visible={!!modalInfo}
         title={modalInfo?.title}
@@ -348,107 +343,101 @@ export default function ExplorarScreen({ navigation }) {
   );
 }
 
-const getStyles = (COLORS) => StyleSheet.create({
-  // â”€â”€ Header â”€â”€
+const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
+  scrollContent: { paddingBottom: SPACING[6] },
+  // ── Header ──
   headerWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: SPACING[5],
-    gap: 12,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: SPACING[5], marginBottom: SPACING[4], gap: 12, marginTop: SPACING[2]
   },
-  headerTitle: { color: COLORS.textPrimary, fontSize: 34, fontWeight: '900', fontFamily: FONTS.display },
-  headerSub: { color: COLORS.textMuted, fontSize: 13, marginTop: 4, lineHeight: 18 },
-  avatarWrap: { width: 52, height: 52, borderRadius: 26, borderWidth: 3, borderColor: COLORS.primario, ...SHADOWS.light },
-  avatar: { width: '100%', height: '100%', borderRadius: 26, backgroundColor: COLORS.softRed },
-  statusDot: { position: 'absolute', top: -2, right: -2, width: 16, height: 16, borderRadius: 8, backgroundColor: '#22C55E', borderWidth: 3, borderColor: COLORS.bg },
+  headerTitle: { color: COLORS.textPrimary, fontSize: 32, fontWeight: '900', fontFamily: FONTS.display },
+  headerSub: { color: COLORS.textMuted, fontSize: 14, marginTop: 4, lineHeight: 20 },
+  avatarWrap: { width: 50, height: 50, borderRadius: 25, borderWidth: 2, borderColor: COLORS.primario, ...SHADOWS.light },
+  avatar: { width: '100%', height: '100%', borderRadius: 25, backgroundColor: COLORS.softRed },
+  statusDot: { position: 'absolute', top: -2, right: -2, width: 14, height: 14, borderRadius: 7, backgroundColor: '#34A853', borderWidth: 2, borderColor: COLORS.bg },
 
-  // â”€â”€ Hero Banner â”€â”€
-  heroCard: { height: 260, borderRadius: 24, overflow: 'hidden', marginBottom: SPACING[2], backgroundColor: COLORS.navy },
+  // ── Hero Banner ──
+  heroCard: { height: 260, borderRadius: 28, overflow: 'hidden', marginHorizontal: SPACING[5], marginBottom: SPACING[4], backgroundColor: COLORS.tarjeta },
   heroImage: { flex: 1 },
-  heroImageStyle: { borderRadius: 24 },
+  heroImageStyle: { borderRadius: 28 },
   heroOverlay: { flex: 1, padding: 20, justifyContent: 'flex-end' },
   destacadoBadge: {
     position: 'absolute', top: 16, left: 16,
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14,
   },
-  destacadoText: { color: '#FFD166', fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
-  heroTitle: { color: '#FFF', fontSize: 28, fontWeight: '900', fontFamily: FONTS.display, letterSpacing: 0 },
-  heroSubtitle: { color: 'rgba(255,255,255,0.85)', fontSize: 14, marginTop: 4 },
-  liveRow: {
-    marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8,
-  },
+  destacadoText: { color: '#F59E0B', fontSize: 11, fontWeight: '900', letterSpacing: 0.5 },
+  heroTitle: { color: '#FFF', fontSize: 30, fontWeight: '900', fontFamily: FONTS.display, letterSpacing: -0.5 },
+  heroSubtitle: { color: 'rgba(255,255,255,0.9)', fontSize: 15, marginTop: 4, fontWeight: '500' },
+  liveRow: { marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   avatarStack: { flexDirection: 'row', alignItems: 'center' },
-  liveAvatar: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(240,68,79,0.9)', borderWidth: 1.5, borderColor: '#FFF' },
-  liveCount: { color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: '700' },
-  playButton: {
+  liveAvatar: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primario, borderWidth: 2, borderColor: '#FFF' },
+  liveCount: { color: 'rgba(255,255,255,0.9)', fontSize: 13, fontWeight: '800' },
+  playButtonGradient: { borderRadius: 18, padding: 2, ...SHADOWS.medium },
+  playButtonInner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: COLORS.primario, borderRadius: 99,
-    paddingVertical: 14, paddingHorizontal: 20, marginTop: 14,
-    ...SHADOWS.light,
+    backgroundColor: 'transparent', borderRadius: 16,
+    paddingVertical: 14, paddingHorizontal: 20,
   },
   playButtonText: { color: '#FFF', fontSize: 15, fontWeight: '900', fontFamily: FONTS.display },
-  playButtonPrice: { color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: '700', marginLeft: 4 },
+  playButtonPricePill: { backgroundColor: 'rgba(0,0,0,0.2)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, marginLeft: 4 },
+  playButtonPrice: { color: '#FFF', fontSize: 10, fontWeight: '900' },
 
-  // â”€â”€ Comunidades horizontal â”€â”€
-  comunidadesScroll: { marginBottom: SPACING[2] },
-  comunidadesContent: { gap: 12, paddingRight: 20 },
+  // ── Features (Horizontal Pills) ──
+  featureRowScrollWrapper: { marginBottom: SPACING[5] },
+  featureRowContent: { paddingHorizontal: SPACING[5], gap: 10 },
+  featurePill: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : COLORS.tarjeta,
+    paddingRight: 16, paddingLeft: 6, paddingVertical: 6, borderRadius: 24,
+    borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.06)' : COLORS.border,
+    ...(isDarkMode ? {} : SHADOWS.light)
+  },
+  featureIconWrap: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  featureTitle: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '700' },
+
+  // ── Secciones ──
+  sectionHeader: { paddingHorizontal: SPACING[5], marginBottom: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
+  sectionTitle: { color: COLORS.textPrimary, fontSize: 22, fontWeight: '900', fontFamily: FONTS.display },
+  sectionSub: { color: COLORS.textMuted, fontSize: 14, marginTop: 2 },
+  verMasBtn: { paddingVertical: 4, paddingHorizontal: 8, backgroundColor: 'rgba(240,68,79,0.1)', borderRadius: 12 },
+  verMasText: { color: COLORS.primario, fontSize: 12, fontWeight: '800' },
+
+  // ── Comunidades ──
+  comunidadesScroll: { marginBottom: SPACING[5] },
+  comunidadesContent: { gap: 14, paddingHorizontal: SPACING[5] },
   comunidadCard: {
-    width: 170, minHeight: 190, borderRadius: 20, borderWidth: 1.5,
-    padding: 14, overflow: 'hidden', ...SHADOWS.light,
+    width: 160, height: 190, borderRadius: 24, borderWidth: 1,
+    padding: 16, overflow: 'hidden', backgroundColor: COLORS.tarjeta, ...(isDarkMode ? {} : SHADOWS.light)
   },
-  cardAccent: { position: 'absolute', right: -30, top: -40, width: 100, height: 100, borderBottomLeftRadius: 60 },
-  comunidadTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-  activeBadge: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
-  activeBadgeText: { color: '#FFF', fontSize: 10, fontWeight: '800' },
-  comunidadTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '900', fontFamily: FONTS.display, marginBottom: 4 },
-  comunidadSub: { color: COLORS.textMuted, fontSize: 12, lineHeight: 16, flex: 1 },
+  cardAccent: { position: 'absolute', right: -40, top: -40, width: 120, height: 120, borderRadius: 60 },
+  comunidadTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 },
+  activeBadge: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 },
+  activeBadgeText: { color: '#FFF', fontSize: 10, fontWeight: '900' },
+  comunidadTitle: { color: COLORS.textPrimary, fontSize: 17, fontWeight: '900', fontFamily: FONTS.display, marginBottom: 4 },
+  comunidadSub: { color: COLORS.textMuted, fontSize: 13, lineHeight: 18, flex: 1 },
   comunidadBottom: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
-  memberDot: { width: 7, height: 7, borderRadius: 4 },
-  memberText: { color: COLORS.textMuted, fontSize: 11, fontWeight: '700' },
+  memberDot: { width: 8, height: 8, borderRadius: 4 },
+  memberText: { color: COLORS.textPrimary, fontSize: 12, fontWeight: '800' },
 
-  // â”€â”€ Feature grid compacto â”€â”€
-  featureGrid: {
-    flexDirection: 'row', flexWrap: 'wrap',
-    justifyContent: 'space-between', rowGap: 10, columnGap: 10,
-    marginTop: SPACING[2],
-  },
-  featureCard: {
-    width: '23%', minHeight: 100, backgroundColor: COLORS.tarjeta,
-    borderRadius: 16, borderWidth: 1, borderColor: COLORS.border,
-    padding: 10, alignItems: 'center', ...SHADOWS.light,
-  },
-  featureIcon: {
-    width: 40, height: 40, borderRadius: 20,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: COLORS.softRed, marginBottom: 6,
-  },
-  featureTitle: { color: COLORS.textPrimary, fontSize: 11, fontWeight: '800', textAlign: 'center', lineHeight: 14 },
-  featureText: { color: COLORS.textMuted, fontSize: 9, textAlign: 'center', marginTop: 2 },
+  // ── Trending ──
+  trendingContent: { gap: 14, paddingHorizontal: SPACING[5], paddingBottom: 10 },
+  trendingCard: { width: 110, height: 150, borderRadius: 20, overflow: 'hidden', backgroundColor: COLORS.border, ...(isDarkMode ? {} : SHADOWS.medium) },
+  trendingAvatar: { width: '100%', height: '100%' },
+  trendingOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 10, paddingTop: 30, backgroundColor: 'rgba(0,0,0,0.5)' },
+  trendingName: { color: '#FFF', fontSize: 14, fontWeight: '800', marginBottom: 4 },
+  trendingChip: { alignSelf: 'flex-start', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 3 },
+  trendingChipText: { color: '#FFF', fontSize: 9, fontWeight: '800' },
 
-  // â”€â”€ Trending â”€â”€
-  trendingContent: { gap: 14, paddingRight: 20, paddingTop: 4 },
-  trendingCard: { alignItems: 'center', width: 80 },
-  trendingAvatar: {
-    width: 70, height: 70, borderRadius: 35,
-    backgroundColor: COLORS.softRed, borderWidth: 2.5, borderColor: COLORS.primario,
-  },
-  trendingName: { color: COLORS.textPrimary, fontSize: 12, fontWeight: '700', marginTop: 6, textAlign: 'center' },
-  trendingChip: {
-    backgroundColor: COLORS.chipBg, borderRadius: 99,
-    paddingHorizontal: 6, paddingVertical: 2, marginTop: 3,
-  },
-  trendingChipText: { color: COLORS.chipText, fontSize: 9, fontWeight: '600' },
-
-  // â”€â”€ Modal â”€â”€
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(16,24,40,0.45)', justifyContent: 'flex-end' },
-  joinModal: { backgroundColor: COLORS.tarjeta, borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: SPACING[5], paddingBottom: 36, borderWidth: 1, borderColor: COLORS.border },
+  // ── Modal ──
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  joinModal: { backgroundColor: COLORS.tarjeta, borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: SPACING[5], paddingBottom: 40 },
   modalTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  closeButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.fondo, borderWidth: 1, borderColor: COLORS.border },
-  modalTitle: { color: COLORS.textPrimary, fontSize: 30, lineHeight: 36, fontWeight: '900', fontFamily: FONTS.display, marginTop: SPACING[4] },
-  modalText: { color: COLORS.textMuted, fontSize: 17, lineHeight: 25, marginTop: SPACING[2] },
-  modalHint: { color: COLORS.textMuted, fontSize: 13, lineHeight: 20, marginTop: SPACING[4] },
-  joinButton: { height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center', marginTop: SPACING[5], ...SHADOWS.light },
-  joinButtonText: { color: '#FFF', fontSize: 17, fontWeight: '900', fontFamily: FONTS.display },
+  closeButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : COLORS.inputBg },
+  modalTitle: { color: COLORS.textPrimary, fontSize: 28, lineHeight: 34, fontWeight: '900', fontFamily: FONTS.display, marginTop: 20 },
+  modalText: { color: COLORS.textMuted, fontSize: 16, lineHeight: 24, marginTop: 12 },
+  modalInfoBox: { flexDirection: 'row', gap: 10, backgroundColor: 'rgba(240,68,79,0.1)', padding: 14, borderRadius: 16, marginTop: 20 },
+  modalHint: { color: COLORS.primario, fontSize: 13, lineHeight: 18, flex: 1, fontWeight: '600' },
+  joinButton: { height: 60, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginTop: 24, ...SHADOWS.medium },
+  joinButtonText: { color: '#FFF', fontSize: 17, fontWeight: '900' },
 });

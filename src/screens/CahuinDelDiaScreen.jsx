@@ -18,8 +18,8 @@ const FALLBACK_CAHUIN = {
 };
 
 export default function CahuinDelDiaScreen({ navigation }) {
-  const { COLORS } = useTheme();
-  const styles = getStyles(COLORS);
+  const { COLORS, isDarkMode } = useTheme();
+  const styles = getStyles(COLORS, isDarkMode);
   const [data, setData] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [votando, setVotando] = useState(false);
@@ -110,9 +110,9 @@ export default function CahuinDelDiaScreen({ navigation }) {
   );
 }
 
-const getStyles = (COLORS) => StyleSheet.create({
+const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg, padding: SPACING[5] },
-  back: { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.tarjeta, alignItems: 'center', justifyContent: 'center', marginBottom: SPACING[5], ...SHADOWS.light },
+  back: { width: 44, height: 44, borderRadius: 22, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : COLORS.tarjeta, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : COLORS.border, alignItems: 'center', justifyContent: 'center', marginBottom: SPACING[5], ...(isDarkMode ? {} : SHADOWS.light) },
   title: { color: COLORS.textPrimary, fontSize: 36, fontWeight: '900', fontFamily: FONTS.display },
   subtitle: { color: COLORS.textMuted, fontSize: 16, lineHeight: 23, marginTop: 8, marginBottom: SPACING[6] },
   card: { borderRadius: 30, padding: SPACING[5], minHeight: 460, justifyContent: 'center', ...SHADOWS.dark },

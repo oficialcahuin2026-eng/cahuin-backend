@@ -9,20 +9,20 @@ const PREGUNTAS = [
   { 
     ronda: 1, 
     titulo: 'Primera Patita: La Comida ðŸŒ­', 
-    pregunta: 'Â¿Para tu cumpleaÃ±os, quÃ© prefieres invitar?', 
+    pregunta: 'Â¿Para tu cumpleaños, qué prefieres invitar?', 
     opciones: ['Asado con los amigos', 'Completada italiana', 'Sushi piola'] 
   },
   { 
     ronda: 2, 
     titulo: 'Segunda Patita: El Panorama ðŸ”ï¸', 
-    pregunta: 'Fin de semana largo, Â¿para dÃ³nde agarramos rumbo?', 
-    opciones: ['Playa y solcito', 'Sur, cabaÃ±a y lluvia', 'Me quedo durmiendo'] 
+    pregunta: 'Fin de semana largo, Â¿para dónde agarramos rumbo?', 
+    opciones: ['Playa y solcito', 'Sur, cabaña y lluvia', 'Me quedo durmiendo'] 
   },
   { 
     ronda: 3, 
     titulo: 'Tercera Patita (Zapateo): La Fiesta ðŸ•º', 
-    pregunta: 'En un mambo, tÃº eres el que...', 
-    opciones: ['Baila hasta abajo', 'Se queda conversando', 'Controla la mÃºsica (DJ)'] 
+    pregunta: 'En un mambo, tú eres el que...', 
+    opciones: ['Baila hasta abajo', 'Se queda conversando', 'Controla la música (DJ)'] 
   }
 ];
 
@@ -46,7 +46,7 @@ export default function CuecaScreen({ route, navigation }) {
       }
     } catch (error) {
       console.log("Error en La Cueca:", error);
-      Alert.alert("Ups", "Alguien pisÃ³ mal en el baile. Intenta de nuevo.");
+      Alert.alert("Ups", "Alguien pisó mal en el baile. Intenta de nuevo.");
     }
   };
 

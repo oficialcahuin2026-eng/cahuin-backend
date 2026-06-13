@@ -12,31 +12,31 @@ export default function TerminosScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="close" size={30} color="#FFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitulo}>TÃ©rminos y Condiciones</Text>
+        <Text style={styles.headerTitulo}>Términos y Condiciones</Text>
         <View style={{ width: 30 }} />
       </View>
 
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.titulo}>Las reglas del CahuÃ­n ðŸŒ¶ï¸</Text>
-        <Text style={styles.ultimaActualizacion}>Ãšltima actualizaciÃ³n: Mayo 2026</Text>
+        <Text style={styles.titulo}>Las reglas del Cahuín ðŸŒ¶ï¸</Text>
+        <Text style={styles.ultimaActualizacion}>Última actualización: Mayo 2026</Text>
 
         <Text style={styles.parrafo}>
-          Bienvenido a CahuÃ­n, la app de citas hecha por y para chilenos. Al usar nuestra aplicaciÃ³n, aceptas portarte bien y seguir estas reglas bÃ¡sicas. Si no estÃ¡s de acuerdo, lamentablemente tendrÃ¡s que buscar el amor a la antigua.
+          Bienvenido a Cahuín, la app de citas hecha por y para chilenos. Al usar nuestra aplicación, aceptas portarte bien y seguir estas reglas básicas. Si no estás de acuerdo, lamentablemente tendrás que buscar el amor a la antigua.
         </Text>
 
         <Text style={styles.subtitulo}>1. Requisitos para entrar</Text>
         <Text style={styles.parrafo}>
-          Debes tener al menos 18 aÃ±os cumplidos para crearte una cuenta. Si te pillamos mintiendo con la edad, tu cuenta serÃ¡ eliminada al instante. CahuÃ­n es un espacio para adultos.
+          Debes tener al menos 18 años cumplidos para crearte una cuenta. Si te pillamos mintiendo con la edad, tu cuenta será eliminada al instante. Cahuín es un espacio para adultos.
         </Text>
 
         <Text style={styles.subtitulo}>2. Respeto ante todo (Cero toxicidad)</Text>
         <Text style={styles.parrafo}>
-          AquÃ­ vinimos a pasarlo bien. No toleramos el acoso, los insultos, el lenguaje de odio ni el envÃ­o de fotos no solicitadas (tÃº sabes a quÃ© nos referimos). Si otro usuario te reporta por mala conducta, nuestro equipo revisarÃ¡ el caso y podrÃ¡ banearte permanentemente.
+          Aquí vinimos a pasarlo bien. No toleramos el acoso, los insultos, el lenguaje de odio ni el envío de fotos no solicitadas (tú sabes a qué nos referimos). Si otro usuario te reporta por mala conducta, nuestro equipo revisará el caso y podrá banearte permanentemente.
         </Text>
 
         <Text style={styles.subtitulo}>3. Privacidad y Seguridad</Text>
         <Text style={styles.parrafo}>
-          Nos tomamos tus datos en serio. Tu ubicaciÃ³n exacta nunca serÃ¡ revelada a otros usuarios, solo la distancia aproximada. Los chats estÃ¡n encriptados y tus fotos solo serÃ¡n usadas dentro de la plataforma para buscarte matches.
+          Nos tomamos tus datos en serio. Tu ubicación exacta nunca será revelada a otros usuarios, solo la distancia aproximada. Los chats están encriptados y tus fotos solo serán usadas dentro de la plataforma para buscarte matches.
         </Text>
 
         <Text style={styles.subtitulo}>4. Suscripciones</Text>
@@ -45,7 +45,7 @@ export default function TerminosScreen() {
         </Text>
 
         <Text style={styles.parrafoDestacado}>
-          Al hacer clic en "Aceptar" durante el registro, confirmas que has leÃ­do y entendido estas reglas. Â¡PÃ¡salo increÃ­ble y que viva el CahuÃ­n!
+          Al hacer clic en "Aceptar" durante el registro, confirmas que has leído y entendido estas reglas. Â¡Pásalo increíble y que viva el Cahuín!
         </Text>
         
         <View style={{ height: 50 }} />

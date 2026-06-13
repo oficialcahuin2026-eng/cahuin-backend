@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -13,12 +13,14 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { userService } from '../services/api';
-import { BottomSheetHandle, ScreenHeader, ScreenScaffold, SoftCard, SoftIcon } from '../components/CahuinUI';
+import { BottomSheetHandle, ScreenHeader, SoftIcon } from '../components/CahuinUI';
 import CahuinModal from '../components/CahuinModal';
-import { FONTS, SPACING } from '../utils/theme';
+import { FONTS, SPACING, SHADOWS } from '../utils/theme';
 
 const REGIONES_CHILE = {
   'Arica y Parinacota': ['Arica', 'Putre', 'Camarones', 'General Lagos'],
@@ -45,7 +47,7 @@ const TIKTOK_URL = 'https://www.tiktok.com/@cahuinapp?_r=1&_t=ZS-978PynTyi4G';
 export default function AjustesScreen({ navigation }) {
   const { usuario, actualizarUsuario, logout } = useAuth();
   const { isDarkMode, toggleTheme, COLORS } = useTheme();
-  const styles = getStyles(COLORS);
+  const styles = getStyles(COLORS, isDarkMode);
 
   const [modalViaje, setModalViaje] = useState(false);
   const [guardandoViaje, setGuardandoViaje] = useState(false);
@@ -169,260 +171,294 @@ export default function AjustesScreen({ navigation }) {
   };
 
   return (
-    <ScreenScaffold COLORS={COLORS}>
-      <View style={styles.headerRow}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={30} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <ScreenHeader title="Ajustes" centered />
-        <View style={{ width: 54 }} />
-      </View>
-
-      <SoftCard COLORS={COLORS} style={styles.socialCard}>
-        <View style={styles.socialHeader}>
-          <SoftIcon name="sparkles" color={COLORS.primario} bg={COLORS.softRed} size={54} rounded={18} iconSize={25} />
-          <View style={styles.socialCopy}>
-            <Text style={styles.socialTitle}>Cahuín oficial</Text>
-            <Text style={styles.socialSubtitle}>Novedades, eventos y comunidad en nuestras redes.</Text>
-          </View>
-        </View>
-        <View style={styles.socialActions}>
-          <TouchableOpacity activeOpacity={0.88} style={[styles.socialButton, styles.instagramButton]} onPress={() => abrirRedSocial(INSTAGRAM_URL)}>
-            <Ionicons name="logo-instagram" size={24} color="#FFF" />
-            <Text style={styles.socialButtonText}>Instagram</Text>
+    <View style={styles.safe}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={28} color={COLORS.textPrimary} />
           </TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.88} style={[styles.socialButton, styles.tiktokButton]} onPress={() => abrirRedSocial(TIKTOK_URL)}>
-            <Ionicons name="musical-notes" size={24} color="#FFF" />
-            <Text style={styles.socialButtonText}>TikTok</Text>
-          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Ajustes</Text>
+          <View style={styles.backButton} />
         </View>
-      </SoftCard>
 
-      <SettingsSection COLORS={COLORS} title="VISIBILIDAD Y UBICACIÓN" icon="eye" color="#8B5CF6">
-        <SettingsRow
-          COLORS={COLORS}
-          icon="airplane"
-          iconColor="#8B5CF6"
-          bg={COLORS.softPurple}
-          title="Modo Viajero"
-          subtitle={usuario?.viaje?.ciudadDestino ? `Viajando a: ${usuario.viaje.ciudadDestino}` : 'Teletranspórtate a otra ciudad'}
-          onPress={() => { setStepViaje(1); setModalViaje(true); }}
-        />
-        <Divider COLORS={COLORS} />
-        <SettingsRow
-          COLORS={COLORS}
-          icon="pause"
-          iconColor="#F59E0B"
-          bg={COLORS.softAmber}
-          title="Pausar mi cuenta"
-          subtitle="Oculta tu perfil del radar"
-          control={<Switch value={usuario?.cuentaPausada || false} onValueChange={togglePausaCuenta} trackColor={{ true: '#F59E0B', false: '#D0D5DD' }} thumbColor="#FFF" />}
-        />
-      </SettingsSection>
-
-      <SettingsSection COLORS={COLORS} title="BIENESTAR Y APARIENCIA" icon="leaf" color="#34A853">
-        <SettingsRow
-          COLORS={COLORS}
-          icon={isDarkMode ? 'moon' : 'sunny'}
-          iconColor="#8B5CF6"
-          bg={COLORS.softPurple}
-          title="Modo Oscuro"
-          control={<Switch value={isDarkMode} onValueChange={toggleTheme} trackColor={{ true: COLORS.primario, false: '#D0D5DD' }} thumbColor="#FFF" />}
-        />
-        <Divider COLORS={COLORS} />
-        <SettingsRow
-          COLORS={COLORS}
-          icon="leaf"
-          iconColor="#34A853"
-          bg={COLORS.softGreen}
-          title='Modo "Recuperándome" 🌱'
-          subtitle="Limita tu app a 10 perfiles diarios"
-          control={<Switch value={usuario?.modoRecuperacion || false} onValueChange={toggleModoRecuperacion} trackColor={{ true: '#34A853', false: '#D0D5DD' }} thumbColor="#FFF" />}
-        />
-      </SettingsSection>
-
-      <SettingsSection COLORS={COLORS} title="ACTIVIDAD Y PREMIUM" icon="analytics" color="#8B5CF6">
-        <SettingsRow
-          COLORS={COLORS}
-          icon="analytics"
-          iconColor="#8B5CF6"
-          bg={COLORS.softPurple}
-          title="Analytics de perfil"
-          subtitle={`${analytics?.vistasSemana || 0} vistas esta semana · foto top ${analytics?.segundosFotoTop || 0}s`}
-          onPress={() => navigation.navigate('Premium')}
-        />
-        <Divider COLORS={COLORS} />
-        <SettingsRow
-          COLORS={COLORS}
-          icon="flame"
-          iconColor="#F0444F"
-          bg={COLORS.softRed}
-          title="Racha diaria de swipes"
-          subtitle={`${usuario?.rachaSwipesDias || 0} días · ${usuario?.boostGratisDisponibles || 0} boosts gratis`}
-          control={(
-            <TouchableOpacity style={styles.miniPill} onPress={salvarRachaSwipes}>
-              <Text style={styles.miniPillText}>Salvar 1</Text>
-            </TouchableOpacity>
-          )}
-        />
-      </SettingsSection>
-
-      <SettingsSection COLORS={COLORS} title="LEGAL Y SOPORTE" icon="shield-checkmark" color="#8B5CF6">
-        <SettingsRow COLORS={COLORS} icon="document-text" iconColor="#8B5CF6" bg={COLORS.softPurple} title="Términos y Condiciones" onPress={abrirLegales} />
-        <Divider COLORS={COLORS} />
-        <SettingsRow COLORS={COLORS} icon="lock-closed" iconColor="#8B5CF6" bg={COLORS.softPurple} title="Políticas de Privacidad" onPress={abrirLegales} />
-      </SettingsSection>
-
-      <TouchableOpacity style={styles.logoutButton} onPress={logout}>
-        <Ionicons name="log-out-outline" size={24} color={COLORS.textPrimary} />
-        <Text style={styles.logoutText}>Cerrar sesión</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.deleteButton} onPress={eliminarCuenta}>
-        <Ionicons name="trash-outline" size={24} color={COLORS.primario} />
-        <Text style={styles.deleteText}>Eliminar Cuenta</Text>
-      </TouchableOpacity>
-
-      <Modal visible={modalViaje} animationType="slide" transparent>
-        <View style={styles.modalFondo}>
-          <View style={styles.modalCard}>
-            <BottomSheetHandle />
-            <View style={styles.modalHeader}>
-              <View style={styles.modalTitleLeft}>
-                <SoftIcon name="airplane" color="#8B5CF6" bg={COLORS.softPurple} size={54} rounded={18} />
-                <View>
-                  <Text style={styles.modalTitle}>Modo Viajero</Text>
-                  <Text style={styles.modalSub}>{stepViaje === 1 ? '¿A qué región viajas?' : `¿A qué ciudad de ${regionSeleccionada} vas?`}</Text>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          
+          {/* Cahuín Oficial - Glass Premium Card */}
+          <View style={styles.socialCardWrap}>
+            <LinearGradient colors={isDarkMode ? ['rgba(240,68,79,0.15)', 'rgba(139,92,246,0.1)'] : ['#FFF0F1', '#F4ECFF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.socialCard}>
+              <View style={styles.socialHeader}>
+                <View style={styles.socialIconWrap}>
+                  <Ionicons name="sparkles" size={24} color={COLORS.primario} />
+                </View>
+                <View style={styles.socialCopy}>
+                  <Text style={styles.socialTitle}>Cahuín oficial</Text>
+                  <Text style={styles.socialSubtitle}>Novedades, eventos y comunidad.</Text>
                 </View>
               </View>
-              <TouchableOpacity style={styles.closeButton} onPress={() => setModalViaje(false)}>
-                <Ionicons name="close" size={26} color={COLORS.textPrimary} />
-              </TouchableOpacity>
-            </View>
-
-            {guardandoViaje ? (
-              <ActivityIndicator size="large" color="#8B5CF6" style={{ marginTop: 50 }} />
-            ) : (
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {stepViaje === 1 ? (
-                  Object.keys(REGIONES_CHILE).map((reg) => (
-                    <TouchableOpacity key={reg} style={styles.regionButton} onPress={() => { setRegionSeleccionada(reg); setStepViaje(2); }}>
-                      <Text style={styles.regionText}>{reg}</Text>
-                      <Ionicons name="chevron-forward" size={20} color={COLORS.gris} />
-                    </TouchableOpacity>
-                  ))
-                ) : (
-                  <>
-                    <TouchableOpacity style={styles.backRegion} onPress={() => setStepViaje(1)}>
-                      <Ionicons name="arrow-back" size={20} color={COLORS.primario} />
-                      <Text style={styles.backRegionText}>Volver a regiones</Text>
-                    </TouchableOpacity>
-                    {REGIONES_CHILE[regionSeleccionada]?.map((ciudad) => (
-                      <TouchableOpacity key={ciudad} style={styles.regionButton} onPress={() => guardarViaje(ciudad)}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                          <Ionicons name="location" size={18} color={COLORS.primario} />
-                          <Text style={styles.regionText}>{ciudad}</Text>
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-                  </>
-                )}
-              </ScrollView>
-            )}
-
-            {usuario?.viaje?.ciudadDestino && !guardandoViaje && stepViaje === 1 ? (
-              <TouchableOpacity style={styles.turnOffTravel} onPress={() => guardarViaje('')}>
-                <Text style={styles.turnOffTravelText}>Apagar Modo Viajero</Text>
-              </TouchableOpacity>
-            ) : null}
+              <View style={styles.socialActions}>
+                <TouchableOpacity activeOpacity={0.88} style={[styles.socialButton, styles.instagramButton]} onPress={() => abrirRedSocial(INSTAGRAM_URL)}>
+                  <Ionicons name="logo-instagram" size={20} color="#FFF" />
+                  <Text style={styles.socialButtonText}>Instagram</Text>
+                </TouchableOpacity>
+                <TouchableOpacity activeOpacity={0.88} style={[styles.socialButton, styles.tiktokButton]} onPress={() => abrirRedSocial(TIKTOK_URL)}>
+                  <Ionicons name="musical-notes" size={20} color={isDarkMode ? '#FFF' : '#000'} />
+                  <Text style={[styles.socialButtonText, { color: isDarkMode ? '#FFF' : '#000' }]}>TikTok</Text>
+                </TouchableOpacity>
+              </View>
+            </LinearGradient>
           </View>
-        </View>
-      </Modal>
-      <CahuinModal
-        visible={!!modalInfo}
-        title={modalInfo?.title}
-        message={modalInfo?.message}
-        emoji={modalInfo?.emoji}
-        actions={modalInfo?.actions || []}
-        accent={modalInfo?.accent}
-        tone={modalInfo?.tone}
-        details={modalInfo?.details}
-        onClose={() => setModalInfo(null)}
-      />
-    </ScreenScaffold>
+
+          <SettingsSection title="VISIBILIDAD Y UBICACIÓN" COLORS={COLORS} isDarkMode={isDarkMode}>
+            <SettingsRow
+              COLORS={COLORS} isDarkMode={isDarkMode}
+              icon="airplane"
+              iconColor="#8B5CF6"
+              bg={isDarkMode ? "rgba(139,92,246,0.15)" : "#F4ECFF"}
+              title="Modo Viajero"
+              subtitle={usuario?.viaje?.ciudadDestino ? `Viajando a: ${usuario.viaje.ciudadDestino}` : 'Teletranspórtate a otra ciudad'}
+              onPress={() => { setStepViaje(1); setModalViaje(true); }}
+            />
+            <SettingsRow
+              COLORS={COLORS} isDarkMode={isDarkMode}
+              icon="pause"
+              iconColor="#F59E0B"
+              bg={isDarkMode ? "rgba(245,158,11,0.15)" : "#FEF3C7"}
+              title="Pausar mi cuenta"
+              subtitle="Oculta tu perfil del radar"
+              control={<Switch value={usuario?.cuentaPausada || false} onValueChange={togglePausaCuenta} trackColor={{ true: '#F59E0B', false: COLORS.border }} thumbColor="#FFF" />}
+              isLast
+            />
+          </SettingsSection>
+
+          <SettingsSection title="BIENESTAR Y APARIENCIA" COLORS={COLORS} isDarkMode={isDarkMode}>
+            <SettingsRow
+              COLORS={COLORS} isDarkMode={isDarkMode}
+              icon={isDarkMode ? 'moon' : 'sunny'}
+              iconColor="#38BDF8"
+              bg={isDarkMode ? "rgba(56,189,248,0.15)" : "#E0F2FE"}
+              title="Modo Oscuro"
+              control={<Switch value={isDarkMode} onValueChange={toggleTheme} trackColor={{ true: COLORS.primario, false: COLORS.border }} thumbColor="#FFF" />}
+            />
+            <SettingsRow
+              COLORS={COLORS} isDarkMode={isDarkMode}
+              icon="leaf"
+              iconColor="#34A853"
+              bg={isDarkMode ? "rgba(52,168,83,0.15)" : "#DCFCE7"}
+              title='Modo "Recuperándome"'
+              subtitle="Limita tu app a 10 perfiles diarios"
+              control={<Switch value={usuario?.modoRecuperacion || false} onValueChange={toggleModoRecuperacion} trackColor={{ true: '#34A853', false: COLORS.border }} thumbColor="#FFF" />}
+              isLast
+            />
+          </SettingsSection>
+
+          <SettingsSection title="ACTIVIDAD Y PREMIUM" COLORS={COLORS} isDarkMode={isDarkMode}>
+            <SettingsRow
+              COLORS={COLORS} isDarkMode={isDarkMode}
+              icon="analytics"
+              iconColor="#F472B6"
+              bg={isDarkMode ? "rgba(244,114,182,0.15)" : "#FCE7F3"}
+              title="Analytics de perfil"
+              subtitle={`${analytics?.vistasSemana || 0} vistas esta semana · foto top ${analytics?.segundosFotoTop || 0}s`}
+              onPress={() => navigation.navigate('Premium')}
+            />
+            <SettingsRow
+              COLORS={COLORS} isDarkMode={isDarkMode}
+              icon="flame"
+              iconColor="#F0444F"
+              bg={isDarkMode ? "rgba(240,68,79,0.15)" : "#FFE4E6"}
+              title="Racha diaria de swipes"
+              subtitle={`${usuario?.rachaSwipesDias || 0} días · ${usuario?.boostGratisDisponibles || 0} boosts gratis`}
+              control={(
+                <TouchableOpacity style={styles.miniPill} onPress={salvarRachaSwipes}>
+                  <Text style={styles.miniPillText}>Salvar 1</Text>
+                </TouchableOpacity>
+              )}
+              isLast
+            />
+          </SettingsSection>
+
+          <SettingsSection title="LEGAL Y SOPORTE" COLORS={COLORS} isDarkMode={isDarkMode}>
+            <SettingsRow COLORS={COLORS} isDarkMode={isDarkMode} icon="document-text" iconColor="#9CA3AF" bg={isDarkMode ? "rgba(156,163,175,0.15)" : "#F3F4F6"} title="Términos y Condiciones" onPress={abrirLegales} />
+            <SettingsRow COLORS={COLORS} isDarkMode={isDarkMode} icon="lock-closed" iconColor="#9CA3AF" bg={isDarkMode ? "rgba(156,163,175,0.15)" : "#F3F4F6"} title="Políticas de Privacidad" onPress={abrirLegales} isLast />
+          </SettingsSection>
+
+          <View style={styles.dangerZone}>
+            <TouchableOpacity style={styles.logoutButton} onPress={logout}>
+              <Ionicons name="log-out-outline" size={20} color={COLORS.textPrimary} />
+              <Text style={styles.logoutText}>Cerrar sesión</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.deleteButton} onPress={eliminarCuenta}>
+              <Ionicons name="trash-outline" size={20} color="#FF5252" />
+              <Text style={styles.deleteText}>Eliminar Cuenta</Text>
+            </TouchableOpacity>
+          </View>
+          
+        </ScrollView>
+
+        <Modal visible={modalViaje} animationType="slide" transparent>
+          <View style={styles.modalFondo}>
+            <View style={styles.modalCard}>
+              <BottomSheetHandle />
+              <View style={styles.modalHeader}>
+                <View style={styles.modalTitleLeft}>
+                  <View style={[styles.socialIconWrap, { backgroundColor: isDarkMode ? 'rgba(139,92,246,0.15)' : '#F4ECFF' }]}>
+                    <Ionicons name="airplane" size={24} color="#8B5CF6" />
+                  </View>
+                  <View>
+                    <Text style={styles.modalTitle}>Modo Viajero</Text>
+                    <Text style={styles.modalSub}>{stepViaje === 1 ? '¿A qué región viajas?' : `¿A qué ciudad de ${regionSeleccionada} vas?`}</Text>
+                  </View>
+                </View>
+                <TouchableOpacity style={styles.closeButton} onPress={() => setModalViaje(false)}>
+                  <Ionicons name="close" size={22} color={COLORS.textPrimary} />
+                </TouchableOpacity>
+              </View>
+
+              {guardandoViaje ? (
+                <ActivityIndicator size="large" color="#8B5CF6" style={{ marginTop: 50 }} />
+              ) : (
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  {stepViaje === 1 ? (
+                    Object.keys(REGIONES_CHILE).map((reg) => (
+                      <TouchableOpacity key={reg} style={styles.regionButton} onPress={() => { setRegionSeleccionada(reg); setStepViaje(2); }}>
+                        <Text style={styles.regionText}>{reg}</Text>
+                        <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+                      </TouchableOpacity>
+                    ))
+                  ) : (
+                    <>
+                      <TouchableOpacity style={styles.backRegion} onPress={() => setStepViaje(1)}>
+                        <Ionicons name="arrow-back" size={18} color={COLORS.primario} />
+                        <Text style={styles.backRegionText}>Volver a regiones</Text>
+                      </TouchableOpacity>
+                      {REGIONES_CHILE[regionSeleccionada]?.map((ciudad) => (
+                        <TouchableOpacity key={ciudad} style={styles.regionButton} onPress={() => guardarViaje(ciudad)}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                            <Ionicons name="location" size={18} color={COLORS.primario} />
+                            <Text style={styles.regionText}>{ciudad}</Text>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </>
+                  )}
+                </ScrollView>
+              )}
+
+              {usuario?.viaje?.ciudadDestino && !guardandoViaje && stepViaje === 1 ? (
+                <TouchableOpacity style={styles.turnOffTravel} onPress={() => guardarViaje('')}>
+                  <Text style={styles.turnOffTravelText}>Apagar Modo Viajero</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          </View>
+        </Modal>
+
+        <CahuinModal
+          visible={!!modalInfo}
+          title={modalInfo?.title}
+          message={modalInfo?.message}
+          emoji={modalInfo?.emoji}
+          actions={modalInfo?.actions || []}
+          accent={modalInfo?.accent}
+          tone={modalInfo?.tone}
+          details={modalInfo?.details}
+          onClose={() => setModalInfo(null)}
+        />
+      </SafeAreaView>
+    </View>
   );
 }
 
-function SettingsSection({ COLORS, title, icon, color, children }) {
+// ── Componentes Internos ──
+
+function SettingsSection({ title, children, COLORS, isDarkMode }) {
+  const rowStyles = getRowStyles(COLORS, isDarkMode);
   return (
-    <SoftCard COLORS={COLORS} style={{ marginBottom: SPACING[5], padding: SPACING[4] }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: SPACING[3] }}>
-        <SoftIcon name={icon} color={color} bg={color === '#34A853' ? COLORS.softGreen : COLORS.softPurple} size={44} rounded={22} iconSize={22} />
-        <Text style={{ color, fontSize: 16, fontWeight: '900', letterSpacing: 0.2 }}>{title}</Text>
+    <View style={rowStyles.sectionWrap}>
+      <Text style={rowStyles.sectionTitle}>{title}</Text>
+      <View style={rowStyles.sectionCard}>
+        {children}
       </View>
-      {children}
-    </SoftCard>
+    </View>
   );
 }
 
-function SettingsRow({ COLORS, icon, iconColor, bg, title, subtitle, control, onPress }) {
+function SettingsRow({ icon, iconColor, bg, title, subtitle, control, onPress, isLast, COLORS, isDarkMode }) {
+  const rowStyles = getRowStyles(COLORS, isDarkMode);
   const Content = onPress ? TouchableOpacity : View;
   return (
-    <Content style={rowStyles.row} onPress={onPress} activeOpacity={0.86}>
+    <Content style={[rowStyles.row, !isLast && rowStyles.borderBottom]} onPress={onPress} activeOpacity={0.86}>
       <View style={rowStyles.left}>
-        <SoftIcon name={icon} color={iconColor} bg={bg} size={58} rounded={16} iconSize={28} />
+        <View style={[rowStyles.iconWrap, { backgroundColor: bg }]}>
+          <Ionicons name={icon} size={22} color={iconColor} />
+        </View>
         <View style={{ flex: 1 }}>
-          <Text style={[rowStyles.title, { color: COLORS.textPrimary }]}>{title}</Text>
-          {subtitle ? <Text style={[rowStyles.subtitle, { color: COLORS.textMuted }]}>{subtitle}</Text> : null}
+          <Text style={rowStyles.title}>{title}</Text>
+          {subtitle ? <Text style={rowStyles.subtitle}>{subtitle}</Text> : null}
         </View>
       </View>
-      {control || <Ionicons name="chevron-forward" size={24} color={COLORS.gris} />}
+      {control || <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />}
     </Content>
   );
 }
 
-function Divider({ COLORS }) {
-  return <View style={{ height: 1, backgroundColor: COLORS.border, marginLeft: 72, marginVertical: 12 }} />;
-}
-
-const rowStyles = StyleSheet.create({
-  row: { minHeight: 82, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+const getRowStyles = (COLORS, isDarkMode) => StyleSheet.create({
+  sectionWrap: { marginBottom: 28 },
+  sectionTitle: { color: COLORS.textMuted, fontSize: 13, fontWeight: '800', letterSpacing: 0.8, marginLeft: 16, marginBottom: 8 },
+  sectionCard: { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : COLORS.tarjeta, borderRadius: 20, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.06)' : COLORS.border, overflow: 'hidden', ...(isDarkMode ? {} : SHADOWS.light) },
+  row: { minHeight: 74, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
+  borderBottom: { borderBottomWidth: 1, borderBottomColor: isDarkMode ? 'rgba(255,255,255,0.05)' : COLORS.border },
   left: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 14 },
-  title: { fontSize: 20, fontWeight: '900' },
-  subtitle: { fontSize: 15, lineHeight: 21, marginTop: 3 },
+  iconWrap: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  title: { fontSize: 16, fontWeight: '600', color: COLORS.textPrimary },
+  subtitle: { fontSize: 13, color: COLORS.textMuted, marginTop: 2 },
 });
 
-const getStyles = (COLORS) => StyleSheet.create({
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING[4] },
-  backButton: { width: 54, height: 54, alignItems: 'center', justifyContent: 'center' },
-  socialCard: { marginBottom: SPACING[5], padding: SPACING[4] },
-  socialHeader: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: SPACING[4] },
+const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: COLORS.bg },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 16 },
+  backButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { color: COLORS.textPrimary, fontSize: 20, fontWeight: '900', fontFamily: FONTS.display },
+  scrollContent: { paddingHorizontal: 16, paddingBottom: 60 },
+  
+  // ── Tarjeta Social ──
+  socialCardWrap: { borderRadius: 24, overflow: 'hidden', marginBottom: 30, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.08)' : COLORS.border, ...(isDarkMode ? {} : SHADOWS.light) },
+  socialCard: { padding: 20 },
+  socialHeader: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 18 },
+  socialIconWrap: { width: 48, height: 48, borderRadius: 16, backgroundColor: 'rgba(240,68,79,0.2)', alignItems: 'center', justifyContent: 'center' },
   socialCopy: { flex: 1 },
-  socialTitle: { color: COLORS.textPrimary, fontSize: 22, fontWeight: '900', fontFamily: FONTS.display },
-  socialSubtitle: { color: COLORS.textMuted, fontSize: 14, lineHeight: 20, marginTop: 3 },
-  socialActions: { flexDirection: 'row', gap: 12 },
-  socialButton: { flex: 1, minHeight: 54, borderRadius: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  socialTitle: { color: COLORS.textPrimary, fontSize: 20, fontWeight: '900', fontFamily: FONTS.display },
+  socialSubtitle: { color: COLORS.textMuted, fontSize: 14, marginTop: 2 },
+  socialActions: { flexDirection: 'row', gap: 10 },
+  socialButton: { flex: 1, height: 46, borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   instagramButton: { backgroundColor: '#E1306C' },
-  tiktokButton: { backgroundColor: '#111827', borderWidth: 1, borderColor: COLORS.border },
-  socialButtonText: { color: '#FFF', fontSize: 15, fontWeight: '900' },
-  logoutButton: { minHeight: 66, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.tarjeta, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: SPACING[4] },
-  logoutText: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '900' },
-  deleteButton: { minHeight: 72, borderRadius: 20, borderWidth: 1.5, borderColor: COLORS.primario, backgroundColor: COLORS.softRed, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: SPACING[8] },
-  deleteText: { color: COLORS.primario, fontSize: 18, fontWeight: '900' },
-  miniPill: { minHeight: 38, borderRadius: 19, backgroundColor: COLORS.softRed, borderWidth: 1, borderColor: COLORS.primario, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' },
-  miniPillText: { color: COLORS.primario, fontSize: 12, fontWeight: '900' },
-  modalFondo: { flex: 1, backgroundColor: 'rgba(17,24,39,0.58)', justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: COLORS.tarjeta, borderTopLeftRadius: 34, borderTopRightRadius: 34, padding: 24, height: '86%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING[4] },
-  modalTitleLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  modalTitle: { color: COLORS.textPrimary, fontSize: 26, fontWeight: '900', fontFamily: FONTS.display },
-  modalSub: { color: COLORS.textMuted, fontSize: 15, marginTop: 3 },
-  closeButton: { width: 54, height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
-  regionButton: { minHeight: 62, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: SPACING[4], flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING[3] },
-  regionText: { color: COLORS.textPrimary, fontSize: 17, fontWeight: '800' },
-  backRegion: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING[3] },
-  backRegionText: { color: COLORS.primario, fontWeight: '900' },
-  turnOffTravel: { marginTop: 18, alignItems: 'center', padding: 16, backgroundColor: COLORS.softRed, borderRadius: 18 },
-  turnOffTravelText: { color: COLORS.primario, fontWeight: '900' },
+  tiktokButton: { backgroundColor: isDarkMode ? 'rgba(0,0,0,0.4)' : '#F3F4F6', borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : COLORS.border },
+  socialButtonText: { color: '#FFF', fontSize: 14, fontWeight: '800' },
+  
+  // ── Botones Peligro ──
+  dangerZone: { marginTop: 10, gap: 12 },
+  logoutButton: { height: 56, borderRadius: 18, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : COLORS.tarjeta, borderWidth: isDarkMode ? 0 : 1, borderColor: COLORS.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, ...(isDarkMode ? {} : SHADOWS.light) },
+  logoutText: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '700' },
+  deleteButton: { height: 56, borderRadius: 18, backgroundColor: 'rgba(255,82,82,0.1)', borderWidth: 1, borderColor: 'rgba(255,82,82,0.2)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  deleteText: { color: '#FF5252', fontSize: 16, fontWeight: '800' },
+  
+  // ── Extra components ──
+  miniPill: { height: 32, borderRadius: 16, backgroundColor: 'rgba(240,68,79,0.15)', borderWidth: 1, borderColor: 'rgba(240,68,79,0.3)', paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center' },
+  miniPillText: { color: COLORS.primario, fontSize: 12, fontWeight: '800' },
+  
+  // ── Modales ──
+  modalFondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalCard: { backgroundColor: COLORS.tarjeta, borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, height: '80%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+  modalTitleLeft: { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 },
+  modalTitle: { color: COLORS.textPrimary, fontSize: 24, fontWeight: '900', fontFamily: FONTS.display },
+  modalSub: { color: COLORS.textMuted, fontSize: 14, marginTop: 2 },
+  closeButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: isDarkMode ? 'rgba(255,255,255,0.08)' : COLORS.fondo },
+  regionButton: { height: 60, borderRadius: 16, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.04)' : COLORS.fondo, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  regionText: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '600' },
+  backRegion: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16, paddingLeft: 6 },
+  backRegionText: { color: COLORS.primario, fontWeight: '800' },
+  turnOffTravel: { marginTop: 18, alignItems: 'center', padding: 16, backgroundColor: 'rgba(240,68,79,0.15)', borderRadius: 16 },
+  turnOffTravelText: { color: COLORS.primario, fontWeight: '800' },
 });
-

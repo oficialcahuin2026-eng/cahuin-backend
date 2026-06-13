@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -11,6 +11,8 @@ import {
   Text,
   TouchableOpacity,
   View,
+  TextInput,
+  Dimensions,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +27,8 @@ import { FONTS, RADIUS, SHADOWS, SPACING } from '../utils/theme';
 import { GradientButton, SoftIcon } from '../components/CahuinUI';
 import CahuinTextField from '../components/CahuinTextField';
 import CahuinModal from '../components/CahuinModal';
+
+const { width } = Dimensions.get('window');
 
 const INTENCIONES = [
   'Relación seria',
@@ -59,12 +63,13 @@ const DISTANCIAS = [10, 25, 50, 100];
 
 export default function EditarPerfilScreen({ navigation }) {
   const { usuario, actualizarUsuario } = useAuth();
-  const { COLORS } = useTheme();
-  const styles = getStyles(COLORS);
+  const { COLORS, isDarkMode } = useTheme();
+  const styles = getStyles(COLORS, isDarkMode);
 
   const [fotosGaleria, setFotosGaleria] = useState(usuario?.fotos?.length > 0 ? usuario.fotos : (usuario?.foto ? [usuario.foto] : []));
   const [guardando, setGuardando] = useState(false);
   const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0);
   const [modalInfo, setModalInfo] = useState(null);
 
   const [nombre, setNombre] = useState(usuario?.nombre || '');
@@ -86,15 +91,20 @@ export default function EditarPerfilScreen({ navigation }) {
   const [resultadosMusica, setResultadosMusica] = useState([]);
   const [buscandoMusica, setBuscandoMusica] = useState(false);
 
-  const fotoPrincipal = fotosGaleria[0] || usuario?.foto || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=800';
+  const fotoPrincipal = fotosGaleria[0] || (usuario?.fotos && usuario.fotos.length > 0 ? usuario.fotos[0] : usuario?.foto) || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=800';
   const categoriasElegidas = useMemo(
     () => EXPLORAR_CATEGORIAS.filter((categoria) => categoriasExplorar.includes(categoria.id)),
     [categoriasExplorar]
   );
 
-  const agregarFotoGaleria = async () => {
+  const agregarFotoGaleria = async (index) => {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [3, 4], quality: 0.6 });
-    if (!result.canceled) setFotosGaleria([...fotosGaleria, result.assets[0].uri].slice(0, 6));
+    if (!result.canceled) {
+      const nuevasFotos = [...fotosGaleria];
+      nuevasFotos[index] = result.assets[0].uri;
+      // Filtrar undefined o vacíos si se saltó un índice
+      setFotosGaleria(nuevasFotos.filter(Boolean).slice(0, 6));
+    }
   };
 
   const eliminarFotoGaleria = (index) => setFotosGaleria(fotosGaleria.filter((_, i) => i !== index));
@@ -168,10 +178,11 @@ export default function EditarPerfilScreen({ navigation }) {
         categoriasExplorar,
         cancion,
         fechasDisponibles,
+        fotos: fotosGaleria // Asumimos que se guardaron correctamente para actualizar local
       });
       setModalInfo({
-        title: '¡Listo!',
-        message: 'Perfil actualizado. Ahora tu radar entiende mejor tu cahuín.',
+        title: '¡Perfil Actualizado!',
+        message: 'Tus cambios han sido guardados con éxito.',
         emoji: '✅',
         accent: COLORS.primario,
         actions: [{ label: 'Listo', onPress: () => { setModalInfo(null); navigation.goBack(); } }],
@@ -198,6 +209,28 @@ export default function EditarPerfilScreen({ navigation }) {
     }
   };
 
+  const renderFotoSlot = (index, styleExtra = {}) => {
+    const uri = fotosGaleria[index];
+    return (
+      <View style={[styles.cajaFotoSlot, styleExtra]}>
+        {uri ? (
+          <>
+            <Image source={{ uri }} style={styles.fotoEnGrid} />
+            <TouchableOpacity style={styles.btnEliminarFoto} onPress={() => eliminarFotoGaleria(index)}>
+              <Ionicons name="close" size={16} color="#FFF" />
+            </TouchableOpacity>
+          </>
+        ) : (
+          <TouchableOpacity style={styles.btnAgregarFoto} onPress={() => agregarFotoGaleria(index)}>
+            <View style={styles.addIconCircle}>
+              <Ionicons name="add" size={24} color="#FFF" />
+            </View>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
@@ -205,51 +238,74 @@ export default function EditarPerfilScreen({ navigation }) {
           <Ionicons name="arrow-back" size={25} color={COLORS.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.tituloHeader}>Editar Perfil</Text>
-        <TouchableOpacity onPress={guardarDetalles} style={styles.saveTop} disabled={guardando}>
-          {guardando ? <ActivityIndicator color={COLORS.primario} /> : <Text style={styles.btnGuardar}>Guardar</Text>}
-        </TouchableOpacity>
+        <View style={{ width: 42 }} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        <View style={styles.previewStrip}>
-          <Image source={{ uri: fotoPrincipal }} style={styles.previewAvatar} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.previewName} numberOfLines={1}>{nombre || 'Tu nombre'}</Text>
-            <Text style={styles.previewMeta} numberOfLines={1}>{ciudad || 'Tu ciudad'} · {queBuscas}</Text>
-          </View>
-          <TouchableOpacity style={styles.previewButton} onPress={() => setPreviewVisible(true)}>
-            <Ionicons name="eye" size={18} color="#FFF" />
-            <Text style={styles.previewButtonText}>Vista</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.label}>Tus 6 fotos</Text>
-        <View style={styles.gridFotos}>
-          {[0, 1, 2, 3, 4, 5].map((index) => (
-            <View key={index} style={styles.cajaFotoSlot}>
-              {fotosGaleria[index] ? (
-                <>
-                  <Image source={{ uri: fotosGaleria[index] }} style={styles.fotoEnGrid} />
-                  <TouchableOpacity style={styles.btnEliminarFoto} onPress={() => eliminarFotoGaleria(index)}>
-                    <Ionicons name="close" size={16} color="#FFF" />
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <TouchableOpacity style={styles.btnAgregarFoto} onPress={agregarFotoGaleria}>
-                  <Ionicons name="add" size={30} color={COLORS.primario} />
-                </TouchableOpacity>
-              )}
+        
+        {/* GRID ASIMÉTRICO (Tinder-style) */}
+        <View style={styles.gridContainer}>
+          <View style={styles.gridTopRow}>
+            {renderFotoSlot(0, styles.gridLargeSlot)}
+            <View style={styles.gridRightCol}>
+              {renderFotoSlot(1, styles.gridSmallSlot)}
+              {renderFotoSlot(2, styles.gridSmallSlot)}
             </View>
-          ))}
+          </View>
+          <View style={styles.gridBottomRow}>
+            {renderFotoSlot(3, styles.gridSmallSlot)}
+            {renderFotoSlot(4, styles.gridSmallSlot)}
+            {renderFotoSlot(5, styles.gridSmallSlot)}
+          </View>
+        </View>
+        <Text style={styles.gridHint}>Mantén presionado para ordenar (próximamente). La foto más grande es tu portada.</Text>
+
+        <SectionTitle styles={styles} title="Lo básico" subtitle="Cuentale al mundo quién eres." />
+        <View style={styles.floatingInputWrap}>
+          <Ionicons name="person" size={20} color={COLORS.textMuted} style={styles.inputIcon} />
+          <TextInput 
+            style={styles.floatingInput} 
+            placeholder="Tu Nombre" 
+            placeholderTextColor={COLORS.textMuted}
+            value={nombre} 
+            onChangeText={setNombre} 
+          />
         </View>
 
-        <SectionTitle styles={styles} title="Lo básico" subtitle="Que el perfil se sienta tuyo antes de tirar el primer cahuín." />
-        <CahuinTextField icon="person-outline" placeholder="Nombre" value={nombre} onChangeText={setNombre} />
         <View style={styles.rowInputs}>
-          <CahuinTextField icon="business-outline" containerStyle={styles.halfInput} placeholder="Ciudad" value={ciudad} onChangeText={actualizarCiudad} />
-          <CahuinTextField icon="map-outline" containerStyle={styles.halfInput} placeholder="Región" value={region} onChangeText={setRegion} />
+          <View style={[styles.floatingInputWrap, styles.halfInput]}>
+            <Ionicons name="business" size={20} color={COLORS.textMuted} style={styles.inputIcon} />
+            <TextInput 
+              style={styles.floatingInput} 
+              placeholder="Ciudad" 
+              placeholderTextColor={COLORS.textMuted}
+              value={ciudad} 
+              onChangeText={actualizarCiudad} 
+            />
+          </View>
+          <View style={[styles.floatingInputWrap, styles.halfInput]}>
+            <Ionicons name="map" size={20} color={COLORS.textMuted} style={styles.inputIcon} />
+            <TextInput 
+              style={styles.floatingInput} 
+              placeholder="Región" 
+              placeholderTextColor={COLORS.textMuted}
+              value={region} 
+              onChangeText={setRegion} 
+            />
+          </View>
         </View>
-        <CahuinTextField icon="sparkles-outline" containerStyle={{ marginTop: SPACING[3] }} placeholder="Presentate de forma original..." value={descripcion} onChangeText={setDescripcion} multiline variant="textarea" />
+
+        <View style={[styles.floatingInputWrap, styles.bioInputWrap]}>
+          <TextInput 
+            style={[styles.floatingInput, styles.bioInput]} 
+            placeholder="Preséntate de forma original..." 
+            placeholderTextColor={COLORS.textMuted}
+            value={descripcion} 
+            onChangeText={setDescripcion} 
+            multiline 
+            textAlignVertical="top"
+          />
+        </View>
 
         <SectionTitle styles={styles} title="Qué buscas" subtitle="Esto conecta Explorar, Radar y las comunidades." />
         <View style={styles.chipWrap}>
@@ -258,10 +314,10 @@ export default function EditarPerfilScreen({ navigation }) {
           ))}
         </View>
 
-        <SectionTitle styles={styles} title="Distancia del radar" subtitle="Las comunidades respetan esta distancia cuando muestran perfiles." />
+        <SectionTitle styles={styles} title="Distancia del radar" subtitle="¿Qué tan lejos estás dispuesto a ir?" />
         <View style={styles.distanceRow}>
           {DISTANCIAS.map((km) => (
-            <TouchableOpacity key={km} onPress={() => setDistanciaMax(km)} style={[styles.distanceChip, distanciaMax === km && styles.distanceActive]}>
+            <TouchableOpacity key={km} onPress={() => setDistanciaMax(km)} style={[styles.distanceChip, distanciaMax === km && { backgroundColor: COLORS.primario, borderColor: COLORS.primario }]}>
               <Text style={[styles.distanceText, distanciaMax === km && styles.distanceTextActive]}>{km} km</Text>
             </TouchableOpacity>
           ))}
@@ -274,24 +330,22 @@ export default function EditarPerfilScreen({ navigation }) {
           ))}
         </View>
 
-        <SectionTitle styles={styles} title="Comunidades de Explorar" subtitle="Puedes estar en todas las que calcen contigo." />
-        <View style={styles.categoryList}>
+        <SectionTitle styles={styles} title="Comunidades de Explorar" subtitle="Únete a las comunidades vibrantes." />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
           {EXPLORAR_CATEGORIAS.map((categoria) => {
             const selected = categoriasExplorar.includes(categoria.id);
             return (
-              <TouchableOpacity key={categoria.id} onPress={() => toggleCategoria(categoria.id)} style={[styles.categoryRow, selected && { borderColor: categoria.color, backgroundColor: categoria.bg }]}>
-                <SoftIcon name={categoria.icon} bg="#FFF" color={categoria.color} size={46} rounded={23} iconSize={22} />
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.categoryName, selected && styles.categoryNameSelected]}>{categoria.title}</Text>
-                  <Text style={[styles.categoryText, selected && styles.categoryTextSelected]} numberOfLines={2}>{categoria.subtitle}</Text>
-                </View>
-                <Ionicons name={selected ? 'checkmark-circle' : 'add-circle-outline'} size={24} color={selected ? categoria.color : COLORS.gris} />
+              <TouchableOpacity key={categoria.id} onPress={() => toggleCategoria(categoria.id)} style={[styles.categoryCard, selected && { borderColor: categoria.color, backgroundColor: 'rgba(255,255,255,0.1)' }]}>
+                <SoftIcon name={categoria.icon} bg={selected ? categoria.color : COLORS.fondo} color={selected ? '#FFF' : categoria.color} size={46} rounded={23} iconSize={22} />
+                <Text style={[styles.categoryCardName, selected && { color: '#FFF' }]} numberOfLines={1}>{categoria.title}</Text>
+                {selected && <View style={[styles.categoryCardCheck, { backgroundColor: categoria.color }]}><Ionicons name="checkmark" size={12} color="#FFF" /></View>}
               </TouchableOpacity>
             );
           })}
-        </View>
+        </ScrollView>
 
         <SectionTitle styles={styles} title="Detalles que suman" subtitle="Pequeñas pistas para que te inviten con algo más que hola." />
+        
         <View style={styles.calendarHeader}>
           <Text style={styles.subLabel}>Mi calendario de citas</Text>
           <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.smallPrimary}>
@@ -326,18 +380,37 @@ export default function EditarPerfilScreen({ navigation }) {
         ) : (
           <TouchableOpacity style={styles.btnBuscarMusica} onPress={() => setModalMusicaVisible(true)}>
             <Ionicons name="search" size={20} color="#FFF" />
-            <Text style={styles.musicButtonText}>Buscar canción</Text>
+            <Text style={styles.musicButtonText}>Buscar canción en Apple Music</Text>
           </TouchableOpacity>
         )}
 
         <Text style={styles.subLabel}>Altura (m)</Text>
-        <CahuinTextField icon="resize-outline" placeholder="Ej: 1.75" value={altura} onChangeText={setAltura} keyboardType="numeric" />
-
-        <GradientButton icon="save" style={styles.bottomSave} onPress={guardarDetalles} disabled={guardando}>
-          Guardar perfil completo
-        </GradientButton>
+        <View style={styles.floatingInputWrap}>
+          <Ionicons name="resize" size={20} color={COLORS.textMuted} style={styles.inputIcon} />
+          <TextInput 
+            style={styles.floatingInput} 
+            placeholder="Ej: 1.75" 
+            placeholderTextColor={COLORS.textMuted}
+            value={altura} 
+            onChangeText={setAltura} 
+            keyboardType="numeric"
+          />
+        </View>
+        
+        <View style={{ height: 120 }} /> 
       </ScrollView>
 
+      {/* ── STICKY BOTTOM BAR ── */}
+      <LinearGradient colors={['transparent', COLORS.bg, COLORS.bg]} style={styles.bottomBar}>
+        <TouchableOpacity style={styles.btnPreviewCircle} onPress={() => setPreviewVisible(true)}>
+          <Ionicons name="eye" size={26} color={COLORS.primario} />
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.btnSaveFloating, guardando && { opacity: 0.7 }]} onPress={guardarDetalles} disabled={guardando}>
+          {guardando ? <ActivityIndicator color="#FFF" /> : <Text style={styles.btnSaveFloatingText}>Guardar Perfil</Text>}
+        </TouchableOpacity>
+      </LinearGradient>
+
+      {/* ── MODALS ── */}
       <Modal visible={modalMusicaVisible} animationType="slide" transparent>
         <View style={styles.modalFondo}>
           <View style={styles.modalCard}>
@@ -373,9 +446,22 @@ export default function EditarPerfilScreen({ navigation }) {
               <TouchableOpacity onPress={() => setPreviewVisible(false)}><Ionicons name="close" size={28} color={COLORS.textPrimary} /></TouchableOpacity>
             </View>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.previewScroll}>
+              
               <View style={styles.publicCard}>
-                <Image source={{ uri: fotoPrincipal }} style={styles.publicImage} />
-                <LinearGradient colors={['transparent', 'rgba(10,14,24,0.86)']} style={styles.publicOverlay}>
+                <Image source={{ uri: (fotosGaleria.length > 0 ? fotosGaleria[previewIndex] : fotoPrincipal) }} style={styles.publicImage} />
+                
+                {/* Carrusel functionality */}
+                {fotosGaleria.length > 1 && (
+                  <View style={styles.barrasContainer}>
+                    {fotosGaleria.map((_, i) => (
+                      <View key={i} style={[styles.barraFoto, { backgroundColor: i === previewIndex ? '#FFF' : 'rgba(255,255,255,0.4)' }]} />
+                    ))}
+                  </View>
+                )}
+                <TouchableOpacity style={styles.zonaTactilIzq} onPress={() => { if (previewIndex > 0) setPreviewIndex(previewIndex - 1); }} />
+                <TouchableOpacity style={styles.zonaTactilDer} onPress={() => { if (previewIndex < fotosGaleria.length - 1) setPreviewIndex(previewIndex + 1); }} />
+
+                <LinearGradient colors={['transparent', 'rgba(10,14,24,0.95)']} style={styles.publicOverlay}>
                   <Text style={styles.publicName}>{nombre || 'Tu nombre'}, {usuario?.edad || 18}</Text>
                   <View style={styles.publicLocationRow}>
                     <Ionicons name="location" size={15} color="rgba(255,255,255,0.88)" />
@@ -383,6 +469,7 @@ export default function EditarPerfilScreen({ navigation }) {
                   </View>
                 </LinearGradient>
               </View>
+
               <Text style={styles.publicBio}>{descripcion || 'Escribe una bio con personalidad Cahuín para que te inviten con tema.'}</Text>
               <View style={styles.publicChips}>
                 {[queBuscas, ...intereses].filter(Boolean).slice(0, 8).map((chip) => (
@@ -403,6 +490,7 @@ export default function EditarPerfilScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
       <CahuinModal
         visible={!!modalInfo}
         title={modalInfo?.title}
@@ -434,81 +522,153 @@ function SelectableChip({ label, selected, onPress, styles, COLORS }) {
   );
 }
 
-const getStyles = (COLORS) => StyleSheet.create({
+const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: COLORS.border, backgroundColor: COLORS.tarjeta },
-  headerIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.fondo },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, backgroundColor: COLORS.bg },
+  headerIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.tarjeta },
   tituloHeader: { fontSize: 20, fontWeight: '900', color: COLORS.textPrimary, fontFamily: FONTS.display },
-  saveTop: { minWidth: 70, alignItems: 'flex-end' },
-  btnGuardar: { color: COLORS.primario, fontWeight: '900', fontSize: 16 },
-  content: { padding: SPACING[5], paddingBottom: 120 },
-  previewStrip: { flexDirection: 'row', alignItems: 'center', gap: SPACING[3], backgroundColor: COLORS.tarjeta, borderWidth: 1, borderColor: COLORS.border, borderRadius: 24, padding: SPACING[3], ...SHADOWS.light },
-  previewAvatar: { width: 58, height: 58, borderRadius: 18, backgroundColor: COLORS.softRed },
-  previewName: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '900', fontFamily: FONTS.display },
-  previewMeta: { color: COLORS.textMuted, fontSize: 13, marginTop: 3 },
-  previewButton: { height: 42, borderRadius: 21, paddingHorizontal: 14, backgroundColor: COLORS.navy, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  previewButtonText: { color: '#FFF', fontSize: 13, fontWeight: '900' },
-  label: { fontSize: 19, fontWeight: '900', color: COLORS.textPrimary, fontFamily: FONTS.display },
-  sectionTitleWrap: { marginTop: SPACING[7], marginBottom: SPACING[3] },
-  sectionSubtitle: { color: COLORS.textMuted, fontSize: 13, lineHeight: 19, marginTop: 4 },
-  gridFotos: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between', marginTop: SPACING[3] },
-  cajaFotoSlot: { width: '31%', aspectRatio: 0.72, backgroundColor: COLORS.tarjeta, borderRadius: RADIUS.lg, overflow: 'hidden', borderWidth: 2, borderColor: COLORS.border, borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center' },
+  
+  content: { padding: SPACING[4], paddingBottom: 120 },
+
+  // ── Grid Asimétrico ──
+  gridContainer: { gap: 10 },
+  gridTopRow: { flexDirection: 'row', gap: 10, height: 260 },
+  gridLargeSlot: { flex: 2, height: '100%' },
+  gridRightCol: { flex: 1, gap: 10, height: '100%' },
+  gridSmallSlot: { flex: 1, height: '100%' },
+  gridBottomRow: { flexDirection: 'row', gap: 10, height: 125 },
+
+  cajaFotoSlot: { 
+    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', 
+    borderRadius: RADIUS.lg, 
+    overflow: 'hidden', 
+    borderWidth: 1.5, 
+    borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
   fotoEnGrid: { width: '100%', height: '100%', resizeMode: 'cover' },
   btnAgregarFoto: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' },
-  btnEliminarFoto: { position: 'absolute', top: 7, right: 7, backgroundColor: 'rgba(0,0,0,0.6)', width: 26, height: 26, borderRadius: 13, justifyContent: 'center', alignItems: 'center' },
-  inputEmbellecido: { backgroundColor: COLORS.tarjeta, color: COLORS.textPrimary, borderRadius: RADIUS.lg, borderWidth: 1.5, borderColor: COLORS.border, padding: 16, fontSize: 16, ...SHADOWS.light },
-  rowInputs: { flexDirection: 'row', gap: SPACING[3], marginTop: SPACING[3] },
+  addIconCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(240,68,79,0.8)', justifyContent: 'center', alignItems: 'center' },
+  btnEliminarFoto: { position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.6)', width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+  gridHint: { color: COLORS.textMuted, fontSize: 12, marginTop: 10, textAlign: 'center' },
+
+  // ── Typography ──
+  label: { fontSize: 22, fontWeight: '900', color: COLORS.textPrimary, fontFamily: FONTS.display },
+  sectionTitleWrap: { marginTop: SPACING[6], marginBottom: SPACING[3] },
+  sectionSubtitle: { color: COLORS.textMuted, fontSize: 13, lineHeight: 19, marginTop: 2 },
+
+  // ── Minimalist Inputs ──
+  floatingInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+    paddingHorizontal: 16,
+    marginBottom: 10,
+    ...SHADOWS.dark,
+  },
+  inputIcon: { marginRight: 10 },
+  floatingInput: {
+    flex: 1,
+    color: COLORS.textPrimary,
+    fontSize: 16,
+    fontWeight: '500',
+    paddingVertical: 18,
+  },
+  rowInputs: { flexDirection: 'row', gap: 10 },
   halfInput: { flex: 1 },
-  bioInput: { height: 112, textAlignVertical: 'top', marginTop: SPACING[3] },
+  bioInputWrap: { alignItems: 'flex-start', paddingVertical: 12 },
+  bioInput: { height: 120, paddingTop: 0, paddingBottom: 0 },
+
+  // ── Chips ──
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  selectChip: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.tarjeta },
+  selectChip: { borderRadius: 20, paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)', backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' },
   selectChipText: { color: COLORS.textPrimary, fontWeight: '800', fontSize: 13 },
+  
   distanceRow: { flexDirection: 'row', gap: 10 },
-  distanceChip: { flex: 1, minHeight: 50, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.tarjeta, alignItems: 'center', justifyContent: 'center' },
-  distanceActive: { backgroundColor: COLORS.navy, borderColor: COLORS.navy },
+  distanceChip: { flex: 1, minHeight: 46, borderRadius: 16, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)', backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', alignItems: 'center', justifyContent: 'center' },
   distanceText: { color: COLORS.textMuted, fontWeight: '900' },
   distanceTextActive: { color: '#FFF' },
-  categoryList: { gap: SPACING[3] },
-  categoryRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING[3], padding: SPACING[3], borderRadius: 22, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.tarjeta },
-  categoryName: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '900' },
-  categoryText: { color: COLORS.textMuted, fontSize: 12, lineHeight: 17, marginTop: 2 },
-  categoryNameSelected: { color: '#101828' },
-  categoryTextSelected: { color: '#667085' },
+
+  // ── Category Scroll ──
+  categoryScroll: { gap: 12, paddingRight: 20 },
+  categoryCard: { width: 110, padding: 16, borderRadius: 20, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', backgroundColor: isDarkMode ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)', alignItems: 'center' },
+  categoryCardName: { color: COLORS.textMuted, fontSize: 12, fontWeight: '800', marginTop: 10, textAlign: 'center' },
+  categoryCardCheck: { position: 'absolute', top: 10, right: 10, width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+
+  // ── Bottom Bar (Sticky) ──
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0, left: 0, right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 40,
+    paddingBottom: Platform.OS === 'ios' ? 30 : 20,
+    gap: 15,
+  },
+  btnPreviewCircle: {
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: 'rgba(240,68,79,0.15)',
+    borderWidth: 1, borderColor: 'rgba(240,68,79,0.3)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  btnSaveFloating: {
+    flex: 1, height: 56, borderRadius: 28,
+    backgroundColor: COLORS.primario,
+    alignItems: 'center', justifyContent: 'center',
+    ...SHADOWS.dark,
+    shadowColor: COLORS.primario, shadowOpacity: 0.5, shadowRadius: 15,
+  },
+  btnSaveFloatingText: { color: '#FFF', fontSize: 16, fontWeight: '900', fontFamily: FONTS.display },
+
+  // ── Other components ──
   calendarHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  subLabel: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '900', marginBottom: 10, marginTop: SPACING[4] },
-  smallPrimary: { height: 36, borderRadius: 18, paddingHorizontal: 12, backgroundColor: COLORS.primario, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  subLabel: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '900', marginBottom: 12, marginTop: SPACING[5] },
+  smallPrimary: { height: 36, borderRadius: 18, paddingHorizontal: 14, backgroundColor: COLORS.primario, flexDirection: 'row', alignItems: 'center', gap: 6 },
   smallPrimaryText: { color: '#FFF', fontWeight: '900', fontSize: 12 },
   fechasContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  chipFecha: { flexDirection: 'row', backgroundColor: 'rgba(240, 68, 79, 0.1)', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(240, 68, 79, 0.3)', alignItems: 'center' },
+  chipFecha: { flexDirection: 'row', backgroundColor: 'rgba(240, 68, 79, 0.1)', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(240, 68, 79, 0.3)', alignItems: 'center' },
   textoFecha: { color: COLORS.primario, fontWeight: '900', fontSize: 14 },
-  btnBuscarMusica: { flexDirection: 'row', backgroundColor: '#1DB954', padding: 15, borderRadius: RADIUS.lg, alignItems: 'center', justifyContent: 'center', marginTop: 5, gap: 8 },
-  musicButtonText: { color: '#FFF', fontWeight: '900' },
-  cancionSeleccionada: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.tarjeta, padding: 10, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border },
-  album: { width: 48, height: 48, borderRadius: 8, marginRight: 12 },
-  songName: { flex: 1, color: COLORS.textPrimary, fontWeight: '900' },
-  bottomSave: { marginTop: SPACING[7] },
-  modalFondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.62)', justifyContent: 'flex-end' },
+  
+  btnBuscarMusica: { flexDirection: 'row', backgroundColor: '#1DB954', padding: 18, borderRadius: 16, alignItems: 'center', justifyContent: 'center', gap: 10 },
+  musicButtonText: { color: '#111827', fontWeight: '900', fontSize: 15 },
+  cancionSeleccionada: { flexDirection: 'row', alignItems: 'center', backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', padding: 12, borderRadius: 16, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' },
+  album: { width: 52, height: 52, borderRadius: 10, marginRight: 14 },
+  songName: { flex: 1, color: COLORS.textPrimary, fontWeight: '900', fontSize: 16 },
+
+  // ── Modals ──
+  modalFondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
   modalCard: { backgroundColor: COLORS.tarjeta, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 25, height: '80%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   modalTitle: { fontSize: 24, fontWeight: '900', color: COLORS.textPrimary, fontFamily: FONTS.display },
-  trackItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  trackItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
   trackTitle: { color: COLORS.textPrimary, fontWeight: '900' },
   trackArtist: { color: COLORS.textMuted, marginTop: 2 },
-  previewModal: { backgroundColor: COLORS.tarjeta, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 25, maxHeight: '88%' },
+  
+  // ── Preview Modal ──
+  previewModal: { backgroundColor: COLORS.tarjeta, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 25, maxHeight: '90%' },
   previewScroll: { paddingBottom: SPACING[5] },
-  publicCard: { height: 430, borderRadius: 28, overflow: 'hidden', backgroundColor: COLORS.fondo },
+  publicCard: { height: 480, borderRadius: 28, overflow: 'hidden', backgroundColor: COLORS.fondo, position: 'relative' },
   publicImage: { width: '100%', height: '100%' },
-  publicOverlay: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: SPACING[5], paddingTop: 80 },
-  publicName: { color: '#FFF', fontSize: 34, lineHeight: 40, fontWeight: '900', fontFamily: FONTS.display },
-  publicLocationRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
-  publicLocation: { color: 'rgba(255,255,255,0.88)', fontSize: 15, flex: 1 },
-  publicBio: { color: COLORS.textPrimary, fontSize: 16, lineHeight: 23, marginTop: SPACING[4] },
+  publicOverlay: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: SPACING[5], paddingTop: 100 },
+  publicName: { color: '#FFF', fontSize: 36, lineHeight: 42, fontWeight: '900', fontFamily: FONTS.display },
+  publicLocationRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
+  publicLocation: { color: 'rgba(255,255,255,0.9)', fontSize: 16, flex: 1, fontWeight: '600' },
+  publicBio: { color: COLORS.textPrimary, fontSize: 16, lineHeight: 24, marginTop: SPACING[4] },
   publicChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: SPACING[3] },
-  publicChip: { backgroundColor: COLORS.softRed, borderRadius: 16, paddingHorizontal: 10, paddingVertical: 7 },
-  publicChipText: { color: COLORS.primario, fontWeight: '900', fontSize: 12 },
-  previewCategories: { marginTop: SPACING[4], gap: 8 },
-  previewCategory: { borderRadius: 18, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  previewCategoryEmoji: { fontSize: 19 },
-  previewCategoryText: { fontWeight: '900' },
-});
+  publicChip: { backgroundColor: 'rgba(240,68,79,0.15)', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(240,68,79,0.3)' },
+  publicChipText: { color: COLORS.primario, fontWeight: '900', fontSize: 13 },
+  previewCategories: { marginTop: SPACING[4], gap: 10 },
+  previewCategory: { borderRadius: 18, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  previewCategoryText: { fontWeight: '900', fontSize: 15 },
 
+  // ── Carrusel Controls ──
+  barrasContainer: { position: 'absolute', top: 15, left: 12, right: 12, flexDirection: 'row', gap: 5, zIndex: 10 },
+  barraFoto: { flex: 1, height: 4, borderRadius: 2 },
+  zonaTactilIzq: { position: 'absolute', top: 0, bottom: 0, left: 0, width: '50%', zIndex: 5 },
+  zonaTactilDer: { position: 'absolute', top: 0, bottom: 0, right: 0, width: '50%', zIndex: 5 },
+});

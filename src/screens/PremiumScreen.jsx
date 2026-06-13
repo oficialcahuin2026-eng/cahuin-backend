@@ -18,6 +18,7 @@ import CahuinModal from '../components/CahuinModal';
 import { PLANES_CAHUIN } from '../config/economia';
 import { premiumService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 const API_KEY = Platform.OS === 'ios'
   ? process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY
@@ -38,6 +39,9 @@ const PRODUCTOS_POR_PLAN = PLANES_CAHUIN.reduce((acc, plan) => {
 
 export default function PremiumScreen({ navigation }) {
   const { actualizarUsuario } = useAuth();
+  const { isDarkMode, COLORS } = useTheme();
+  const styles = getStyles(COLORS, isDarkMode);
+  
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
@@ -108,27 +112,32 @@ export default function PremiumScreen({ navigation }) {
   const precioPlan = (plan) => packagesPorPlan[plan.id]?.product?.priceString || plan.precioReferencial;
 
   return (
-    <LinearGradient colors={['#07080C', '#140B11', '#07080C']} style={styles.container}>
+    <View style={styles.container}>
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
-            <Ionicons name="close" size={28} color="#FFF" />
+            <Ionicons name="close" size={26} color={COLORS.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Mi suscripcion</Text>
+          <Text style={styles.headerTitle}>Premium</Text>
           <View style={styles.iconButtonGhost} />
         </View>
 
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.hero}>
-            <Text style={styles.kicker}>Planes Cahuin</Text>
-            <Text style={styles.title}>Dos planes simples para moverte con mas libertad.</Text>
+            <View style={styles.badgeWrapper}>
+              <LinearGradient colors={isDarkMode ? ['rgba(255,209,102,0.2)', 'rgba(255,209,102,0.05)'] : ['#FFF5E6', '#FFF8E1']} style={styles.kickerBadge}>
+                <Ionicons name="star" size={14} color="#F59E0B" style={{ marginRight: 6 }} />
+                <Text style={styles.kicker}>PLANES CAHUÍN</Text>
+              </LinearGradient>
+            </View>
+            <Text style={styles.title}>Dos planes simples para {'\n'}moverte con <Text style={styles.highlightText}>más libertad</Text>.</Text>
             <Text style={styles.subtitle}>
-              Gratis sirve para partir. Piola quita limites. A Fondo desbloquea quien te tinca y La Pica.
+              Gratis sirve para partir. Piola quita límites. A Fondo desbloquea quién te tinca y La Pica.
             </Text>
           </View>
 
           {loading ? (
-            <ActivityIndicator size="large" color="#FFD166" style={{ marginVertical: 32 }} />
+            <ActivityIndicator size="large" color="#F59E0B" style={{ marginVertical: 32 }} />
           ) : (
             <View style={styles.plans}>
               {PLANES_CAHUIN.map((plan) => (
@@ -138,6 +147,8 @@ export default function PremiumScreen({ navigation }) {
                   price={precioPlan(plan)}
                   disabled={purchasing}
                   onPress={() => purchasePlan(plan)}
+                  isDarkMode={isDarkMode}
+                  COLORS={COLORS}
                 />
               ))}
             </View>
@@ -145,28 +156,39 @@ export default function PremiumScreen({ navigation }) {
 
           {!revenueCatDisponible ? (
             <View style={styles.previewCard}>
-              <Ionicons name="construct" size={22} color="#FFD166" />
+              <View style={styles.previewIconBox}>
+                <Ionicons name="construct" size={22} color="#F59E0B" />
+              </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.previewTitle}>Compras en vista previa</Text>
                 <Text style={styles.previewText}>
-                  Cuando RevenueCat tenga llave productiva y los productos existan en Google Play, estos botones compraran de verdad.
+                  Cuando RevenueCat tenga llave productiva y los productos existan en Google Play, estos botones comprarán de verdad.
                 </Text>
               </View>
             </View>
           ) : null}
 
-          <Text style={styles.sectionTitle}>Que trae cada plan</Text>
-          <View style={styles.compareCard}>
-            <CompareRow label="Likes diarios" free="5" piola="Sin limite" full="Sin limite" />
-            <CompareRow label="Retroceder" free="No" piola="Si" full="Si" />
-            <CompareRow label="Ver quien te tinca" free="No" piola="No" full="Si" />
-            <CompareRow label="La Pica" free="No" piola="No" full="Si" />
-            <CompareRow label="Ruleta a Ciegas" free="No" piola="Si" full="Si" />
-            <CompareRow label="Modo Destacado" free="No" piola="No" full="Si" />
-            <CompareRow label="Salvar Relampago" free="No" piola="No" full="Si" />
+          <View style={styles.sectionTitleWrap}>
+            <Text style={styles.sectionTitle}>Qué trae cada plan</Text>
+          </View>
+          
+          <View style={styles.compareWrapper}>
+            <View style={styles.compareHeader}>
+              <Text style={styles.compareHeaderLabel}></Text>
+              <Text style={styles.compareHeaderCol}>Gratis</Text>
+              <Text style={styles.compareHeaderCol}>Piola</Text>
+              <Text style={[styles.compareHeaderCol, { color: '#F59E0B' }]}>A Fondo</Text>
+            </View>
+            <CompareRow label="Likes diarios" free="5" piola="Ilimitados" full="Ilimitados" isText isDarkMode={isDarkMode} COLORS={COLORS} />
+            <CompareRow label="Retroceder" free={false} piola={true} full={true} isDarkMode={isDarkMode} COLORS={COLORS} />
+            <CompareRow label="Ver quién te tinca" free={false} piola={false} full={true} isDarkMode={isDarkMode} COLORS={COLORS} />
+            <CompareRow label="La Pica" free={false} piola={false} full={true} isDarkMode={isDarkMode} COLORS={COLORS} />
+            <CompareRow label="Ruleta a Ciegas" free={false} piola={true} full={true} isDarkMode={isDarkMode} COLORS={COLORS} />
+            <CompareRow label="Modo Destacado" free={false} piola={false} full={true} isDarkMode={isDarkMode} COLORS={COLORS} />
+            <CompareRow label="Salvar Racha" free={false} piola={false} full={true} isDarkMode={isDarkMode} COLORS={COLORS} />
           </View>
 
-          {purchasing ? <ActivityIndicator color="#FFF" style={{ marginTop: 20 }} /> : null}
+          {purchasing ? <ActivityIndicator color="#F59E0B" style={{ marginTop: 20 }} /> : null}
         </ScrollView>
       </SafeAreaView>
 
@@ -174,52 +196,127 @@ export default function PremiumScreen({ navigation }) {
         visible={modalVisible}
         title={modalMessage.includes('error') ? 'Oops' : 'Listo'}
         message={modalMessage}
-        emoji={modalMessage.includes('error') ? ':(' : ':)'}
+        emoji={modalMessage.includes('error') ? '🌶️' : '✨'}
         onClose={() => {
           setModalVisible(false);
           if (!modalMessage.includes('error')) navigation.goBack();
         }}
       />
-    </LinearGradient>
+    </View>
   );
 }
 
-function PlanCard({ plan, price, disabled, onPress }) {
+function PlanCard({ plan, price, disabled, onPress, isDarkMode, COLORS }) {
+  const isPremium = plan.destacado; // Cahuín a Fondo
+  const cardStyles = getCardStyles(COLORS, isDarkMode, isPremium);
+  
   return (
-    <TouchableOpacity activeOpacity={0.92} onPress={onPress} disabled={disabled} style={styles.planOuter}>
-      <LinearGradient colors={[plan.color, '#111827']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.planCard}>
-        {plan.destacado ? <Text style={styles.bestBadge}>MAS CONVENIENTE</Text> : null}
-        <Text style={styles.planName}>{plan.nombre}</Text>
-        <Text style={styles.planTagline}>{plan.tagline}</Text>
-        <Text style={styles.planPrice}>{price}</Text>
-        <View style={styles.planDivider} />
-        {plan.beneficios.slice(0, 5).map((beneficio) => (
-          <View key={beneficio} style={styles.benefitRow}>
-            <Ionicons name="checkmark" size={18} color={plan.accent} />
-            <Text style={styles.benefitText}>{beneficio}</Text>
+    <TouchableOpacity activeOpacity={0.92} onPress={onPress} disabled={disabled} style={[cardStyles.planOuter, isPremium && cardStyles.planOuterPremium]}>
+      {isPremium && (
+        <LinearGradient colors={['#FFD166', '#F59E0B']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={cardStyles.premiumBorderGlow} />
+      )}
+      <LinearGradient 
+        colors={isDarkMode 
+          ? (isPremium ? ['#1A1208', '#0D0814'] : ['#1C101A', '#0D0814']) 
+          : (isPremium ? ['#FFF8E1', '#FFFFFF'] : ['#FCE7F3', '#FFFFFF'])} 
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={cardStyles.planCard}
+      >
+        
+        {isPremium && (
+          <View style={cardStyles.bestBadgeWrap}>
+            <LinearGradient colors={['#FFD166', '#F59E0B']} style={cardStyles.bestBadgeBg}>
+              <Text style={cardStyles.bestBadgeText}>✨ MÁS CONVENIENTE</Text>
+            </LinearGradient>
           </View>
-        ))}
-        <View style={[styles.planButton, { backgroundColor: plan.accent }]}>
-          <Text style={styles.planButtonText}>Elegir plan</Text>
+        )}
+
+        <Text style={[cardStyles.planName, isPremium && { color: '#F59E0B' }]}>{plan.nombre}</Text>
+        <Text style={cardStyles.planTagline}>{plan.tagline}</Text>
+        <Text style={cardStyles.planPrice}>{price}</Text>
+        
+        <View style={cardStyles.planDivider} />
+        
+        <View style={cardStyles.benefitsContainer}>
+          {plan.beneficios.slice(0, 5).map((beneficio) => (
+            <View key={beneficio} style={cardStyles.benefitRow}>
+              <Ionicons name="checkmark-circle" size={18} color={plan.accent} />
+              <Text style={cardStyles.benefitText}>{beneficio}</Text>
+            </View>
+          ))}
         </View>
+
+        <TouchableOpacity 
+          activeOpacity={0.8} 
+          style={[cardStyles.planButton, { backgroundColor: isPremium ? '#F59E0B' : (isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)') }]}
+          onPress={onPress}
+          disabled={disabled}
+        >
+          <Text style={[cardStyles.planButtonText, { color: isPremium ? '#FFF' : COLORS.textPrimary }]}>
+            {isPremium ? 'Obtener A Fondo' : 'Elegir Piola'}
+          </Text>
+        </TouchableOpacity>
       </LinearGradient>
     </TouchableOpacity>
   );
 }
 
-function CompareRow({ label, free, piola, full }) {
+function CompareRow({ label, free, piola, full, isText = false, isDarkMode, COLORS }) {
+  const rowStyles = getRowStyles(COLORS, isDarkMode);
+  
+  const renderValue = (val, isFull) => {
+    if (isText) {
+      return <Text style={[rowStyles.compareValueText, isFull && { color: '#F59E0B' }]}>{val}</Text>;
+    }
+    return val ? (
+      <Ionicons name="checkmark-circle" size={20} color={isFull ? '#F59E0B' : (isDarkMode ? '#E5E7EB' : '#9CA3AF')} />
+    ) : (
+      <Text style={rowStyles.compareValueEmpty}>—</Text>
+    );
+  };
+
   return (
-    <View style={styles.compareRow}>
-      <Text style={styles.compareLabel}>{label}</Text>
-      <Text style={styles.compareValue}>{free}</Text>
-      <Text style={styles.compareValue}>{piola}</Text>
-      <Text style={[styles.compareValue, styles.compareValueStrong]}>{full}</Text>
+    <View style={rowStyles.compareRow}>
+      <Text style={rowStyles.compareLabel}>{label}</Text>
+      <View style={rowStyles.compareColWrap}>{renderValue(free, false)}</View>
+      <View style={rowStyles.compareColWrap}>{renderValue(piola, false)}</View>
+      <View style={rowStyles.compareColWrap}>{renderValue(full, true)}</View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
+const getCardStyles = (COLORS, isDarkMode, isPremium) => StyleSheet.create({
+  planOuter: { borderRadius: 32, position: 'relative' },
+  planOuterPremium: { shadowColor: '#F59E0B', shadowOpacity: isDarkMode ? 0.15 : 0.4, shadowRadius: 25, shadowOffset: { width: 0, height: 10 }, elevation: isDarkMode ? 0 : 10 },
+  premiumBorderGlow: { position: 'absolute', top: -2, bottom: -2, left: -2, right: -2, borderRadius: 34 },
+  planCard: { borderRadius: 32, padding: SPACING[5], paddingVertical: 28, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.05)' : COLORS.border, position: 'relative', ...(isDarkMode ? {} : SHADOWS.medium) },
+  
+  bestBadgeWrap: { position: 'absolute', top: -14, left: 0, right: 0, alignItems: 'center', zIndex: 10 },
+  bestBadgeBg: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, ...SHADOWS.dark },
+  bestBadgeText: { color: '#111827', fontSize: 11, fontWeight: '900', letterSpacing: 0.5 },
+  
+  planName: { color: COLORS.textPrimary, fontSize: 28, fontWeight: '900', fontFamily: FONTS.display, marginBottom: 4 },
+  planTagline: { color: COLORS.textMuted, fontSize: 14, lineHeight: 20 },
+  planPrice: { color: COLORS.textPrimary, fontSize: 32, fontWeight: '900', marginTop: 22, fontFamily: FONTS.display },
+  planDivider: { height: 1, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : COLORS.border, marginVertical: 20 },
+  
+  benefitsContainer: { gap: 12, marginBottom: 24 },
+  benefitRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  benefitText: { color: COLORS.textPrimary, flex: 1, fontSize: 15, lineHeight: 20, fontWeight: '600' },
+  
+  planButton: { height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center' },
+  planButtonText: { fontSize: 16, fontWeight: '900' },
+});
+
+const getRowStyles = (COLORS, isDarkMode) => StyleSheet.create({
+  compareRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: isDarkMode ? 'rgba(255,255,255,0.04)' : COLORS.border },
+  compareLabel: { flex: 1.4, color: COLORS.textPrimary, fontSize: 13, fontWeight: '700' },
+  compareColWrap: { flex: 0.8, alignItems: 'center', justifyContent: 'center' },
+  compareValueText: { color: COLORS.textPrimary, fontSize: 12, fontWeight: '800' },
+  compareValueEmpty: { color: COLORS.textMuted, fontSize: 14, fontWeight: '900', opacity: 0.5 },
+});
+
+const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: COLORS.bg },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -232,57 +329,40 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : COLORS.fondo,
+    borderWidth: 1,
+    borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : COLORS.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   iconButtonGhost: { width: 44, height: 44 },
-  headerTitle: { color: '#FFF', fontSize: 22, fontWeight: '900', fontFamily: FONTS.display },
-  scroll: { padding: SPACING[5], paddingBottom: 80 },
-  hero: { marginBottom: SPACING[5] },
-  kicker: { color: '#FFD166', fontSize: 13, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0 },
-  title: { color: '#FFF', fontSize: 32, lineHeight: 38, fontWeight: '900', fontFamily: FONTS.display, marginTop: 8 },
-  subtitle: { color: '#CBD5E1', fontSize: 15, lineHeight: 22, marginTop: 12 },
-  plans: { gap: SPACING[4] },
-  planOuter: { borderRadius: 26, ...SHADOWS.dark },
-  planCard: { borderRadius: 26, padding: SPACING[5], overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
-  bestBadge: {
-    alignSelf: 'flex-start',
-    color: '#111827',
-    backgroundColor: '#FFD166',
-    borderRadius: 99,
-    overflow: 'hidden',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    fontSize: 11,
-    fontWeight: '900',
-    marginBottom: 12,
-  },
-  planName: { color: '#FFF', fontSize: 30, fontWeight: '900', fontFamily: FONTS.display },
-  planTagline: { color: '#E5E7EB', fontSize: 14, lineHeight: 20, marginTop: 4 },
-  planPrice: { color: '#FFF', fontSize: 24, fontWeight: '900', marginTop: 18 },
-  planDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.16)', marginVertical: 16 },
-  benefitRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 10 },
-  benefitText: { color: '#F8FAFC', flex: 1, fontSize: 14, lineHeight: 19, fontWeight: '700' },
-  planButton: { marginTop: 10, minHeight: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
-  planButtonText: { color: '#111827', fontSize: 15, fontWeight: '900' },
-  previewCard: {
-    flexDirection: 'row',
-    gap: 12,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,209,102,0.28)',
-    borderRadius: 18,
-    padding: SPACING[4],
-    marginTop: SPACING[4],
-  },
-  previewTitle: { color: '#FFF', fontSize: 15, fontWeight: '900' },
-  previewText: { color: '#CBD5E1', fontSize: 13, lineHeight: 19, marginTop: 3 },
-  sectionTitle: { color: '#FFF', fontSize: 22, fontWeight: '900', fontFamily: FONTS.display, marginTop: SPACING[7], marginBottom: SPACING[2] },
-  sectionSub: { color: '#CBD5E1', fontSize: 14, lineHeight: 20, marginBottom: SPACING[3] },
-  compareCard: { backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', borderRadius: 22, overflow: 'hidden' },
-  compareRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 13, paddingHorizontal: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(255,255,255,0.12)' },
-  compareLabel: { flex: 1.35, color: '#FFF', fontSize: 13, fontWeight: '800' },
-  compareValue: { flex: 0.82, color: '#CBD5E1', fontSize: 12, fontWeight: '700', textAlign: 'center' },
-  compareValueStrong: { color: '#FFD166' },
+  headerTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase' },
+  scroll: { padding: SPACING[5], paddingBottom: 100 },
+  
+  // ── Hero ──
+  hero: { marginBottom: 35, alignItems: 'center' },
+  badgeWrapper: { marginBottom: 16 },
+  kickerBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,209,102,0.2)' : 'rgba(245,158,11,0.2)' },
+  kicker: { color: '#F59E0B', fontSize: 12, fontWeight: '900', letterSpacing: 1 },
+  title: { color: COLORS.textPrimary, fontSize: 34, lineHeight: 40, fontWeight: '900', fontFamily: FONTS.display, textAlign: 'center' },
+  highlightText: { color: '#F472B6' },
+  subtitle: { color: COLORS.textMuted, fontSize: 15, lineHeight: 22, marginTop: 14, textAlign: 'center', paddingHorizontal: 10 },
+  
+  // ── Plans ──
+  plans: { gap: 24 },
+  
+  // ── Preview Alert ──
+  previewCard: { flexDirection: 'row', gap: 14, backgroundColor: isDarkMode ? 'rgba(255,209,102,0.1)' : '#FFFBEB', borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,209,102,0.3)' : '#FDE68A', borderRadius: 20, padding: 20, marginTop: 30 },
+  previewIconBox: { width: 40, height: 40, borderRadius: 20, backgroundColor: isDarkMode ? 'rgba(255,209,102,0.2)' : '#FEF3C7', alignItems: 'center', justifyContent: 'center' },
+  previewTitle: { color: '#F59E0B', fontSize: 16, fontWeight: '900' },
+  previewText: { color: COLORS.textMuted, fontSize: 14, lineHeight: 20, marginTop: 4 },
+  
+  // ── Comparison Table ──
+  sectionTitleWrap: { marginTop: 40, marginBottom: 20, alignItems: 'center' },
+  sectionTitle: { color: COLORS.textPrimary, fontSize: 20, fontWeight: '900', fontFamily: FONTS.display, letterSpacing: 0.5 },
+  
+  compareWrapper: { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : COLORS.tarjeta, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.08)' : COLORS.border, borderRadius: 24, overflow: 'hidden', paddingVertical: 10, ...(isDarkMode ? {} : SHADOWS.light) },
+  compareHeader: { flexDirection: 'row', paddingVertical: 16, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: isDarkMode ? 'rgba(255,255,255,0.1)' : COLORS.border },
+  compareHeaderLabel: { flex: 1.4 },
+  compareHeaderCol: { flex: 0.8, color: COLORS.textMuted, fontSize: 12, fontWeight: '900', textAlign: 'center', textTransform: 'uppercase' },
 });

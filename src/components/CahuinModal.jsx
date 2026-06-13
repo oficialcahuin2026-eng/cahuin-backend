@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
@@ -29,57 +29,59 @@ export default function CahuinModal({
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.card}>
-          <View style={styles.sheetHandle} />
-          <View style={styles.sparkleOne}><Text style={styles.sparkleText}>*</Text></View>
-          <View style={styles.sparkleTwo}><Text style={styles.sparkleText}>*</Text></View>
-          <View style={styles.sparkleDot} />
+          <ScrollView contentContainerStyle={{ alignItems: 'center', paddingBottom: 10 }} showsVerticalScrollIndicator={false} style={{ width: '100%' }}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.sparkleOne}><Text style={styles.sparkleText}>*</Text></View>
+            <View style={styles.sparkleTwo}><Text style={styles.sparkleText}>*</Text></View>
+            <View style={styles.sparkleDot} />
 
-          <LinearGradient colors={[hexToRgba(accentColor, 0.16), hexToRgba(accentColor, 0.04)]} style={styles.iconHalo}>
-            <View style={styles.iconWrap}>
-              {emoji ? (
-                <Text style={styles.emoji}>{emoji}</Text>
-              ) : (
-                <Ionicons name={icon} size={42} color={accentColor} />
-              )}
+            <LinearGradient colors={[hexToRgba(accentColor, 0.16), hexToRgba(accentColor, 0.04)]} style={styles.iconHalo}>
+              <View style={styles.iconWrap}>
+                {emoji ? (
+                  <Text style={styles.emoji}>{emoji}</Text>
+                ) : (
+                  <Ionicons name={icon} size={42} color={accentColor} />
+                )}
+              </View>
+            </LinearGradient>
+            <Text style={styles.title}>{title}</Text>
+            {message ? <Text style={styles.message}>{message}</Text> : null}
+            {details ? <Text style={styles.details}>{details}</Text> : null}
+
+            <View style={[
+              styles.actions, 
+              finalActions.length === 1 && styles.actionsSingle,
+              finalActions.length > 2 && { flexDirection: 'column' }
+            ]}>
+              {finalActions.map((action) => {
+                const primary = action.variant !== 'secondary';
+                const danger = action.variant === 'danger';
+                const actionColor = action.color || (danger ? '#F0444F' : accentColor);
+                return (
+                  <TouchableOpacity
+                    key={action.label}
+                    activeOpacity={0.9}
+                    style={[
+                      styles.button,
+                      action.variant === 'secondary' && styles.secondaryButton,
+                    ]}
+                    onPress={action.onPress || onClose}
+                  >
+                    {primary ? (
+                      <LinearGradient colors={[actionColor, lighten(actionColor)]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={styles.buttonGradient}>
+                        {action.icon ? <Ionicons name={action.icon} size={18} color="#FFF" style={{ marginRight: 8 }} /> : null}
+                        <Text style={[styles.buttonText, styles.primaryText]}>{action.label}</Text>
+                      </LinearGradient>
+                    ) : (
+                      <Text style={[styles.buttonText, styles.secondaryText, { color: action.color || accentColor }]}>
+                        {action.label}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-          </LinearGradient>
-          <Text style={styles.title}>{title}</Text>
-          {message ? <Text style={styles.message}>{message}</Text> : null}
-          {details ? <Text style={styles.details}>{details}</Text> : null}
-
-          <View style={[
-            styles.actions, 
-            finalActions.length === 1 && styles.actionsSingle,
-            finalActions.length > 2 && { flexDirection: 'column' }
-          ]}>
-            {finalActions.map((action) => {
-              const primary = action.variant !== 'secondary';
-              const danger = action.variant === 'danger';
-              const actionColor = action.color || (danger ? '#F0444F' : accentColor);
-              return (
-                <TouchableOpacity
-                  key={action.label}
-                  activeOpacity={0.9}
-                  style={[
-                    styles.button,
-                    action.variant === 'secondary' && styles.secondaryButton,
-                  ]}
-                  onPress={action.onPress || onClose}
-                >
-                  {primary ? (
-                    <LinearGradient colors={[actionColor, lighten(actionColor)]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={styles.buttonGradient}>
-                      {action.icon ? <Ionicons name={action.icon} size={18} color="#FFF" style={{ marginRight: 8 }} /> : null}
-                      <Text style={[styles.buttonText, styles.primaryText]}>{action.label}</Text>
-                    </LinearGradient>
-                  ) : (
-                    <Text style={[styles.buttonText, styles.secondaryText, { color: action.color || accentColor }]}>
-                      {action.label}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -139,6 +141,7 @@ const getStyles = (COLORS, isDarkMode, accentColor, forceDark) => {
     borderColor: darkPanel ? 'rgba(255,255,255,0.16)' : 'rgba(16,24,40,0.08)',
     alignItems: 'center',
     overflow: 'hidden',
+    maxHeight: '90%',
     ...SHADOWS.dark,
   },
   sheetHandle: {

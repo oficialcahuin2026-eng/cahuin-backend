@@ -8,25 +8,20 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { matchService, mensajeService, panoramaService } from '../services/api';
 import CahuinModal from '../components/CahuinModal';
-import CahuinTextField from '../components/CahuinTextField';
 import {
   BottomSheetHandle,
   EmptyState,
   GradientButton,
   ScreenScaffold,
   SegmentedControl,
-  SoftCard,
-  SoftIcon,
 } from '../components/CahuinUI';
 import { FONTS, SHADOWS, SPACING } from '../utils/theme';
 
@@ -51,9 +46,9 @@ const soloVigentes = (items = []) => {
 };
 
 export default function PanoramasScreen({ navigation }) {
-  const { COLORS } = useTheme();
+  const { COLORS, isDarkMode } = useTheme();
   const { usuario } = useAuth();
-  const styles = getStyles(COLORS);
+  const styles = getStyles(COLORS, isDarkMode);
 
   const [tabActiva, setTabActiva] = useState('eventos');
   const [panoramas, setPanoramas] = useState([]);
@@ -61,10 +56,6 @@ export default function PanoramasScreen({ navigation }) {
   const [misMatchesReales, setMisMatchesReales] = useState([]);
   const [regionOficial, setRegionOficial] = useState(usuario?.region || 'Metropolitana');
   const [modalExplorador, setModalExplorador] = useState(false);
-  const [modalCrear, setModalCrear] = useState(false);
-  const [nuevoPano, setNuevoPano] = useState({ titulo: '', descripcion: '', lugar: '', fecha: new Date() });
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
   const [eventoActivo, setEventoActivo] = useState(null);
   const [eventoParaInvitar, setEventoParaInvitar] = useState(null);
   const [enviandoInvitacion, setEnviandoInvitacion] = useState(false);
@@ -91,33 +82,6 @@ export default function PanoramasScreen({ navigation }) {
       setMisMatchesReales(resMatches.matches || []);
     } catch (error) {
       console.log(error);
-    } finally {
-      setCargando(false);
-    }
-  };
-
-  const handleCrearPanorama = async () => {
-    if (!nuevoPano.titulo || !nuevoPano.lugar) {
-      avisar('Ey', 'Ponle un titulo y un lugar.', '📍', { accent: COLORS.primario });
-      return;
-    }
-
-    try {
-      setCargando(true);
-      await panoramaService.crear({
-        ...nuevoPano,
-        descripcion: nuevoPano.descripcion || nuevoPano.titulo,
-        region: usuario?.viaje?.ciudadDestino || usuario?.region || 'Metropolitana',
-        maxPersonas: 10,
-        categoria: 'Comunidad',
-        emoji: '📍',
-      });
-      setModalCrear(false);
-      setNuevoPano({ titulo: '', descripcion: '', lugar: '', fecha: new Date() });
-      avisar('Listo', 'Panorama publicado en la comunidad.', '📍', { accent: COLORS.primario });
-      cargarTodo();
-    } catch {
-      avisar('Error', 'No pudimos publicarlo. Verifica tu conexión.', '🌶️', { tone: 'danger' });
     } finally {
       setCargando(false);
     }
@@ -178,21 +142,6 @@ export default function PanoramasScreen({ navigation }) {
     }
   };
 
-  const onChangeFecha = (event, selectedDate) => {
-    setShowDatePicker(Platform.OS === 'ios');
-    if (selectedDate) setNuevoPano({ ...nuevoPano, fecha: selectedDate });
-  };
-
-  const onChangeHora = (event, selectedTime) => {
-    setShowTimePicker(Platform.OS === 'ios');
-    if (selectedTime) {
-      const nuevaFecha = new Date(nuevoPano.fecha);
-      nuevaFecha.setHours(selectedTime.getHours());
-      nuevaFecha.setMinutes(selectedTime.getMinutes());
-      setNuevoPano({ ...nuevoPano, fecha: nuevaFecha });
-    }
-  };
-
   const panoramasOficiales = panoramas.filter((p) => p.esOficial);
   const panoramasComunidad = panoramas.filter((p) => !p.esOficial);
   const listaActual = tabActiva === 'eventos' ? panoramasOficiales : panoramasComunidad;
@@ -202,107 +151,104 @@ export default function PanoramasScreen({ navigation }) {
 
     if (!featured) {
       return (
-        <TouchableOpacity key={item._id || index} activeOpacity={0.9} onPress={() => setEventoActivo(item)}>
-          <SoftCard COLORS={COLORS} style={styles.eventRow}>
-            <Image source={{ uri: imageUri }} style={styles.eventThumb} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.eventTitle} numberOfLines={1}>{item.titulo}</Text>
-              <Text style={styles.eventDesc} numberOfLines={1}>{item.descripcion}</Text>
-              <View style={styles.metaRow}>
-                <Ionicons name="location" size={15} color={COLORS.primario} />
-                <Text style={styles.eventMeta} numberOfLines={1}>{item.lugar} · {fechaCorta(item.fecha)}</Text>
-              </View>
+        <TouchableOpacity key={item._id || index} activeOpacity={0.9} onPress={() => setEventoActivo(item)} style={styles.eventRow}>
+          <Image source={{ uri: imageUri }} style={styles.eventThumb} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.eventTitle} numberOfLines={1}>{item.titulo}</Text>
+            <Text style={styles.eventDesc} numberOfLines={1}>{item.descripcion}</Text>
+            <View style={styles.metaRow}>
+              <Ionicons name="location" size={14} color={COLORS.primario} />
+              <Text style={styles.eventMeta} numberOfLines={1}>{item.lugar} · {fechaCorta(item.fecha)}</Text>
             </View>
-            <View style={styles.chevronCircle}><Ionicons name="chevron-forward" size={22} color={COLORS.primario} /></View>
-          </SoftCard>
+          </View>
+          <View style={styles.chevronCircle}><Ionicons name="chevron-forward" size={18} color={COLORS.primario} /></View>
         </TouchableOpacity>
       );
     }
 
     return (
-      <TouchableOpacity key={item._id || index} activeOpacity={0.92} onPress={() => setEventoActivo(item)}>
-        <SoftCard COLORS={COLORS} style={styles.featuredCard}>
-          <View style={styles.featuredTop}>
-            <Image source={{ uri: imageUri }} style={styles.featuredImage} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.featuredTitle}>{item.titulo}</Text>
-              <Text style={styles.featuredDesc}>{item.descripcion}</Text>
-              <TouchableOpacity onPress={() => abrirMapa(item.lugar, regionOficial)}>
-                <View style={styles.metaRow}>
-                  <Ionicons name="location" size={16} color={COLORS.primario} />
-                  <Text style={styles.featuredMeta}>{item.lugar} · {fechaCorta(item.fecha)}</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
+      <TouchableOpacity key={item._id || index} activeOpacity={0.92} onPress={() => setEventoActivo(item)} style={styles.featuredCard}>
+        <View style={styles.featuredTop}>
+          <Image source={{ uri: imageUri }} style={styles.featuredImage} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.featuredTitle}>{item.titulo}</Text>
+            <Text style={styles.featuredDesc} numberOfLines={2}>{item.descripcion}</Text>
+            <TouchableOpacity style={styles.metaBox} onPress={() => abrirMapa(item.lugar, regionOficial)}>
+              <Ionicons name="location" size={14} color={COLORS.primario} />
+              <Text style={styles.featuredMeta} numberOfLines={1}>{item.lugar} · {fechaCorta(item.fecha)}</Text>
+            </TouchableOpacity>
           </View>
+        </View>
 
-          <View style={styles.inviteBox}>
-            <SoftIcon name="people" size={56} rounded={28} bg={COLORS.softRed} color={COLORS.primario} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.inviteTitle}>Invitar amigos</Text>
-              <Text style={styles.inviteText}>Comparte este evento con tus cahuines.</Text>
-            </View>
-            <GradientButton icon="send" style={styles.inviteButton} onPress={() => abrirInvitaciones(item)}>
-              Invitar
-            </GradientButton>
+        <View style={styles.inviteBox}>
+          <View style={styles.inviteIconWrap}>
+            <Ionicons name="people" size={24} color={COLORS.primario} />
           </View>
-        </SoftCard>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.inviteTitle}>Invitar amigos</Text>
+            <Text style={styles.inviteText}>Comparte este evento con tus cahuines.</Text>
+          </View>
+          <TouchableOpacity style={styles.inviteButtonSmall} onPress={() => abrirInvitaciones(item)}>
+            <Ionicons name="send" size={16} color="#FFF" />
+            <Text style={styles.inviteButtonSmallText}>Invitar</Text>
+          </TouchableOpacity>
+        </View>
       </TouchableOpacity>
     );
   };
 
   const renderCommunityCard = (item, index) => (
-    <SoftCard key={item._id || index} COLORS={COLORS} style={styles.communityCard}>
-      <SoftIcon name="location" size={58} rounded={20} bg={COLORS.softAmber} color={COLORS.primario} />
+    <View key={item._id || index} style={styles.communityCard}>
+      <View style={styles.communityIconBox}>
+        <Ionicons name="map" size={28} color="#FF6B45" />
+      </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.eventTitle}>{item.titulo}</Text>
-        <Text style={styles.eventDesc}>{item.descripcion}</Text>
-        <TouchableOpacity onPress={() => abrirMapa(item.lugar, usuario?.viaje?.ciudadDestino || usuario?.region)}>
-          <View style={styles.metaRow}>
-            <Ionicons name="location" size={15} color={COLORS.primario} />
-            <Text style={styles.eventMeta}>{item.lugar} · {fechaCorta(item.fecha)}</Text>
-          </View>
+        <Text style={styles.communityTitle}>{item.titulo}</Text>
+        <Text style={styles.communityDesc} numberOfLines={1}>{item.descripcion}</Text>
+        <TouchableOpacity style={styles.communityMetaRow} onPress={() => abrirMapa(item.lugar, usuario?.viaje?.ciudadDestino || usuario?.region)}>
+          <Ionicons name="location" size={14} color="#FF6B45" />
+          <Text style={styles.communityMetaText} numberOfLines={1}>{item.lugar} · {fechaCorta(item.fecha)}</Text>
         </TouchableOpacity>
         <View style={styles.groupHint}>
-          <Ionicons name="people" size={14} color={COLORS.primario} />
+          <Ionicons name="people" size={14} color="#FF6B45" />
           <Text style={styles.groupHintText}>{item.participantes?.length || 0} anotados · el creador ve la lista</Text>
         </View>
       </View>
       <TouchableOpacity style={styles.joinButton} onPress={() => handleUnirse(item._id)}>
         <Text style={styles.joinButtonText}>Me anoto</Text>
       </TouchableOpacity>
-    </SoftCard>
+    </View>
   );
 
   return (
     <ScreenScaffold COLORS={COLORS}>
       <SegmentedControl
-        COLORS={COLORS}
+        COLORS={{ ...COLORS, tarjeta: isDarkMode ? 'rgba(255,255,255,0.08)' : COLORS.inputBg }}
         value={tabActiva}
         onChange={setTabActiva}
         options={[
           { value: 'eventos', label: 'Eventos Oficiales', icon: 'ticket' },
-          { value: 'comunidad', label: 'Comunidad', icon: 'people', dark: true },
+          { value: 'comunidad', label: 'Comunidad', icon: 'people', dark: isDarkMode },
         ]}
       />
 
       {tabActiva === 'eventos' ? (
         <View style={styles.sectionHeader}>
           <View style={styles.regionTitleRow}>
-            <Ionicons name="location" size={28} color={COLORS.primario} />
+            <Ionicons name="location" size={26} color={COLORS.primario} />
             <Text style={styles.sectionTitle} numberOfLines={1} adjustsFontSizeToFit>{regionOficial}</Text>
           </View>
           <TouchableOpacity style={styles.darkPill} onPress={() => setModalExplorador(true)}>
-            <Ionicons name="map" size={18} color="#FFF" />
+            <Ionicons name="map" size={16} color={COLORS.textPrimary} />
             <Text style={styles.darkPillText}>Ver más regiones</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Panoramas Locales</Text>
-          <TouchableOpacity style={styles.darkPill} onPress={() => navigation.navigate('CrearPanorama')}>
-            <Ionicons name="add" size={22} color="#FFF" />
-            <Text style={styles.darkPillText}>Crear Panorama</Text>
+          <TouchableOpacity style={styles.darkPillActive} onPress={() => navigation.navigate('CrearPanorama')}>
+            <Ionicons name="add" size={20} color={isDarkMode ? '#FFF' : '#FFF'} />
+            <Text style={styles.darkPillTextActive}>Crear Panorama</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -341,16 +287,16 @@ export default function PanoramasScreen({ navigation }) {
                 <Text style={styles.modalSubSmall}>{eventoActivo?.descripcion}</Text>
               </View>
               <TouchableOpacity style={styles.closeButton} onPress={() => setEventoActivo(null)}>
-                <Ionicons name="close" size={28} color={COLORS.textPrimary} />
+                <Ionicons name="close" size={24} color={COLORS.textPrimary} />
               </TouchableOpacity>
             </View>
 
             <View style={styles.detailRow}>
-              <Ionicons name="location" size={22} color={COLORS.primario} />
+              <Ionicons name="location" size={20} color={COLORS.primario} />
               <Text style={styles.detailText}>{eventoActivo?.lugar}</Text>
             </View>
             <View style={styles.detailRow}>
-              <Ionicons name="calendar" size={22} color={COLORS.primario} />
+              <Ionicons name="calendar" size={20} color={COLORS.primario} />
               <Text style={styles.detailText}>{eventoActivo ? fechaCorta(eventoActivo.fecha) : ''}</Text>
             </View>
 
@@ -373,17 +319,17 @@ export default function PanoramasScreen({ navigation }) {
             <BottomSheetHandle />
             <View style={styles.modalTitleRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.modalTitulo}>Invitar a un Cahuín</Text>
+                <Text style={styles.modalTituloGrande}>Invitar a un Cahuín</Text>
                 <Text style={styles.modalSubSmall}>{eventoParaInvitar?.titulo}</Text>
               </View>
               <TouchableOpacity style={styles.closeButton} onPress={() => setEventoParaInvitar(null)}>
-                <Ionicons name="close" size={28} color={COLORS.textPrimary} />
+                <Ionicons name="close" size={24} color={COLORS.textPrimary} />
               </TouchableOpacity>
             </View>
 
             {misMatchesReales.length === 0 ? (
               <View style={styles.emptyInvite}>
-                <Text style={styles.emptyInviteTitle}>Aun no hay chats para invitar.</Text>
+                <Text style={styles.emptyInviteTitle}>Aún no hay chats para invitar.</Text>
                 <Text style={styles.emptyInviteText}>Cuando tengas matches, aparecerán aquí para mandarles panoramas directo al chat.</Text>
               </View>
             ) : (
@@ -412,15 +358,15 @@ export default function PanoramasScreen({ navigation }) {
 
       <Modal visible={modalExplorador} animationType="slide" transparent>
         <View style={styles.modalFondo}>
-          <View style={[styles.modalCard, { maxHeight: '82%' }]}>
+          <View style={[styles.modalCard, { maxHeight: '85%' }]}>
             <BottomSheetHandle />
             <View style={styles.modalTitleRow}>
               <View style={styles.modalTitleLeft}>
-                <Ionicons name="map" size={30} color={COLORS.navy} />
-                <Text style={styles.modalTitulo}>Explorar Chile</Text>
+                <Ionicons name="map" size={28} color="#8B5CF6" />
+                <Text style={styles.modalTituloGrande}>Explorar Chile</Text>
               </View>
               <TouchableOpacity style={styles.closeButton} onPress={() => setModalExplorador(false)}>
-                <Ionicons name="close" size={28} color={COLORS.textPrimary} />
+                <Ionicons name="close" size={24} color={COLORS.textPrimary} />
               </TouchableOpacity>
             </View>
             <Text style={styles.modalSub}>Revisa la cartelera oficial de cualquier parte del país para planear un pique e invitar a tus matches.</Text>
@@ -433,8 +379,8 @@ export default function PanoramasScreen({ navigation }) {
                     style={[styles.regionButton, active && styles.regionButtonActive]}
                     onPress={() => { setRegionOficial(reg); setModalExplorador(false); }}
                   >
-                    <Text style={[styles.regionButtonText, active && { fontWeight: '900' }]}>{reg}</Text>
-                    {active ? <View style={styles.regionCheck}><Ionicons name="checkmark" size={18} color="#FFF" /></View> : null}
+                    <Text style={[styles.regionButtonText, active && { fontWeight: '900', color: isDarkMode ? '#FFF' : COLORS.primario }]}>{reg}</Text>
+                    {active ? <View style={styles.regionCheck}><Ionicons name="checkmark" size={16} color="#FFF" /></View> : null}
                   </TouchableOpacity>
                 );
               })}
@@ -443,57 +389,6 @@ export default function PanoramasScreen({ navigation }) {
         </View>
       </Modal>
 
-      <Modal visible={modalCrear} animationType="slide" transparent>
-        <View style={styles.modalFondo}>
-          <View style={styles.modalCard}>
-            <BottomSheetHandle />
-            <View style={styles.modalTitleRow}>
-              <Text style={styles.modalTituloGrande}>Armar un Panorama</Text>
-              <TouchableOpacity style={styles.closeButton} onPress={() => setModalCrear(false)}>
-                <Ionicons name="close" size={28} color={COLORS.textPrimary} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.inputLabelRow}>
-              <SoftIcon name="sparkles" color="#8B5CF6" bg={COLORS.softPurple} size={42} rounded={12} iconSize={22} />
-              <Text style={styles.label}>¿Qué van a hacer?</Text>
-            </View>
-            <CahuinTextField icon="sparkles-outline" placeholder="Ej: Juntarse a tomar unas chelas" value={nuevoPano.titulo} onChangeText={(t) => setNuevoPano({ ...nuevoPano, titulo: t })} />
-
-            <View style={styles.inputLabelRow}>
-              <SoftIcon name="location" color="#72B84A" bg={COLORS.softGreen} size={42} rounded={12} iconSize={22} />
-              <Text style={styles.label}>¿Dónde es?</Text>
-            </View>
-            <CahuinTextField icon="location-outline" placeholder="Ej: Bar X, Centro" value={nuevoPano.lugar} onChangeText={(l) => setNuevoPano({ ...nuevoPano, lugar: l })} />
-
-            <View style={styles.dateRow}>
-              <TouchableOpacity style={styles.dateBox} onPress={() => setShowDatePicker(true)}>
-                <SoftIcon name="calendar" color="#FF6B45" bg={COLORS.softRed} size={42} rounded={12} iconSize={22} />
-                <View>
-                  <Text style={styles.dateLabel}>Fecha</Text>
-                  <Text style={styles.dateValue}>{nuevoPano.fecha.toLocaleDateString()}</Text>
-                </View>
-                <Ionicons name="chevron-down" size={18} color={COLORS.textMuted} style={{ marginLeft: 'auto' }} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.dateBox} onPress={() => setShowTimePicker(true)}>
-                <SoftIcon name="time" color="#4F6FEA" bg="#EEF2FF" size={42} rounded={12} iconSize={22} />
-                <View>
-                  <Text style={styles.dateLabel}>Hora</Text>
-                  <Text style={styles.dateValue}>{nuevoPano.fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
-                </View>
-                <Ionicons name="chevron-down" size={18} color={COLORS.textMuted} style={{ marginLeft: 'auto' }} />
-              </TouchableOpacity>
-            </View>
-
-            {showDatePicker ? <DateTimePicker value={nuevoPano.fecha} mode="date" display="default" minimumDate={new Date()} onChange={onChangeFecha} /> : null}
-            {showTimePicker ? <DateTimePicker value={nuevoPano.fecha} mode="time" display="default" onChange={onChangeHora} /> : null}
-
-            <GradientButton icon="sparkles" style={{ marginTop: 26 }} onPress={handleCrearPanorama}>
-              Publicar Panorama
-            </GradientButton>
-          </View>
-        </View>
-      </Modal>
       <CahuinModal
         visible={!!modalInfo}
         title={modalInfo?.title}
@@ -509,7 +404,7 @@ export default function PanoramasScreen({ navigation }) {
   );
 }
 
-const getStyles = (COLORS) => StyleSheet.create({
+const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -519,90 +414,98 @@ const getStyles = (COLORS) => StyleSheet.create({
     flexWrap: 'wrap',
   },
   regionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 160 },
-  sectionTitle: {
-    color: COLORS.textPrimary,
-    fontSize: 26,
-    fontWeight: '900',
-    fontFamily: FONTS.display,
-    letterSpacing: 0,
-    flexShrink: 1,
-  },
+  sectionTitle: { color: COLORS.textPrimary, fontSize: 24, fontWeight: '900', fontFamily: FONTS.display, letterSpacing: 0.5, flexShrink: 1 },
   darkPill: {
-    backgroundColor: '#182033',
-    borderRadius: 28,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
+    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.06)' : COLORS.tarjeta,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    ...SHADOWS.light,
-  },
-  darkPillText: { color: '#FFF', fontWeight: '900', fontSize: 14 },
-  featuredCard: { marginBottom: SPACING[4], padding: SPACING[4] },
-  featuredTop: { flexDirection: 'row', gap: SPACING[4] },
-  featuredImage: { width: 138, height: 138, borderRadius: 22, backgroundColor: COLORS.softRed },
-  featuredTitle: { color: COLORS.textPrimary, fontSize: 23, lineHeight: 28, fontWeight: '900', fontFamily: FONTS.display },
-  featuredDesc: { color: COLORS.textMuted, fontSize: 16, lineHeight: 22, marginTop: 8 },
-  featuredMeta: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '700', flex: 1 },
-  inviteBox: {
-    marginTop: SPACING[4],
-    padding: SPACING[4],
-    borderRadius: 22,
-    backgroundColor: COLORS.softRed,
+    gap: 6,
     borderWidth: 1,
-    borderColor: 'rgba(240,68,79,0.12)',
+    borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : COLORS.border,
+    ...(isDarkMode ? {} : SHADOWS.light)
+  },
+  darkPillText: { color: COLORS.textPrimary, fontWeight: '800', fontSize: 13 },
+  darkPillActive: {
+    backgroundColor: 'rgba(240,68,79,0.15)',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING[3],
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(240,68,79,0.3)',
+    ...(isDarkMode ? {} : SHADOWS.light)
   },
-  inviteTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '900' },
-  inviteText: { color: COLORS.textMuted, fontSize: 14, lineHeight: 20, marginTop: 3 },
-  inviteButton: { width: 108, borderRadius: 20 },
-  eventRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING[4], marginBottom: SPACING[3], padding: SPACING[3] },
-  eventThumb: { width: 82, height: 82, borderRadius: 18, backgroundColor: COLORS.softRed },
-  eventTitle: { color: COLORS.textPrimary, fontSize: 20, fontWeight: '900', fontFamily: FONTS.display },
-  eventDesc: { color: COLORS.textMuted, fontSize: 15, marginTop: 5 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 9, flexShrink: 1 },
-  eventMeta: { color: COLORS.textMuted, fontSize: 13, fontWeight: '700', flex: 1 },
-  groupHint: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 },
-  groupHintText: { color: COLORS.textMuted, fontSize: 12, fontWeight: '700' },
-  chevronCircle: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(240,68,79,0.18)' },
-  communityCard: { flexDirection: 'row', alignItems: 'center', gap: SPACING[3], marginBottom: SPACING[3] },
-  joinButton: { borderRadius: 99, borderWidth: 1, borderColor: COLORS.primario, paddingHorizontal: 14, paddingVertical: 10 },
-  joinButtonText: { color: COLORS.primario, fontWeight: '900', fontSize: 13 },
-  modalFondo: { flex: 1, backgroundColor: 'rgba(17,24,39,0.58)', justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: COLORS.tarjeta, borderTopLeftRadius: 34, borderTopRightRadius: 34, padding: 24, maxHeight: '88%' },
-  modalTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  darkPillTextActive: { color: COLORS.primario, fontWeight: '900', fontSize: 13 },
+  
+  // Cards
+  featuredCard: { marginBottom: 16, padding: 16, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : COLORS.tarjeta, borderRadius: 24, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.06)' : COLORS.border, ...(isDarkMode ? {} : SHADOWS.light) },
+  featuredTop: { flexDirection: 'row', gap: 16 },
+  featuredImage: { width: 120, height: 120, borderRadius: 20, backgroundColor: COLORS.softRed },
+  featuredTitle: { color: COLORS.textPrimary, fontSize: 20, lineHeight: 26, fontWeight: '900', fontFamily: FONTS.display },
+  featuredDesc: { color: COLORS.textMuted, fontSize: 14, lineHeight: 20, marginTop: 4 },
+  metaBox: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, padding: 6, paddingHorizontal: 10, backgroundColor: 'rgba(240,68,79,0.1)', borderRadius: 12, alignSelf: 'flex-start' },
+  featuredMeta: { color: COLORS.primario, fontSize: 13, fontWeight: '800', flexShrink: 1 },
+  
+  inviteBox: { marginTop: 16, padding: 14, borderRadius: 18, backgroundColor: 'rgba(240,68,79,0.08)', borderWidth: 1, borderColor: 'rgba(240,68,79,0.15)', flexDirection: 'row', alignItems: 'center', gap: 14 },
+  inviteIconWrap: { width: 44, height: 44, borderRadius: 16, backgroundColor: 'rgba(240,68,79,0.15)', alignItems: 'center', justifyContent: 'center' },
+  inviteTitle: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '900' },
+  inviteText: { color: COLORS.textMuted, fontSize: 13, lineHeight: 18, marginTop: 2 },
+  inviteButtonSmall: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.primario, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 14 },
+  inviteButtonSmallText: { color: '#FFF', fontSize: 13, fontWeight: '800' },
+  
+  eventRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 12, padding: 12, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : COLORS.tarjeta, borderRadius: 20, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.05)' : COLORS.border, ...(isDarkMode ? {} : SHADOWS.light) },
+  eventThumb: { width: 72, height: 72, borderRadius: 16, backgroundColor: COLORS.softRed },
+  eventTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '900', fontFamily: FONTS.display },
+  eventDesc: { color: COLORS.textMuted, fontSize: 14, marginTop: 3 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8, flexShrink: 1 },
+  eventMeta: { color: COLORS.textMuted, fontSize: 12, fontWeight: '700', flex: 1 },
+  chevronCircle: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: isDarkMode ? 'rgba(255,255,255,0.04)' : COLORS.inputBg },
+  
+  communityCard: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 12, padding: 16, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : COLORS.tarjeta, borderRadius: 22, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.05)' : COLORS.border, ...(isDarkMode ? {} : SHADOWS.light) },
+  communityIconBox: { width: 56, height: 56, borderRadius: 18, backgroundColor: 'rgba(255,107,69,0.1)', alignItems: 'center', justifyContent: 'center' },
+  communityTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '900', fontFamily: FONTS.display },
+  communityDesc: { color: COLORS.textMuted, fontSize: 14, marginTop: 3 },
+  communityMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 },
+  communityMetaText: { color: COLORS.textMuted, fontSize: 12, fontWeight: '700' },
+  groupHint: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
+  groupHintText: { color: COLORS.textMuted, fontSize: 11, fontWeight: '800' },
+  joinButton: { borderRadius: 16, borderWidth: 1, borderColor: '#FF6B45', paddingHorizontal: 14, paddingVertical: 10, backgroundColor: 'rgba(255,107,69,0.1)' },
+  joinButtonText: { color: '#FF6B45', fontWeight: '900', fontSize: 13 },
+  
+  // Modals
+  modalFondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalCard: { backgroundColor: COLORS.tarjeta, borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, maxHeight: '88%' },
+  modalTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   modalTitleLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  modalTitulo: { color: COLORS.textPrimary, fontSize: 26, fontWeight: '900', fontFamily: FONTS.display },
-  modalTituloGrande: { color: COLORS.textPrimary, fontSize: 30, fontWeight: '900', fontFamily: FONTS.display, flex: 1 },
-  closeButton: { width: 54, height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: COLORS.border },
-  modalSub: { color: COLORS.textMuted, fontSize: 16, lineHeight: 23, marginBottom: SPACING[5] },
-  modalSubSmall: { color: COLORS.textMuted, fontSize: 15, lineHeight: 22, marginTop: 8 },
-  detailRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: SPACING[3] },
-  detailText: { color: COLORS.textPrimary, flex: 1, fontSize: 16, lineHeight: 22, fontWeight: '700' },
-  actionRow: { flexDirection: 'row', gap: SPACING[3], marginTop: SPACING[5] },
-  secondaryAction: { flex: 1, minHeight: 56, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, backgroundColor: COLORS.fondo },
-  secondaryActionText: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '900' },
-  primaryAction: { flex: 1 },
-  emptyInvite: { borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, padding: SPACING[5], backgroundColor: COLORS.fondo },
-  emptyInviteTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '900', marginBottom: 6 },
-  emptyInviteText: { color: COLORS.textMuted, fontSize: 15, lineHeight: 22 },
-  matchInviteRow: { minHeight: 72, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border, padding: SPACING[3], marginBottom: SPACING[3], flexDirection: 'row', alignItems: 'center', gap: SPACING[3], backgroundColor: COLORS.fondo },
-  matchAvatar: { width: 48, height: 48, borderRadius: 18, backgroundColor: COLORS.softRed },
-  matchName: { color: COLORS.textPrimary, fontSize: 17, fontWeight: '900' },
-  matchHint: { color: COLORS.textMuted, fontSize: 13, marginTop: 3 },
-  regionButton: { minHeight: 64, borderRadius: 17, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: SPACING[4], alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING[3] },
-  regionButtonActive: { backgroundColor: COLORS.softRed, borderColor: COLORS.primario },
-  regionButtonText: { color: COLORS.textPrimary, fontSize: 18 },
-  regionCheck: { width: 34, height: 34, borderRadius: 17, backgroundColor: COLORS.navy, alignItems: 'center', justifyContent: 'center' },
-  inputLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: SPACING[4], marginBottom: SPACING[2] },
-  label: { color: COLORS.textPrimary, fontSize: 17, fontWeight: '900' },
-  input: { minHeight: 64, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: SPACING[4], color: COLORS.textPrimary, fontSize: 16, backgroundColor: COLORS.tarjeta },
-  dateRow: { flexDirection: 'row', gap: SPACING[3], marginTop: SPACING[5] },
-  dateBox: { flex: 1, minHeight: 76, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, padding: SPACING[3], flexDirection: 'row', alignItems: 'center', gap: 10 },
-  dateLabel: { color: COLORS.textMuted, fontSize: 14 },
-  dateValue: { color: COLORS.textPrimary, fontSize: 17, fontWeight: '900', marginTop: 2 },
+  modalTituloGrande: { color: COLORS.textPrimary, fontSize: 26, fontWeight: '900', fontFamily: FONTS.display, flex: 1 },
+  closeButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: isDarkMode ? 'rgba(255,255,255,0.08)' : COLORS.fondo },
+  modalSub: { color: COLORS.textMuted, fontSize: 15, lineHeight: 22, marginBottom: 24 },
+  modalSubSmall: { color: COLORS.textMuted, fontSize: 14, lineHeight: 20, marginTop: 4 },
+  
+  detailRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  detailText: { color: COLORS.textPrimary, flex: 1, fontSize: 15, lineHeight: 20, fontWeight: '700' },
+  
+  actionRow: { flexDirection: 'row', gap: 14, marginTop: 24 },
+  secondaryAction: { flex: 1, minHeight: 52, borderRadius: 18, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : COLORS.border, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.04)' : COLORS.inputBg },
+  secondaryActionText: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '800' },
+  primaryAction: { flex: 1, borderRadius: 18 },
+  
+  emptyInvite: { borderRadius: 20, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.08)' : COLORS.border, padding: 20, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : COLORS.inputBg },
+  emptyInviteTitle: { color: COLORS.textPrimary, fontSize: 17, fontWeight: '900', marginBottom: 6 },
+  emptyInviteText: { color: COLORS.textMuted, fontSize: 14, lineHeight: 20 },
+  
+  matchInviteRow: { minHeight: 70, borderRadius: 20, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.05)' : COLORS.border, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : COLORS.fondo },
+  matchAvatar: { width: 46, height: 46, borderRadius: 18, backgroundColor: COLORS.softRed },
+  matchName: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '900' },
+  matchHint: { color: COLORS.textMuted, fontSize: 12, marginTop: 2 },
+  
+  regionButton: { height: 62, borderRadius: 18, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.04)' : COLORS.fondo, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  regionButtonActive: { backgroundColor: 'rgba(240,68,79,0.15)', borderWidth: 1, borderColor: 'rgba(240,68,79,0.3)' },
+  regionButtonText: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '600' },
+  regionCheck: { width: 30, height: 30, borderRadius: 15, backgroundColor: COLORS.primario, alignItems: 'center', justifyContent: 'center' },
 });
-
-

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, TextInput, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import MapView, { Marker } from 'react-native-maps';
@@ -14,8 +16,8 @@ const VIBES_DISPONIBLES = [
 ];
 
 export default function CrearPanoramaScreen({ navigation }) {
-  const { COLORS } = useTheme();
-  const styles = getStyles(COLORS);
+  const { COLORS, isDarkMode } = useTheme();
+  const styles = getStyles(COLORS, isDarkMode);
   
   const [titulo, setTitulo] = useState('');
   const [lugar, setLugar] = useState('');
@@ -96,289 +98,309 @@ export default function CrearPanoramaScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Armar un Panorama</Text>
-        <View style={{ width: 40 }} />
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scroll}>
-        
-        {/* Título */}
-        <View style={styles.inputGroup}>
-          <View style={styles.labelRow}>
-            <Text style={styles.label}>¿Qué van a hacer?</Text>
-            <Text style={styles.charCount}>{titulo.length}/80</Text>
-          </View>
-          <View style={styles.inputBox}>
-            <Ionicons name="sparkles-outline" size={20} color={COLORS.primario} style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Ej: Juntarse a tomar unas chelas"
-              placeholderTextColor={COLORS.textMuted}
-              maxLength={80}
-              value={titulo}
-              onChangeText={setTitulo}
-            />
-          </View>
-        </View>
-
-        {/* Lugar */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>¿Dónde es?</Text>
-          <View style={styles.inputBox}>
-            <Ionicons name="location-outline" size={20} color="#34A853" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Ej: Bar X, Centro"
-              placeholderTextColor={COLORS.textMuted}
-              value={lugar}
-              onChangeText={setLugar}
-            />
-          </View>
-          {/* Map */}
-          <View style={styles.mapContainer}>
-            <MapView
-              style={styles.mapImage}
-              region={regionMap}
-              onRegionChangeComplete={(r) => setRegionMap(r)}
-            >
-              <Marker coordinate={{ latitude: regionMap.latitude, longitude: regionMap.longitude }}>
-                <View style={styles.mapPin}>
-                  <Ionicons name="location" size={20} color="#FFF" />
-                </View>
-              </Marker>
-            </MapView>
-          </View>
-          <TouchableOpacity style={styles.useLocationBtn} onPress={obtenerUbicacionActual} disabled={cargandoUbicacion}>
-            <Ionicons name="navigate-outline" size={16} color={COLORS.primario} />
-            <Text style={styles.useLocationText}>{cargandoUbicacion ? 'Obteniendo...' : 'Usar mi ubicación actual'}</Text>
+    <LinearGradient colors={isDarkMode ? ['#0A0F1A', '#0D0814'] : [COLORS.fondo, COLORS.bg]} style={styles.safe}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={26} color={COLORS.textPrimary} />
           </TouchableOpacity>
+          <Text style={styles.headerTitle}>Armar un Panorama</Text>
+          <View style={{ width: 44 }} />
         </View>
 
-        {/* Fecha y Hora */}
-        <View style={styles.row}>
-          <View style={[styles.inputGroup, { flex: 1 }]}>
-            <Text style={styles.label}>Fecha</Text>
-            <TouchableOpacity style={styles.dateBox} onPress={() => setShowDatePicker(true)}>
-              <View style={styles.dateIconWrap}>
-                <Ionicons name="calendar-outline" size={18} color="#FF6B45" />
-              </View>
-              <Text style={styles.dateText}>{fecha.toLocaleDateString()}</Text>
-              <Ionicons name="chevron-down" size={16} color={COLORS.textMuted} />
-            </TouchableOpacity>
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          
+          {/* Título */}
+          <View style={styles.inputGroup}>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>¿Qué van a hacer?</Text>
+              <Text style={styles.charCount}>{titulo.length}/80</Text>
+            </View>
+            <View style={styles.inputBox}>
+              <Ionicons name="sparkles-outline" size={22} color={COLORS.primario} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Ej: Juntarse a tomar unas chelas"
+                placeholderTextColor={COLORS.textMuted}
+                maxLength={80}
+                value={titulo}
+                onChangeText={setTitulo}
+              />
+            </View>
           </View>
-          <View style={[styles.inputGroup, { flex: 1 }]}>
-            <Text style={styles.label}>Hora</Text>
-            <TouchableOpacity style={styles.dateBox} onPress={() => setShowTimePicker(true)}>
-              <View style={[styles.dateIconWrap, { backgroundColor: '#EEF2FF' }]}>
-                <Ionicons name="time-outline" size={18} color="#4F6FEA" />
-              </View>
-              <Text style={styles.dateText}>
-                {fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </Text>
-              <Ionicons name="chevron-down" size={16} color={COLORS.textMuted} />
-            </TouchableOpacity>
-          </View>
-        </View>
 
-        {showDatePicker && (
-          <DateTimePicker 
-            value={fecha} 
-            mode="date" 
-            minimumDate={new Date()} 
-            display="default" 
-            onChange={(e, d) => { setShowDatePicker(false); if (d) setFecha(d); }} 
-          />
-        )}
-        {showTimePicker && (
-          <DateTimePicker 
-            value={fecha} 
-            mode="time" 
-            display="default" 
-            onChange={(e, d) => { setShowTimePicker(false); if (d) setFecha(d); }} 
-          />
-        )}
-
-        {/* Descripción */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Descripción breve</Text>
-          <TextInput
-            style={styles.textArea}
-            placeholder="Añade detalles, si hay cuota, qué llevar..."
-            placeholderTextColor={COLORS.textMuted}
-            multiline
-            numberOfLines={4}
-            value={descripcion}
-            onChangeText={setDescripcion}
-          />
-        </View>
-
-        {/* Vibes */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Vibe del panorama (Máx 3)</Text>
-          <View style={styles.vibesContainer}>
-            {VIBES_DISPONIBLES.map(v => (
-              <TouchableOpacity 
-                key={v} 
-                style={[styles.vibeChip, vibes.includes(v) && styles.vibeChipActive]}
-                onPress={() => toggleVibe(v)}
+          {/* Lugar */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>¿Dónde es?</Text>
+            <View style={styles.inputBox}>
+              <Ionicons name="location-outline" size={22} color="#34A853" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Ej: Bar X, Centro"
+                placeholderTextColor={COLORS.textMuted}
+                value={lugar}
+                onChangeText={setLugar}
+              />
+            </View>
+            {/* Map */}
+            <View style={styles.mapContainer}>
+              <MapView
+                style={styles.mapImage}
+                region={regionMap}
+                onRegionChangeComplete={(r) => setRegionMap(r)}
+                userInterfaceStyle={isDarkMode ? "dark" : "light"}
               >
-                <Text style={[styles.vibeChipText, vibes.includes(v) && styles.vibeChipTextActive]}>
-                  {vibes.includes(v) ? '✓ ' : ''}{v}
+                <Marker coordinate={{ latitude: regionMap.latitude, longitude: regionMap.longitude }}>
+                  <View style={styles.mapPinWrap}>
+                    <View style={styles.mapPin}>
+                      <Ionicons name="location" size={20} color="#FFF" />
+                    </View>
+                    <View style={styles.mapPinPulse} />
+                  </View>
+                </Marker>
+              </MapView>
+            </View>
+            <TouchableOpacity style={styles.useLocationBtn} onPress={obtenerUbicacionActual} disabled={cargandoUbicacion}>
+              <Ionicons name="navigate" size={18} color={COLORS.primario} />
+              <Text style={styles.useLocationText}>{cargandoUbicacion ? 'Obteniendo ubicación...' : 'Usar mi ubicación actual'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Fecha y Hora */}
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.label}>Fecha</Text>
+              <TouchableOpacity style={styles.dateBox} onPress={() => setShowDatePicker(true)}>
+                <View style={styles.dateIconWrap}>
+                  <Ionicons name="calendar" size={18} color="#FF6B45" />
+                </View>
+                <Text style={styles.dateText}>{fecha.toLocaleDateString()}</Text>
+                <Ionicons name="chevron-down" size={16} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            </View>
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.label}>Hora</Text>
+              <TouchableOpacity style={styles.dateBox} onPress={() => setShowTimePicker(true)}>
+                <View style={[styles.dateIconWrap, { backgroundColor: 'rgba(79,111,234,0.15)' }]}>
+                  <Ionicons name="time" size={18} color="#4F6FEA" />
+                </View>
+                <Text style={styles.dateText}>
+                  {fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </Text>
+                <Ionicons name="chevron-down" size={16} color={COLORS.textMuted} />
               </TouchableOpacity>
-            ))}
-            <TouchableOpacity style={styles.vibeChipAdd}>
-              <Text style={styles.vibeChipAddText}>+ Agregar vibe</Text>
-            </TouchableOpacity>
+            </View>
           </View>
-        </View>
 
-        {/* Ajustes finales */}
-        <View style={styles.row}>
-          <View style={[styles.inputGroup, { flex: 1 }]}>
-            <Text style={styles.label}>Cupos</Text>
-            <TouchableOpacity style={styles.selectBox} onPress={() => setShowCuposModal(true)}>
-              <Text style={styles.selectText}>{cupos}</Text>
-              <Text style={styles.selectLabel}>personas</Text>
-              <Ionicons name="chevron-down" size={16} color={COLORS.textMuted} style={{ marginLeft: 'auto' }} />
-            </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker 
+              value={fecha} 
+              mode="date" 
+              minimumDate={new Date()} 
+              display="default" 
+              onChange={(e, d) => { setShowDatePicker(false); if (d) setFecha(d); }} 
+            />
+          )}
+          {showTimePicker && (
+            <DateTimePicker 
+              value={fecha} 
+              mode="time" 
+              display="default" 
+              onChange={(e, d) => { setShowTimePicker(false); if (d) setFecha(d); }} 
+            />
+          )}
+
+          {/* Descripción */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Descripción breve</Text>
+            <TextInput
+              style={styles.textArea}
+              placeholder="Añade detalles, si hay cuota, qué llevar..."
+              placeholderTextColor={COLORS.textMuted}
+              multiline
+              numberOfLines={4}
+              value={descripcion}
+              onChangeText={setDescripcion}
+            />
           </View>
-          <View style={[styles.inputGroup, { flex: 1.5 }]}>
-            <Text style={styles.label}>Privacidad</Text>
-            <TouchableOpacity style={styles.selectBox} onPress={() => setShowPrivacidadModal(true)}>
-              <Ionicons name={privacidad === 'Público' ? "globe-outline" : "lock-closed-outline"} size={16} color={COLORS.textMuted} />
-              <Text style={[styles.selectText, { flex: 1, marginLeft: 8 }]}>{privacidad}</Text>
-              <Ionicons name="chevron-down" size={16} color={COLORS.textMuted} />
-            </TouchableOpacity>
-          </View>
-        </View>
 
-        <GradientButton style={styles.btnSubmit} onPress={handleCrear} disabled={guardando}>
-          {guardando ? "Creando..." : "Publicar panorama"}
-        </GradientButton>
-
-        <View style={{ height: 40 }} />
-      </ScrollView>
-
-      {/* Modals para Selección */}
-      {showCuposModal && (
-        <View style={styles.bottomSheetOverlay}>
-          <View style={styles.bottomSheet}>
-            <Text style={styles.bottomSheetTitle}>¿Cuántos cupos?</Text>
-            {['2', '4', '6', '10', 'Sin límite'].map(opt => (
-              <TouchableOpacity key={opt} style={styles.sheetOption} onPress={() => { setCupos(opt); setShowCuposModal(false); }}>
-                <Text style={styles.sheetOptionText}>{opt} {opt !== 'Sin límite' ? 'personas' : ''}</Text>
-                {cupos === opt && <Ionicons name="checkmark-circle" size={20} color={COLORS.primario} />}
+          {/* Vibes */}
+          <View style={styles.inputGroup}>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Vibe del panorama (Máx 3)</Text>
+              <Text style={styles.charCount}>{vibes.length}/3</Text>
+            </View>
+            <View style={styles.vibesContainer}>
+              {VIBES_DISPONIBLES.map(v => {
+                const isActive = vibes.includes(v);
+                return (
+                  <TouchableOpacity 
+                    key={v} 
+                    style={[styles.vibeChip, isActive && styles.vibeChipActive]}
+                    onPress={() => toggleVibe(v)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.vibeChipText, isActive && styles.vibeChipTextActive]}>
+                      {isActive ? '✓ ' : ''}{v}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+              <TouchableOpacity style={styles.vibeChipAdd}>
+                <Ionicons name="add" size={14} color={COLORS.textMuted} />
+                <Text style={styles.vibeChipAddText}>Agregar vibe</Text>
               </TouchableOpacity>
-            ))}
-            <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowCuposModal(false)}>
-              <Text style={styles.sheetCancelText}>Cancelar</Text>
-            </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      )}
 
-      {showPrivacidadModal && (
-        <View style={styles.bottomSheetOverlay}>
-          <View style={styles.bottomSheet}>
-            <Text style={styles.bottomSheetTitle}>Privacidad del Panorama</Text>
-            {['Público', 'Amigos', 'Solo invitación'].map(opt => (
-              <TouchableOpacity key={opt} style={styles.sheetOption} onPress={() => { setPrivacidad(opt); setShowPrivacidadModal(false); }}>
-                <Text style={styles.sheetOptionText}>{opt}</Text>
-                {privacidad === opt && <Ionicons name="checkmark-circle" size={20} color={COLORS.primario} />}
+          {/* Ajustes finales */}
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.label}>Cupos</Text>
+              <TouchableOpacity style={styles.selectBox} onPress={() => setShowCuposModal(true)}>
+                <Text style={styles.selectText}>{cupos}</Text>
+                <Text style={styles.selectLabel}>personas</Text>
+                <Ionicons name="chevron-down" size={16} color={COLORS.textMuted} style={{ marginLeft: 'auto' }} />
               </TouchableOpacity>
-            ))}
-            <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowPrivacidadModal(false)}>
-              <Text style={styles.sheetCancelText}>Cancelar</Text>
-            </TouchableOpacity>
+            </View>
+            <View style={[styles.inputGroup, { flex: 1.5 }]}>
+              <Text style={styles.label}>Privacidad</Text>
+              <TouchableOpacity style={styles.selectBox} onPress={() => setShowPrivacidadModal(true)}>
+                <Ionicons name={privacidad === 'Público' ? "globe-outline" : "lock-closed-outline"} size={18} color={COLORS.textMuted} />
+                <Text style={[styles.selectText, { flex: 1, marginLeft: 8 }]}>{privacidad}</Text>
+                <Ionicons name="chevron-down" size={16} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      )}
-    </SafeAreaView>
+
+          <GradientButton style={styles.btnSubmit} onPress={handleCrear} disabled={guardando}>
+            {guardando ? "Publicando..." : "Publicar panorama"}
+          </GradientButton>
+
+          <View style={{ height: 60 }} />
+        </ScrollView>
+
+        {/* Modals para Selección */}
+        {showCuposModal && (
+          <View style={styles.bottomSheetOverlay}>
+            <View style={styles.bottomSheet}>
+              <View style={styles.sheetHandle} />
+              <Text style={styles.bottomSheetTitle}>¿Cuántos cupos?</Text>
+              {['2', '4', '6', '10', 'Sin límite'].map((opt, i) => (
+                <TouchableOpacity key={opt} style={[styles.sheetOption, i === 0 && { borderTopWidth: 0 }]} onPress={() => { setCupos(opt); setShowCuposModal(false); }}>
+                  <Text style={[styles.sheetOptionText, cupos === opt && { color: COLORS.primario }]}>{opt} {opt !== 'Sin límite' ? 'personas' : ''}</Text>
+                  {cupos === opt && <Ionicons name="checkmark-circle" size={24} color={COLORS.primario} />}
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowCuposModal(false)}>
+                <Text style={styles.sheetCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {showPrivacidadModal && (
+          <View style={styles.bottomSheetOverlay}>
+            <View style={styles.bottomSheet}>
+              <View style={styles.sheetHandle} />
+              <Text style={styles.bottomSheetTitle}>Privacidad del Panorama</Text>
+              {['Público', 'Amigos', 'Solo invitación'].map((opt, i) => (
+                <TouchableOpacity key={opt} style={[styles.sheetOption, i === 0 && { borderTopWidth: 0 }]} onPress={() => { setPrivacidad(opt); setShowPrivacidadModal(false); }}>
+                  <Text style={[styles.sheetOptionText, privacidad === opt && { color: COLORS.primario }]}>{opt}</Text>
+                  {privacidad === opt && <Ionicons name="checkmark-circle" size={24} color={COLORS.primario} />}
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity style={styles.sheetCancel} onPress={() => setShowPrivacidadModal(false)}>
+                <Text style={styles.sheetCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
-const getStyles = (COLORS) => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.bg },
+const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
+  safe: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: SPACING[4], paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: COLORS.border,
-    backgroundColor: COLORS.tarjeta
+    paddingHorizontal: 20, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: isDarkMode ? 'rgba(255,255,255,0.05)' : COLORS.border,
   },
-  backButton: { width: 40, height: 40, justifyContent: 'center' },
-  headerTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '900', fontFamily: FONTS.display },
-  scroll: { padding: SPACING[4] },
-  inputGroup: { marginBottom: 20 },
-  labelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  label: { fontSize: 14, fontWeight: 'bold', color: COLORS.textPrimary, marginBottom: 8 },
-  charCount: { fontSize: 12, color: COLORS.textMuted },
+  backButton: { width: 44, height: 44, justifyContent: 'center' },
+  headerTitle: { color: COLORS.textPrimary, fontSize: 20, fontWeight: '900', fontFamily: FONTS.display, letterSpacing: 0.5 },
+  scroll: { padding: SPACING[5] },
+  inputGroup: { marginBottom: 26 },
+  labelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
+  label: { fontSize: 15, fontWeight: '800', color: COLORS.textPrimary, marginBottom: 10, letterSpacing: 0.3 },
+  charCount: { fontSize: 13, color: COLORS.textMuted, fontWeight: '700' },
   inputBox: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.fondo, borderRadius: RADIUS.lg,
-    borderWidth: 1, borderColor: COLORS.border,
-    paddingHorizontal: 12, height: 50
+    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.04)' : COLORS.inputBg, borderRadius: 18,
+    borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : COLORS.border,
+    paddingHorizontal: 16, height: 60
   },
-  inputIcon: { marginRight: 8 },
-  input: { flex: 1, color: COLORS.textPrimary, fontSize: 15, height: '100%' },
+  inputIcon: { marginRight: 12 },
+  input: { flex: 1, color: COLORS.textPrimary, fontSize: 16, height: '100%', fontWeight: '600' },
   mapContainer: {
-    height: 120, borderRadius: RADIUS.lg, overflow: 'hidden', marginTop: 10,
-    borderWidth: 1, borderColor: COLORS.border, position: 'relative'
+    height: 140, borderRadius: 20, overflow: 'hidden', marginTop: 12,
+    borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : COLORS.border, position: 'relative'
   },
   mapImage: { width: '100%', height: '100%' },
-  mapOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center' },
-  mapPin: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#34A853', justifyContent: 'center', alignItems: 'center', ...SHADOWS.md, borderWidth: 2, borderColor: '#FFF' },
-  useLocationBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, alignSelf: 'flex-start' },
-  useLocationText: { color: COLORS.primario, fontSize: 14, fontWeight: '600' },
-  row: { flexDirection: 'row', gap: 15 },
+  mapPinWrap: { alignItems: 'center', justifyContent: 'center' },
+  mapPin: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#34A853', justifyContent: 'center', alignItems: 'center', ...SHADOWS.md, borderWidth: 3, borderColor: '#FFF', zIndex: 2 },
+  mapPinPulse: { position: 'absolute', width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(52,168,83,0.3)', zIndex: 1 },
+  useLocationBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: 'rgba(240,68,79,0.15)', borderRadius: 12, alignSelf: 'flex-start' },
+  useLocationText: { color: COLORS.primario, fontSize: 14, fontWeight: '800' },
+  row: { flexDirection: 'row', gap: 16 },
   dateBox: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.tarjeta, borderRadius: RADIUS.lg,
-    borderWidth: 1, borderColor: COLORS.border,
-    padding: 10,
+    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.04)' : COLORS.inputBg, borderRadius: 18,
+    borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : COLORS.border,
+    padding: 12, height: 64
   },
-  dateIconWrap: { width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(255,107,69,0.15)', justifyContent: 'center', alignItems: 'center', marginRight: 10 },
-  dateText: { flex: 1, color: COLORS.textPrimary, fontSize: 14, fontWeight: '600' },
+  dateIconWrap: { width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(255,107,69,0.15)', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  dateText: { flex: 1, color: COLORS.textPrimary, fontSize: 15, fontWeight: '700' },
   textArea: {
-    backgroundColor: COLORS.fondo, borderRadius: RADIUS.lg,
-    borderWidth: 1, borderColor: COLORS.border,
-    padding: 15, paddingTop: 15, minHeight: 100,
-    color: COLORS.textPrimary, fontSize: 15, textAlignVertical: 'top'
+    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.04)' : COLORS.inputBg, borderRadius: 20,
+    borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : COLORS.border,
+    padding: 18, paddingTop: 18, minHeight: 120,
+    color: COLORS.textPrimary, fontSize: 16, textAlignVertical: 'top', fontWeight: '600'
   },
   vibesContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   vibeChip: {
-    paddingHorizontal: 16, paddingVertical: 8,
-    borderRadius: 20, backgroundColor: COLORS.fondo,
-    borderWidth: 1, borderColor: COLORS.border
+    paddingHorizontal: 16, paddingVertical: 10,
+    borderRadius: 20, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : COLORS.tarjeta,
+    borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.08)' : COLORS.border,
+    ...(isDarkMode ? {} : SHADOWS.light)
   },
-  vibeChipActive: { backgroundColor: COLORS.primario, borderColor: COLORS.primario },
-  vibeChipText: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '600' },
-  vibeChipTextActive: { color: '#FFF' },
+  vibeChipActive: { backgroundColor: 'rgba(240,68,79,0.15)', borderColor: COLORS.primario, ...(isDarkMode ? {} : SHADOWS.light) },
+  vibeChipText: { color: isDarkMode ? 'rgba(255,255,255,0.8)' : COLORS.textPrimary, fontSize: 14, fontWeight: '700' },
+  vibeChipTextActive: { color: COLORS.primario, fontWeight: '900' },
   vibeChipAdd: {
-    paddingHorizontal: 16, paddingVertical: 8,
+    paddingHorizontal: 16, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 6,
     borderRadius: 20, backgroundColor: 'transparent',
-    borderWidth: 1, borderColor: COLORS.border, borderStyle: 'dashed'
+    borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.15)' : COLORS.border, borderStyle: 'dashed'
   },
-  vibeChipAddText: { color: COLORS.textMuted, fontSize: 14, fontWeight: '600' },
+  vibeChipAddText: { color: COLORS.textMuted, fontSize: 14, fontWeight: '700' },
   selectBox: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.tarjeta, borderRadius: RADIUS.lg,
-    borderWidth: 1, borderColor: COLORS.border,
-    paddingHorizontal: 12, height: 50
+    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.04)' : COLORS.inputBg, borderRadius: 18,
+    borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : COLORS.border,
+    paddingHorizontal: 16, height: 60
   },
-  selectText: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '600', padding: 0 },
-  selectLabel: { color: COLORS.textMuted, fontSize: 14, marginLeft: 4 },
-  btnSubmit: { marginTop: 10 },
-  bottomSheetOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end', zIndex: 999 },
-  bottomSheet: { backgroundColor: COLORS.tarjeta, borderTopLeftRadius: RADIUS.xl, borderTopRightRadius: RADIUS.xl, padding: SPACING[4], paddingBottom: SPACING[6] },
-  bottomSheetTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '800', marginBottom: 15, textAlign: 'center' },
-  sheetOption: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  sheetOptionText: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '600' },
-  sheetCancel: { marginTop: 20, paddingVertical: 15, backgroundColor: COLORS.fondo, borderRadius: RADIUS.lg, alignItems: 'center' },
-  sheetCancelText: { color: COLORS.textMuted, fontSize: 16, fontWeight: '700' }
+  selectText: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '800', padding: 0 },
+  selectLabel: { color: COLORS.textMuted, fontSize: 14, marginLeft: 6, fontWeight: '600' },
+  btnSubmit: { marginTop: 10, height: 60, borderRadius: 20 },
+  
+  // Modals
+  bottomSheetOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end', zIndex: 999 },
+  bottomSheet: { backgroundColor: COLORS.tarjeta, borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, paddingBottom: 40 },
+  sheetHandle: { width: 40, height: 5, borderRadius: 3, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.2)' : COLORS.border, alignSelf: 'center', marginBottom: 20 },
+  bottomSheetTitle: { color: COLORS.textPrimary, fontSize: 20, fontWeight: '900', marginBottom: 24, textAlign: 'center', fontFamily: FONTS.display },
+  sheetOption: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 18, borderTopWidth: 1, borderTopColor: isDarkMode ? 'rgba(255,255,255,0.05)' : COLORS.border },
+  sheetOptionText: { color: COLORS.textPrimary, fontSize: 17, fontWeight: '700' },
+  sheetCancel: { marginTop: 24, height: 56, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : COLORS.inputBg, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  sheetCancelText: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '800' }
 });
