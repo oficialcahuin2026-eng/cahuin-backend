@@ -104,7 +104,7 @@ export default function ExplorarScreen({ navigation }) {
   const girarRuleta = async () => {
     avisar(
       'Ruleta a Ciegas',
-      'Te empareja al azar con alguien por 1 hora de chat sin fotos. Incluida en Cahuin Piola y A Fondo.',
+      'Te empareja al azar con alguien por 1 hora de chat sin fotos. Incluida en Cahuín Piola y A Fondo.',
       '🎭',
       [
         { label: 'Cancelar', variant: 'secondary', color: COLORS.primario, onPress: () => setModalInfo(null) },

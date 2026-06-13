@@ -59,7 +59,7 @@ export default function LikesCahuinScreen({ navigation }) {
   const lista = tab === 'likes' ? data.likes : data.topPicks;
   const tituloCTA = tab === 'likes' ? 'Sapear quien te tinca' : 'Desbloquear La Pica';
   const bajadaCTA = tab === 'likes'
-    ? 'Con Cahuin a Fondo ves los nombres, fotos y ciudad de quienes te dieron like.'
+    ? 'Con Cahuín a Fondo ves los nombres, fotos y ciudad de quienes te dieron like.'
     : 'La Pica muestra una seleccion diaria de perfiles con mas onda cerca de ti.';
 
   const abrirPerfil = (item) => {

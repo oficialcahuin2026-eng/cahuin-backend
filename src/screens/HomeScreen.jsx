@@ -153,30 +153,6 @@ export default function HomeScreen({ navigation }) {
         const data = await matchService.pasar(perfilVisto._id);
         if (data?.usuario) actualizarUsuario(data.usuario);
       }
-
-      // Inyección cada 3 swipes
-      const nuevoCount = swipeCount + 1;
-      if (!usuario?.isPremium && nuevoCount >= 3) {
-        setSwipeCount(0);
-        setPerfiles((prev) => {
-          const copia = [...prev];
-          copia.splice(perfilActual + 1, 0, {
-            _id: 'AD_MOCK_' + Date.now(),
-            nombre: 'Oferta Especial',
-            edad: 99,
-            ciudad: 'Publicidad',
-            foto: 'https://i.imgur.com/vHqJk6K.jpeg',
-            fotos: ['https://i.imgur.com/vHqJk6K.jpeg'],
-            descripcion: '¡🍔 + 🥤 Envío sin costo! Toca en la App.',
-            intereses: ['Promoción'],
-            isAd: true
-          });
-          return copia;
-        });
-      } else {
-        setSwipeCount(nuevoCount);
-      }
-
     } catch (error) {
       console.log(error.message);
       // Para efectos del rediseño fluido, ignoramos errores de conexión al dar swipe y seguimos.

@@ -13,7 +13,7 @@ export default function PremiumBanner({ likesRestantes = 0 }) {
           <Text style={styles.titulo}>
             {likesRestantes === 0 ? 'Se acabaron tus likes' : `Te quedan ${likesRestantes} likes hoy`}
           </Text>
-          <Text style={styles.sub}>Cahuin Piola = likes sin limite</Text>
+          <Text style={styles.sub}>Cahuín Piola = likes sin limite</Text>
         </View>
       </View>
       <TouchableOpacity style={styles.btn} onPress={() => nav.navigate('Premium')}>

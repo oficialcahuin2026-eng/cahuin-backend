@@ -7,7 +7,7 @@ export const UI = {
   sinMatches:       'Aún no tienes matches. ¡Sigue descubriendo po\'!',
   likesAgotados:    '¡Se acabaron tus likes por hoy! 😅',
   limiteGratis:     'Solo 5 likes por día en la versión gratis.',
-  pasarePremium:    'Me subo a Cahuin Piola',
+  pasarePremium:    'Me subo a Cahuín Piola',
   premiumTitulo:    'Planes Cahuin',
   registroTitulo:   '¡Bienvenido a Cahuín! 🇨🇱',
   registroSub:      'Citas chilenas de verdad',

@@ -2,7 +2,7 @@ export const PLANES_CAHUIN = [
   {
     id: 'cahuin_piola_monthly',
     tier: 'piola',
-    nombre: 'Cahuin Piola',
+    nombre: 'Cahuín Piola',
     tagline: 'Para moverte tranquilo sin quedarte corto.',
     precioReferencial: 'CLP3.990/mes',
     storeProductId: 'cahuin_piola',
@@ -29,7 +29,7 @@ export const PLANES_CAHUIN = [
   {
     id: 'cahuin_a_fondo_monthly',
     tier: 'a_fondo',
-    nombre: 'Cahuin a Fondo',
+    nombre: 'Cahuín a Fondo',
     tagline: 'Para entrar fuerte al cahuin y ver mas claro.',
     precioReferencial: 'CLP6.990/mes',
     storeProductId: 'cahuin_a_fondo',
@@ -41,7 +41,7 @@ export const PLANES_CAHUIN = [
     accent: '#FFD166',
     destacado: true,
     beneficios: [
-      'Todo lo de Cahuin Piola',
+      'Todo lo de Cahuín Piola',
       'Ver quien te tiro like',
       'La Pica: seleccion diaria de perfiles con mas onda',
       'Tus likes aparecen antes',

@@ -360,7 +360,7 @@ export default function OnboardingScreen() {
               {paso === 7 && <View>{titleWithAccent('Tu orientación ', 'sexual')}<Text style={styles.subtitle}>Para mostrarte a las personas correctas.</Text>{renderOptionList(DATOS.orientacion, orientacion, setOrientacion)}</View>}
               {paso === 8 && <View>{titleWithAccent('A quién te interesa ', 'ver?')}<Text style={styles.subtitle}>El radar solo te mostrará a este grupo.</Text>{renderOptionList(DATOS.preferencias, preferencia, setPreferencia)}</View>}
               {paso === 9 && <View>{titleWithAccent('Qué andai ', 'buscando?')}<Text style={styles.subtitle}>Sé sincerx, hay Cahuín para todxs.</Text>{renderOptionList(DATOS.buscando, queBuscas, setQueBuscas)}</View>}
-              {paso === 10 && <View>{titleWithAccent('A qué distancia ', 'apanas?')}<Text style={styles.subtitle}>¿A cuántos kilómetros te moverías?</Text>{renderChips(DATOS.distancias.map((km) => `${km} km`), `${distanciaMax} km`, (op) => setDistanciaMax(Number(op.replace(' km', ''))))}</View>}
+              {paso === 10 && <View>{titleWithAccent('A qué distancia ', 'apañas?')}<Text style={styles.subtitle}>¿A cuántos kilómetros te moverías?</Text>{renderChips(DATOS.distancias.map((km) => `${km} km`), `${distanciaMax} km`, (op) => setDistanciaMax(Number(op.replace(' km', ''))))}</View>}
               {paso === 11 && <View>{titleWithAccent('Hablemos de ', 'hábitos')}<Text style={styles.label}>¿Tomas alcohol?</Text>{renderOptionList(DATOS.beber, beber, setBeber)}<Text style={styles.label}>¿Fumas?</Text>{renderOptionList(DATOS.fumar, fumar, setFumar)}<Text style={styles.label}>¿Mascotas?</Text>{renderOptionList(DATOS.mascotas, mascotas, setMascotas)}</View>}
               {paso === 12 && (
                 <View>
