@@ -1,5 +1,6 @@
 const { Readable } = require('stream');
 const Historia = require('../models/Historia');
+const HistoriaExito = require('../models/HistoriaExito');
 const CahuinDiario = require('../models/CahuinDiario');
 const Panorama = require('../models/Panorama');
 const PanoramaSwipe = require('../models/PanoramaSwipe');
@@ -10,6 +11,13 @@ const Botella = require('../models/Botella');
 const cloudinary = require('../config/cloudinary');
 const eventosOficiales = require('../utils/seedEventos');
 const { normalizarRegionChile, inferirRegionPorCiudad } = require('../utils/chileLocations');
+const ADMIN_EMAIL = 'oficialcahuin2026@gmail.com';
+const esAdmin = (usuario) => (usuario?.email || '').toLowerCase() === ADMIN_EMAIL;
+const assertAdmin = (req, res) => {
+  if (esAdmin(req.user)) return true;
+  res.status(403).json({ message: 'Solo la cuenta oficial puede revisar esto.' });
+  return false;
+};
 
 const CAHUINES = [
   'Me encanta la pizza con piña y el que opine lo contrario que me pelee.',
@@ -215,6 +223,99 @@ exports.crearHistoria = async (req, res) => {
   } catch (error) {
     console.error('Error creando historia:', error);
     res.status(500).json({ message: 'Error creando historia' });
+  }
+};
+
+exports.listarHistoriasExito = async (req, res) => {
+  try {
+    const admin = esAdmin(req.user);
+    const { estado } = req.query;
+    const filtro = admin && estado && estado !== 'publicadas'
+      ? { estado }
+      : { estado: 'aprobada' };
+
+    const historias = await HistoriaExito.find(filtro)
+      .populate('autor', 'nombre email foto ciudad')
+      .populate('revisadoPor', 'nombre email')
+      .sort({ createdAt: -1 })
+      .limit(admin ? 80 : 20)
+      .lean();
+
+    res.json({ historias, esAdmin: admin });
+  } catch (error) {
+    console.error('Error cargando historias de exito:', error);
+    res.status(500).json({ message: 'Error cargando historias de exito' });
+  }
+};
+
+exports.crearHistoriaExito = async (req, res) => {
+  try {
+    const { nombres, ciudad, historia, contacto } = req.body;
+    if (!nombres || nombres.trim().length < 3) {
+      return res.status(400).json({ message: 'Agrega los nombres de la pareja.' });
+    }
+    if (!historia || historia.trim().length < 30) {
+      return res.status(400).json({ message: 'Cuenta una historia un poco mas completa.' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ message: 'Agrega una foto donde salgan ambos.' });
+    }
+
+    const imagen = await subirImagenHistoria(req.file);
+    const nueva = await HistoriaExito.create({
+      autor: req.user._id,
+      nombres: nombres.trim(),
+      ciudad: ciudad || '',
+      historia: historia.trim(),
+      contacto: contacto || '',
+      imagen,
+      estado: 'pendiente',
+    });
+    await nueva.populate('autor', 'nombre email foto ciudad');
+    res.status(201).json({
+      historia: nueva,
+      message: 'Historia enviada. La cuenta oficial la revisara antes de publicarla.',
+    });
+  } catch (error) {
+    console.error('Error creando historia de exito:', error);
+    res.status(500).json({ message: 'Error enviando historia de exito' });
+  }
+};
+
+exports.revisarHistoriaExito = async (req, res) => {
+  try {
+    if (!assertAdmin(req, res)) return;
+    const { accion, motivo } = req.body;
+    if (!['aprobar', 'rechazar'].includes(accion)) {
+      return res.status(400).json({ message: 'Accion invalida.' });
+    }
+    if (accion === 'rechazar' && (!motivo || motivo.trim().length < 5)) {
+      return res.status(400).json({ message: 'Explica por que se rechaza la historia.' });
+    }
+
+    const historia = await HistoriaExito.findByIdAndUpdate(
+      req.params.id,
+      {
+        estado: accion === 'aprobar' ? 'aprobada' : 'rechazada',
+        motivoRechazo: accion === 'rechazar' ? motivo.trim() : '',
+        revisadoPor: req.user._id,
+        revisadoEn: new Date(),
+      },
+      { new: true }
+    )
+      .populate('autor', 'nombre email foto ciudad')
+      .populate('revisadoPor', 'nombre email');
+
+    if (!historia) return res.status(404).json({ message: 'Historia no encontrada.' });
+    res.json({
+      historia,
+      message: accion === 'aprobar'
+        ? 'Historia publicada.'
+        : 'Historia rechazada con motivo guardado.',
+    });
+  } catch (error) {
+    console.error('Error revisando historia de exito:', error);
+    res.status(500).json({ message: 'Error revisando historia' });
   }
 };
 

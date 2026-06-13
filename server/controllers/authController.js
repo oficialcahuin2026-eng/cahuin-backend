@@ -37,44 +37,52 @@ exports.syncClerk = async (req, res) => {
     }
 
     const emailLimpio = email.toLowerCase();
+    let usuario = await User.findOne({ email: emailLimpio });
 
-    // Upsert: Si el usuario existe, lo actualiza (le pone foto si le faltaba). 
-    // Si NO existe, lo crea saltándose los ganchos problemáticos de encriptación manual.
-    const usuario = await User.findOneAndUpdate(
-      { email: emailLimpio }, // Busca por este email
-      {
-        $setOnInsert: { // Estos campos SOLO se aplican si es un usuario totalmente nuevo
-          nombre: nombre || 'Cahuinero',
-          password: 'ClerkPassword123!',
-          telefono: '',
-          fechaNacimiento: null,
-          ciudad: 'Por definir',
-          region: 'Por definir',
-          genero: 'Otro',
-          preferencia: 'Todxs',
-          edad: 18,
-          aceptaTerminos: true,
-        },
-        // Esto se aplica siempre (sea nuevo o antiguo) para asegurar que la foto esté al día
-        $set: { 
-          ...(fotoUrl && { foto: fotoUrl }),
-        },
-        $addToSet: {
-          ...(fotoUrl && { fotos: fotoUrl }),
-        }
-      },
-      { new: true, upsert: true, runValidators: true } // Upsert crea el documento si no lo encuentra
-    );
+    if (!usuario) {
+      usuario = await User.create({
+        nombre: nombre || 'Cahuinero',
+        email: emailLimpio,
+        password: 'ClerkPassword123!',
+        telefono: '',
+        fechaNacimiento: null,
+        ciudad: 'Por definir',
+        region: 'Por definir',
+        genero: 'Otro',
+        preferencia: 'Todxs',
+        edad: 18,
+        aceptaTerminos: true,
+        foto: fotoUrl || '',
+        fotos: fotoUrl ? [fotoUrl] : [],
+        fotoSocialBloqueada: false,
+      });
+    } else {
+      const update = {};
+      const tieneFotoPropia = Boolean(usuario.foto || (usuario.fotos && usuario.fotos.length > 0));
+
+      if (!usuario.fotoSocialBloqueada && fotoUrl && !tieneFotoPropia) {
+        update.foto = fotoUrl;
+        update.$addToSet = { fotos: fotoUrl };
+      }
+      if (!usuario.nombre && nombre) update.nombre = nombre;
+
+      if (Object.keys(update).length > 0) {
+        usuario = await User.findOneAndUpdate(
+          { email: emailLimpio },
+          update,
+          { new: true, runValidators: true }
+        );
+      }
+    }
 
     const tokenLocal = generarToken(usuario._id);
 
-    res.status(200).json({ 
-        usuario: sanitizarUsuario(usuario),
-        token: tokenLocal 
+    res.status(200).json({
+      usuario: sanitizarUsuario(usuario),
+      token: tokenLocal,
     });
   } catch (error) {
-    // 🌟 AQUÍ ESTÁ EL TRUCO: Si falla, ahora nos dirá EXACTAMENTE por qué en la consola
-    console.error("🔥 Error crítico en syncClerk:", error);
+    console.error('Error critico en syncClerk:', error);
     res.status(500).json({ message: `Error del servidor: ${error.message}` });
   }
 };

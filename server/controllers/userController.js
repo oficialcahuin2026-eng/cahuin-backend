@@ -4,6 +4,13 @@ const Match = require('../models/Match');
 const PLAN_PIOLA_O_SUPERIOR = ['piola', 'a_fondo', 'plus', 'gold', 'platinum'];
 const PLAN_A_FONDO_O_SUPERIOR = ['a_fondo', 'gold', 'platinum'];
 const tienePlan = (usuario, planes) => Boolean(usuario?.isPremium && planes.includes(usuario.premiumPlan || 'gold'));
+const ADMIN_EMAIL = 'oficialcahuin2026@gmail.com';
+const esAdmin = (usuario) => (usuario?.email || '').toLowerCase() === ADMIN_EMAIL;
+const assertAdmin = (req, res) => {
+  if (esAdmin(req.user)) return true;
+  res.status(403).json({ message: 'Solo la cuenta oficial puede revisar esto.' });
+  return false;
+};
 const Reporte = require('../models/Reporte');
 const PreguntaAnonima = require('../models/PreguntaAnonima');
 const { Readable } = require('stream');
@@ -257,15 +264,75 @@ exports.bloquearUsuario = async (req, res) => {
 
 exports.reportarUsuario = async (req, res) => {
   try {
-    await Reporte.create({ denunciante: req.user._id, reportado: req.params.id });
+    const { motivo, detalle, origen } = req.body;
+    if (req.params.id === req.user._id.toString()) {
+      return res.status(400).json({ message: 'No puedes reportarte a ti mismo.' });
+    }
+    await Reporte.create({
+      denunciante: req.user._id,
+      reportado: req.params.id,
+      motivo: motivo || 'Comportamiento inapropiado',
+      detalle: detalle || '',
+      origen: ['perfil', 'chat'].includes(origen) ? origen : 'perfil',
+    });
     res.json({ message: 'Usuario reportado exitosamente. Lo revisaremos.' });
   } catch (error) { res.status(500).json({ message: 'Error al procesar el reporte' }); }
+};
+
+exports.listarReportesAdmin = async (req, res) => {
+  try {
+    if (!assertAdmin(req, res)) return;
+    const { estado = 'pendiente' } = req.query;
+    const filtro = estado === 'todos' ? {} : { estado };
+    const reportes = await Reporte.find(filtro)
+      .populate('denunciante', 'nombre email foto')
+      .populate('reportado', 'nombre email foto edad ciudad region')
+      .populate('revisadoPor', 'nombre email')
+      .sort({ createdAt: -1 })
+      .limit(80)
+      .lean();
+    res.json({ reportes });
+  } catch (error) {
+    res.status(500).json({ message: 'Error cargando reportes' });
+  }
+};
+
+exports.resolverReporteAdmin = async (req, res) => {
+  try {
+    if (!assertAdmin(req, res)) return;
+    const { estado, resolucion } = req.body;
+    const estadosValidos = ['revisado', 'resuelto', 'descartado'];
+    if (!estadosValidos.includes(estado)) {
+      return res.status(400).json({ message: 'Estado invalido.' });
+    }
+    if (!resolucion || resolucion.trim().length < 4) {
+      return res.status(400).json({ message: 'Explica brevemente la resolucion.' });
+    }
+    const reporte = await Reporte.findByIdAndUpdate(
+      req.params.id,
+      {
+        estado,
+        resolucion: resolucion.trim(),
+        revisadoPor: req.user._id,
+        revisadoEn: new Date(),
+      },
+      { new: true }
+    )
+      .populate('denunciante', 'nombre email foto')
+      .populate('reportado', 'nombre email foto edad ciudad region')
+      .populate('revisadoPor', 'nombre email');
+    if (!reporte) return res.status(404).json({ message: 'Reporte no encontrado.' });
+    res.json({ reporte, message: 'Reporte actualizado.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error actualizando reporte' });
+  }
 };
 
 exports.actualizarFotosMult = async (req, res) => {
   try {
     let fotosMantenidas = req.body.fotosExistentes ? JSON.parse(req.body.fotosExistentes) : [];
     let nuevasFotos = req.files && req.files.length > 0 ? await Promise.all(req.files.map(subirFotoPerfil)) : [];
+    const fotoSocialBloqueada = req.body.fotoSocialBloqueada === 'true' || nuevasFotos.length > 0;
 
     // ðŸŒŸ BLINDAJE: Evita que crashee si dbUser es nulo
     let dbUser = await User.findById(req.user._id);
@@ -274,18 +341,19 @@ exports.actualizarFotosMult = async (req, res) => {
     const tieneFotosActuales = dbUser && dbUser.fotos && dbUser.fotos.length > 0;
 
     if (fotosMantenidas.length === 0 && nuevasFotos.length === 0) {
-      if (!tieneFotosActuales) {
-        nuevasFotos.push('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=400');
-      } else {
-        return res.json(dbUser);
-      }
+      const usuario = await User.findByIdAndUpdate(
+        req.user._id,
+        { fotos: [], foto: '', fotoSocialBloqueada: true },
+        { new: true, upsert: true }
+      ).select('-password');
+      return res.json(usuario);
     }
 
     const fotosFinales = [...fotosMantenidas, ...nuevasFotos].slice(0, 6);
     
     const usuario = await User.findByIdAndUpdate(
       req.user._id, 
-      { fotos: fotosFinales, foto: fotosFinales[0] || '' }, 
+      { fotos: fotosFinales, foto: fotosFinales[0] || '', fotoSocialBloqueada }, 
       { new: true, upsert: true } // Upsert salvarÃ¡ el dÃ­a si el ID venÃ­a pero no estaba creado
     ).select('-password');
 

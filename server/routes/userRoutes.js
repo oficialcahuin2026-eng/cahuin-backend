@@ -10,6 +10,8 @@ router.get('/me', proteger, userController.getMiPerfil);
 router.get('/me/vistas', proteger, userController.getVistas);
 router.get('/me/likes', proteger, userController.getLikesRecibidos);
 router.get('/me/analytics', proteger, userController.getAnalyticsPerfil);
+router.get('/admin/reportes', proteger, userController.listarReportesAdmin);
+router.patch('/admin/reportes/:id', proteger, userController.resolverReporteAdmin);
 router.get('/trending', proteger, userController.getTrending); 
 router.put('/me', proteger, userController.actualizarPerfil);
 router.get('/descubrir', proteger, userController.descubrir);

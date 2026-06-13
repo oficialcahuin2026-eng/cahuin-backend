@@ -18,6 +18,15 @@ const KARAOKE_SONGS = [
   { artista: 'Los Bunkers', cancion: 'Bailando solo', parte: 'uno pregunta y el otro contesta con el coro' },
 ];
 
+const MOTIVOS_REPORTE = [
+  'Perfil falso o suplantacion',
+  'Acoso o insultos',
+  'Fotos o contenido inapropiado',
+  'Spam o intento de estafa',
+  'Menor de edad',
+  'Otro',
+];
+
 const PREGUNTAS_MADRUGADA = [
   '¿Qué cosa te da calma cuando todo está raro?',
   '¿Cuál fue la última decisión que te cambió un poquito?',
@@ -57,6 +66,10 @@ export default function SalaChatScreen({ route, navigation }) {
 
   // 🌟 NUEVO ESTADO PARA EL CALENDARIO
   const [modalFechasVisible, setModalFechasVisible] = useState(false);
+  const [modalReporteVisible, setModalReporteVisible] = useState(false);
+  const [motivoReporte, setMotivoReporte] = useState('');
+  const [detalleReporte, setDetalleReporte] = useState('');
+  const [enviandoReporte, setEnviandoReporte] = useState(false);
 
   const flatListRef = useRef();
   const socketRef = useRef(null);
@@ -142,15 +155,50 @@ export default function SalaChatScreen({ route, navigation }) {
   const ejecutarAccionSeguridad = async (accion, mensajeExito) => {
     try {
       if (accion === 'bloquear') await userService.bloquear(otroUsuario._id);
-      else await userService.reportar(otroUsuario._id);
-      avisar('Listo 🛡️', mensajeExito, '🛡️');
+      else {
+        await userService.reportar(otroUsuario._id, {
+          motivo: motivoReporte || 'Comportamiento inapropiado',
+          detalle: detalleReporte,
+          origen: 'chat',
+        });
+      }
+      avisar('Listo', mensajeExito, '🛡️');
       navigation.goBack();
-    } catch (error) { avisar('Error', 'No se pudo completar la acción'); }
+    } catch (error) { avisar('Error', 'No se pudo completar la accion'); }
+  };
+
+  const abrirReporteChat = () => {
+    setModalCahuin(null);
+    setMotivoReporte('');
+    setDetalleReporte('');
+    setModalReporteVisible(true);
+  };
+
+  const enviarReporteChat = async () => {
+    if (!motivoReporte) {
+      avisar('Falta motivo', 'Elige por que quieres reportar este chat.');
+      return;
+    }
+    if (motivoReporte === 'Otro' && detalleReporte.trim().length < 4) {
+      avisar('Cuentanos mas', 'Escribe brevemente que paso.');
+      return;
+    }
+    setEnviandoReporte(true);
+    try {
+      await userService.reportar(otroUsuario._id, { motivo: motivoReporte, detalle: detalleReporte, origen: 'chat' });
+      setModalReporteVisible(false);
+      avisar('Listo', 'Usuario reportado.', '🛡️');
+      navigation.goBack();
+    } catch {
+      avisar('Error', 'No se pudo completar la accion');
+    } finally {
+      setEnviandoReporte(false);
+    }
   };
 
   const mostrarMenuSeguridad = () => {
     avisar('Seguridad', '¿Qué quieres hacer con este chat?', '🛡️', [
-      { label: 'Reportar', variant: 'danger', onPress: () => { setModalCahuin(null); ejecutarAccionSeguridad('reportar', 'Usuario reportado.'); } },
+      { label: 'Reportar', variant: 'danger', onPress: abrirReporteChat },
       { label: 'Bloquear', variant: 'danger', onPress: () => { setModalCahuin(null); ejecutarAccionSeguridad('bloquear', 'Usuario bloqueado.'); } },
       { label: 'Cancelar', variant: 'secondary', onPress: () => setModalCahuin(null) },
     ]);
@@ -476,6 +524,35 @@ export default function SalaChatScreen({ route, navigation }) {
       </Modal>
 
       {/* 🌟 MODAL DE DISPONIBILIDAD DEL MATCH */}
+      <Modal visible={modalReporteVisible} transparent animationType="fade" onRequestClose={() => setModalReporteVisible(false)}>
+        <View style={styles.modalFondo}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitulo}>Reportar chat</Text>
+            <Text style={styles.modalSubtitulo}>Elige el motivo. La cuenta oficial revisara el reporte.</Text>
+            <View style={styles.motivosWrap}>
+              {MOTIVOS_REPORTE.map((motivo) => (
+                <TouchableOpacity key={motivo} style={[styles.motivoChip, motivoReporte === motivo && styles.motivoChipActive]} onPress={() => setMotivoReporte(motivo)}>
+                  <Text style={[styles.motivoChipText, motivoReporte === motivo && styles.motivoChipTextActive]}>{motivo}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TextInput
+              value={detalleReporte}
+              onChangeText={setDetalleReporte}
+              placeholder={motivoReporte === 'Otro' ? 'Explica que paso...' : 'Detalle opcional'}
+              placeholderTextColor={COLORS.textMuted}
+              multiline
+              textAlignVertical="top"
+              style={styles.detalleReporteInput}
+            />
+            <View style={styles.modalBotones}>
+              <TouchableOpacity style={styles.btnCancelar} onPress={() => setModalReporteVisible(false)}><Text style={styles.btnCancelarTexto}>Cancelar</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.btnGuardar} onPress={enviarReporteChat} disabled={enviandoReporte}>{enviandoReporte ? <ActivityIndicator color="#FFF" /> : <Text style={styles.btnGuardarTexto}>Enviar</Text>}</TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={modalFechasVisible} transparent animationType="fade">
         <View style={styles.modalFondo}>
           <View style={[styles.modalCard, { height: 'auto', paddingBottom: 40 }]}>

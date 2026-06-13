@@ -146,11 +146,12 @@ export default function EditarPerfilScreen({ navigation }) {
     try {
       const formData = new FormData();
       formData.append('fotosExistentes', JSON.stringify(fotosGaleria.filter((f) => typeof f === 'string' && f.startsWith('http'))));
+      formData.append('fotoSocialBloqueada', 'true');
       const fotosNuevas = fotosGaleria.filter((f) => typeof f === 'string' && !f.startsWith('http'));
       fotosNuevas.forEach((uri, idx) => {
         formData.append('nuevasFotos', { uri: Platform.OS === 'android' ? uri : uri.replace('file://', ''), name: `f_${idx}.jpg`, type: 'image/jpeg' });
       });
-      await userService.actualizarFotos(formData);
+      const fotoRes = await userService.actualizarFotos(formData);
 
       const res = await userService.actualizar({
         nombre,
@@ -165,8 +166,11 @@ export default function EditarPerfilScreen({ navigation }) {
         cancion,
         fechasDisponibles,
       });
+      const usuarioFotos = fotoRes?.usuario || fotoRes || {};
+      const fotosGuardadas = Array.isArray(usuarioFotos.fotos) ? usuarioFotos.fotos : fotosGaleria;
       actualizarUsuario({
         ...(res.usuario || {}),
+        ...usuarioFotos,
         nombre,
         descripcion,
         altura,
@@ -178,7 +182,9 @@ export default function EditarPerfilScreen({ navigation }) {
         categoriasExplorar,
         cancion,
         fechasDisponibles,
-        fotos: fotosGaleria // Asumimos que se guardaron correctamente para actualizar local
+        fotos: fotosGuardadas,
+        foto: usuarioFotos.foto || fotosGuardadas[0] || '',
+        fotoSocialBloqueada: true,
       });
       setModalInfo({
         title: '¡Perfil Actualizado!',

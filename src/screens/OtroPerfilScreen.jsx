@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Modal,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -17,6 +18,15 @@ import CahuinModal from '../components/CahuinModal';
 import CahuinTextField from '../components/CahuinTextField';
 import { FONTS, RADIUS, SHADOWS, SPACING } from '../utils/theme';
 
+const MOTIVOS_REPORTE = [
+  'Perfil falso o suplantacion',
+  'Acoso o insultos',
+  'Fotos o contenido inapropiado',
+  'Spam o intento de estafa',
+  'Menor de edad',
+  'Otro',
+];
+
 export default function OtroPerfilScreen({ route, navigation }) {
   const { usuario: perfilResumido } = route.params;
   const [perfil, setPerfil] = useState(perfilResumido);
@@ -25,6 +35,10 @@ export default function OtroPerfilScreen({ route, navigation }) {
   const [preguntaAnonima, setPreguntaAnonima] = useState('');
   const [enviandoPregunta, setEnviandoPregunta] = useState(false);
   const [modalInfo, setModalInfo] = useState(null);
+  const [modalReporteVisible, setModalReporteVisible] = useState(false);
+  const [motivoReporte, setMotivoReporte] = useState('');
+  const [detalleReporte, setDetalleReporte] = useState('');
+  const [enviandoReporte, setEnviandoReporte] = useState(false);
 
   const { COLORS } = useTheme();
   const styles = getStyles(COLORS);
@@ -60,22 +74,35 @@ export default function OtroPerfilScreen({ route, navigation }) {
   };
 
   const reportarPerfil = () => {
-    avisar('Reportar perfil', `Vamos a revisar el perfil de ${perfil.nombre}.`, '🛡️', [
-      { label: 'Cancelar', variant: 'secondary', onPress: () => setModalInfo(null) },
-      {
-        label: 'Reportar',
-        variant: 'danger',
-        onPress: async () => {
-          setModalInfo(null);
-          try {
-            await userService.reportar(perfil._id);
-            avisar('Listo', 'Gracias. Revisaremos este perfil.', '🛡️');
-          } catch {
-            avisar('Error', 'No pudimos reportar el perfil.');
-          }
-        },
-      },
-    ]);
+    setMotivoReporte('');
+    setDetalleReporte('');
+    setModalReporteVisible(true);
+  };
+
+  const enviarReporte = async () => {
+    if (!motivoReporte) {
+      avisar('Falta motivo', 'Elige por que quieres reportar este perfil.');
+      return;
+    }
+    if (motivoReporte === 'Otro' && detalleReporte.trim().length < 4) {
+      avisar('Cuentanos mas', 'Escribe brevemente que paso.');
+      return;
+    }
+
+    setEnviandoReporte(true);
+    try {
+      await userService.reportar(perfil._id, {
+        motivo: motivoReporte,
+        detalle: detalleReporte,
+        origen: 'perfil',
+      });
+      setModalReporteVisible(false);
+      avisar('Listo', 'Gracias. La cuenta oficial revisara este reporte.', '🛡️');
+    } catch {
+      avisar('Error', 'No pudimos reportar el perfil.');
+    } finally {
+      setEnviandoReporte(false);
+    }
   };
 
   return (
@@ -187,6 +214,42 @@ export default function OtroPerfilScreen({ route, navigation }) {
           <View style={{ height: 40 }} />
         </View>
       </ScrollView>
+      <Modal visible={modalReporteVisible} transparent animationType="fade" onRequestClose={() => setModalReporteVisible(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.reporteModal}>
+            <Text style={styles.reporteTitle}>Reportar perfil</Text>
+            <Text style={styles.reporteSubtitle}>Elige el motivo. La cuenta oficial revisara el caso.</Text>
+            <View style={styles.motivosWrap}>
+              {MOTIVOS_REPORTE.map((motivo) => (
+                <TouchableOpacity
+                  key={motivo}
+                  style={[styles.motivoChip, motivoReporte === motivo && styles.motivoChipActive]}
+                  onPress={() => setMotivoReporte(motivo)}
+                >
+                  <Text style={[styles.motivoChipText, motivoReporte === motivo && styles.motivoChipTextActive]}>{motivo}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TextInput
+              value={detalleReporte}
+              onChangeText={setDetalleReporte}
+              placeholder={motivoReporte === 'Otro' ? 'Explica que paso...' : 'Detalle opcional'}
+              placeholderTextColor={COLORS.textMuted}
+              multiline
+              textAlignVertical="top"
+              style={styles.detalleReporteInput}
+            />
+            <View style={styles.reporteActions}>
+              <TouchableOpacity style={[styles.reporteBtn, styles.reporteCancel]} onPress={() => setModalReporteVisible(false)}>
+                <Text style={styles.reporteCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.reporteBtn, styles.reporteSubmit]} onPress={enviarReporte} disabled={enviandoReporte}>
+                {enviandoReporte ? <ActivityIndicator color="#FFF" /> : <Text style={styles.reporteSubmitText}>Enviar</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       <CahuinModal visible={!!modalInfo} title={modalInfo?.title} message={modalInfo?.message} emoji={modalInfo?.emoji} actions={modalInfo?.actions || []} onClose={() => setModalInfo(null)} />
     </SafeAreaView>
   );
@@ -232,4 +295,20 @@ const getStyles = (COLORS) => StyleSheet.create({
   cancionInfo: { flex: 1 },
   cancionLabel: { color: COLORS.gris, fontSize: 12, marginBottom: 2 },
   cancionNombre: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '900' },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.62)', justifyContent: 'center', padding: SPACING[5] },
+  reporteModal: { backgroundColor: COLORS.tarjeta, borderRadius: 24, borderWidth: 1, borderColor: COLORS.border, padding: SPACING[5] },
+  reporteTitle: { color: COLORS.textPrimary, fontSize: 24, fontWeight: '900', fontFamily: FONTS.display },
+  reporteSubtitle: { color: COLORS.textMuted, fontSize: 14, lineHeight: 20, marginTop: 8 },
+  motivosWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: SPACING[4] },
+  motivoChip: { borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, paddingVertical: 9, paddingHorizontal: 12, backgroundColor: COLORS.fondo },
+  motivoChipActive: { backgroundColor: COLORS.primario, borderColor: COLORS.primario },
+  motivoChipText: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '800' },
+  motivoChipTextActive: { color: '#FFF' },
+  detalleReporteInput: { minHeight: 110, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.fondo, color: COLORS.textPrimary, padding: 14, marginTop: SPACING[4], fontWeight: '700' },
+  reporteActions: { flexDirection: 'row', gap: 10, marginTop: SPACING[4] },
+  reporteBtn: { flex: 1, minHeight: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  reporteCancel: { backgroundColor: COLORS.fondo, borderWidth: 1, borderColor: COLORS.border },
+  reporteSubmit: { backgroundColor: COLORS.primario },
+  reporteCancelText: { color: COLORS.textPrimary, fontWeight: '900' },
+  reporteSubmitText: { color: '#FFF', fontWeight: '900' },
 });

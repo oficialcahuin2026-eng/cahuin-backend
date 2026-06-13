@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import { socialService } from '../services/api';
 import CahuinModal from '../components/CahuinModal';
 import { FONTS, SHADOWS, SPACING } from '../utils/theme';
@@ -17,9 +18,13 @@ const FALLBACK_CAHUIN = {
   miVoto: null,
 };
 
+const ADMIN_EMAIL = 'oficialcahuin2026@gmail.com';
+
 export default function CahuinDelDiaScreen({ navigation }) {
+  const { usuario } = useAuth();
   const { COLORS, isDarkMode } = useTheme();
   const styles = getStyles(COLORS, isDarkMode);
+  const esAdmin = (usuario?.email || '').toLowerCase() === ADMIN_EMAIL;
   const [data, setData] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [votando, setVotando] = useState(false);
@@ -71,6 +76,11 @@ export default function CahuinDelDiaScreen({ navigation }) {
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
         <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
       </TouchableOpacity>
+      {esAdmin ? (
+        <TouchableOpacity onPress={() => navigation.navigate('HistoriasExito')} style={styles.adminShortcut}>
+          <Ionicons name="share-social" size={22} color={COLORS.primario} />
+        </TouchableOpacity>
+      ) : null}
       <Text style={styles.title}>Cahuín del Día</Text>
       <Text style={styles.subtitle}>Todos votan. Mañana tus primeros matches priorizan gente que piensa igual.</Text>
 
@@ -113,6 +123,7 @@ export default function CahuinDelDiaScreen({ navigation }) {
 const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg, padding: SPACING[5] },
   back: { width: 44, height: 44, borderRadius: 22, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : COLORS.tarjeta, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : COLORS.border, alignItems: 'center', justifyContent: 'center', marginBottom: SPACING[5], ...(isDarkMode ? {} : SHADOWS.light) },
+  adminShortcut: { position: 'absolute', top: SPACING[5], right: SPACING[5], width: 44, height: 44, borderRadius: 22, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : COLORS.tarjeta, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : COLORS.border, alignItems: 'center', justifyContent: 'center', zIndex: 5, ...(isDarkMode ? {} : SHADOWS.light) },
   title: { color: COLORS.textPrimary, fontSize: 36, fontWeight: '900', fontFamily: FONTS.display },
   subtitle: { color: COLORS.textMuted, fontSize: 16, lineHeight: 23, marginTop: 8, marginBottom: SPACING[6] },
   card: { borderRadius: 30, padding: SPACING[5], minHeight: 460, justifyContent: 'center', ...SHADOWS.dark },

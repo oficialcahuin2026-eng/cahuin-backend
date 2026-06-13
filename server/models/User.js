@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema({
   password:    { type: String, required: true },
   foto:        { type: String, default: '' },
   fotos:       { type: [String], default: [] },
+  fotoSocialBloqueada: { type: Boolean, default: false },
   ciudad:      { type: String, default: 'Por definir' },
   region:      { type: String, default: 'Por definir' },
 

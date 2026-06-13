@@ -12,6 +12,10 @@ router.post('/historias/:id/reaccionar', socialController.reaccionarHistoria);
 router.post('/historias/:id/comentar', socialController.comentarHistoria);
 router.post('/historias/:id/sumarse', socialController.sumarseHistoria);
 
+router.get('/historias-exito', socialController.listarHistoriasExito);
+router.post('/historias-exito', upload.single('imagen'), socialController.crearHistoriaExito);
+router.patch('/historias-exito/:id/revisar', socialController.revisarHistoriaExito);
+
 router.get('/cahuin-dia', socialController.getCahuinDiario);
 router.post('/cahuin-dia/votar', socialController.votarCahuinDiario);
 

@@ -1,0 +1,395 @@
+﻿diff --git a/server/controllers/authController.js b/server/controllers/authController.js
+index 8a1939e..523dc73 100644
+--- a/server/controllers/authController.js
++++ b/server/controllers/authController.js
+@@ -37,44 +37,52 @@ exports.syncClerk = async (req, res) => {
+     }
+ 
+     const emailLimpio = email.toLowerCase();
++    let usuario = await User.findOne({ email: emailLimpio });
+ 
+-    // Upsert: Si el usuario existe, lo actualiza (le pone foto si le faltaba). 
+-    // Si NO existe, lo crea salt├índose los ganchos problem├íticos de encriptaci├│n manual.
+-    const usuario = await User.findOneAndUpdate(
+-      { email: emailLimpio }, // Busca por este email
+-      {
+-        $setOnInsert: { // Estos campos SOLO se aplican si es un usuario totalmente nuevo
+-          nombre: nombre || 'Cahuinero',
+-          password: 'ClerkPassword123!',
+-          telefono: '',
+-          fechaNacimiento: null,
+-          ciudad: 'Por definir',
+-          region: 'Por definir',
+-          genero: 'Otro',
+-          preferencia: 'Todxs',
+-          edad: 18,
+-          aceptaTerminos: true,
+-        },
+-        // Esto se aplica siempre (sea nuevo o antiguo) para asegurar que la foto est├® al d├¡a
+-        $set: { 
+-          ...(fotoUrl && { foto: fotoUrl }),
+-        },
+-        $addToSet: {
+-          ...(fotoUrl && { fotos: fotoUrl }),
+-        }
+-      },
+-      { new: true, upsert: true, runValidators: true } // Upsert crea el documento si no lo encuentra
+-    );
++    if (!usuario) {
++      usuario = await User.create({
++        nombre: nombre || 'Cahuinero',
++        email: emailLimpio,
++        password: 'ClerkPassword123!',
++        telefono: '',
++        fechaNacimiento: null,
++        ciudad: 'Por definir',
++        region: 'Por definir',
++        genero: 'Otro',
++        preferencia: 'Todxs',
++        edad: 18,
++        aceptaTerminos: true,
++        foto: fotoUrl || '',
++        fotos: fotoUrl ? [fotoUrl] : [],
++        fotoSocialBloqueada: false,
++      });
++    } else {
++      const update = {};
++      const tieneFotoPropia = Boolean(usuario.foto || (usuario.fotos && usuario.fotos.length > 0));
++
++      if (!usuario.fotoSocialBloqueada && fotoUrl && !tieneFotoPropia) {
++        update.foto = fotoUrl;
++        update.$addToSet = { fotos: fotoUrl };
++      }
++      if (!usuario.nombre && nombre) update.nombre = nombre;
++
++      if (Object.keys(update).length > 0) {
++        usuario = await User.findOneAndUpdate(
++          { email: emailLimpio },
++          update,
++          { new: true, runValidators: true }
++        );
++      }
++    }
+ 
+     const tokenLocal = generarToken(usuario._id);
+ 
+-    res.status(200).json({ 
+-        usuario: sanitizarUsuario(usuario),
+-        token: tokenLocal 
++    res.status(200).json({
++      usuario: sanitizarUsuario(usuario),
++      token: tokenLocal,
+     });
+   } catch (error) {
+-    // ­ƒîƒ AQU├ì EST├ü EL TRUCO: Si falla, ahora nos dir├í EXACTAMENTE por qu├® en la consola
+-    console.error("­ƒöÑ Error cr├¡tico en syncClerk:", error);
++    console.error('Error critico en syncClerk:', error);
+     res.status(500).json({ message: `Error del servidor: ${error.message}` });
+   }
+ };
+diff --git a/server/controllers/socialController.js b/server/controllers/socialController.js
+index 82fe5e4..bbf9bfe 100644
+--- a/server/controllers/socialController.js
++++ b/server/controllers/socialController.js
+@@ -1,5 +1,6 @@
+ const { Readable } = require('stream');
+ const Historia = require('../models/Historia');
++const HistoriaExito = require('../models/HistoriaExito');
+ const CahuinDiario = require('../models/CahuinDiario');
+ const Panorama = require('../models/Panorama');
+ const PanoramaSwipe = require('../models/PanoramaSwipe');
+@@ -10,6 +11,13 @@ const Botella = require('../models/Botella');
+ const cloudinary = require('../config/cloudinary');
+ const eventosOficiales = require('../utils/seedEventos');
+ const { normalizarRegionChile, inferirRegionPorCiudad } = require('../utils/chileLocations');
++const ADMIN_EMAIL = 'oficialcahuin2026@gmail.com';
++const esAdmin = (usuario) => (usuario?.email || '').toLowerCase() === ADMIN_EMAIL;
++const assertAdmin = (req, res) => {
++  if (esAdmin(req.user)) return true;
++  res.status(403).json({ message: 'Solo la cuenta oficial puede revisar esto.' });
++  return false;
++};
+ 
+ const CAHUINES = [
+   'Me encanta la pizza con pi├▒a y el que opine lo contrario que me pelee.',
+@@ -218,6 +226,99 @@ exports.crearHistoria = async (req, res) => {
+   }
+ };
+ 
++exports.listarHistoriasExito = async (req, res) => {
++  try {
++    const admin = esAdmin(req.user);
++    const { estado } = req.query;
++    const filtro = admin && estado && estado !== 'publicadas'
++      ? { estado }
++      : { estado: 'aprobada' };
++
++    const historias = await HistoriaExito.find(filtro)
++      .populate('autor', 'nombre email foto ciudad')
++      .populate('revisadoPor', 'nombre email')
++      .sort({ createdAt: -1 })
++      .limit(admin ? 80 : 20)
++      .lean();
++
++    res.json({ historias, esAdmin: admin });
++  } catch (error) {
++    console.error('Error cargando historias de exito:', error);
++    res.status(500).json({ message: 'Error cargando historias de exito' });
++  }
++};
++
++exports.crearHistoriaExito = async (req, res) => {
++  try {
++    const { nombres, ciudad, historia, contacto } = req.body;
++    if (!nombres || nombres.trim().length < 3) {
++      return res.status(400).json({ message: 'Agrega los nombres de la pareja.' });
++    }
++    if (!historia || historia.trim().length < 30) {
++      return res.status(400).json({ message: 'Cuenta una historia un poco mas completa.' });
++    }
++    if (!req.file) {
++      return res.status(400).json({ message: 'Agrega una foto donde salgan ambos.' });
++    }
++
++    const imagen = await subirImagenHistoria(req.file);
++    const nueva = await HistoriaExito.create({
++      autor: req.user._id,
++      nombres: nombres.trim(),
++      ciudad: ciudad || '',
++      historia: historia.trim(),
++      contacto: contacto || '',
++      imagen,
++      estado: 'pendiente',
++    });
++    await nueva.populate('autor', 'nombre email foto ciudad');
++    res.status(201).json({
++      historia: nueva,
++      message: 'Historia enviada. La cuenta oficial la revisara antes de publicarla.',
++    });
++  } catch (error) {
++    console.error('Error creando historia de exito:', error);
++    res.status(500).json({ message: 'Error enviando historia de exito' });
++  }
++};
++
++exports.revisarHistoriaExito = async (req, res) => {
++  try {
++    if (!assertAdmin(req, res)) return;
++    const { accion, motivo } = req.body;
++    if (!['aprobar', 'rechazar'].includes(accion)) {
++      return res.status(400).json({ message: 'Accion invalida.' });
++    }
++    if (accion === 'rechazar' && (!motivo || motivo.trim().length < 5)) {
++      return res.status(400).json({ message: 'Explica por que se rechaza la historia.' });
++    }
++
++    const historia = await HistoriaExito.findByIdAndUpdate(
++      req.params.id,
++      {
++        estado: accion === 'aprobar' ? 'aprobada' : 'rechazada',
++        motivoRechazo: accion === 'rechazar' ? motivo.trim() : '',
++        revisadoPor: req.user._id,
++        revisadoEn: new Date(),
++      },
++      { new: true }
++    )
++      .populate('autor', 'nombre email foto ciudad')
++      .populate('revisadoPor', 'nombre email');
++
++    if (!historia) return res.status(404).json({ message: 'Historia no encontrada.' });
++    res.json({
++      historia,
++      message: accion === 'aprobar'
++        ? 'Historia publicada.'
++        : 'Historia rechazada con motivo guardado.',
++    });
++  } catch (error) {
++    console.error('Error revisando historia de exito:', error);
++    res.status(500).json({ message: 'Error revisando historia' });
++  }
++};
++
+ exports.reaccionarHistoria = async (req, res) => {
+   try {
+     const historia = await Historia.findById(req.params.id);
+diff --git a/server/controllers/userController.js b/server/controllers/userController.js
+index b462133..c76d75d 100644
+--- a/server/controllers/userController.js
++++ b/server/controllers/userController.js
+@@ -4,6 +4,13 @@ const Match = require('../models/Match');
+ const PLAN_PIOLA_O_SUPERIOR = ['piola', 'a_fondo', 'plus', 'gold', 'platinum'];
+ const PLAN_A_FONDO_O_SUPERIOR = ['a_fondo', 'gold', 'platinum'];
+ const tienePlan = (usuario, planes) => Boolean(usuario?.isPremium && planes.includes(usuario.premiumPlan || 'gold'));
++const ADMIN_EMAIL = 'oficialcahuin2026@gmail.com';
++const esAdmin = (usuario) => (usuario?.email || '').toLowerCase() === ADMIN_EMAIL;
++const assertAdmin = (req, res) => {
++  if (esAdmin(req.user)) return true;
++  res.status(403).json({ message: 'Solo la cuenta oficial puede revisar esto.' });
++  return false;
++};
+ const Reporte = require('../models/Reporte');
+ const PreguntaAnonima = require('../models/PreguntaAnonima');
+ const { Readable } = require('stream');
+@@ -257,15 +264,75 @@ exports.bloquearUsuario = async (req, res) => {
+ 
+ exports.reportarUsuario = async (req, res) => {
+   try {
+-    await Reporte.create({ denunciante: req.user._id, reportado: req.params.id });
++    const { motivo, detalle, origen } = req.body;
++    if (req.params.id === req.user._id.toString()) {
++      return res.status(400).json({ message: 'No puedes reportarte a ti mismo.' });
++    }
++    await Reporte.create({
++      denunciante: req.user._id,
++      reportado: req.params.id,
++      motivo: motivo || 'Comportamiento inapropiado',
++      detalle: detalle || '',
++      origen: ['perfil', 'chat'].includes(origen) ? origen : 'perfil',
++    });
+     res.json({ message: 'Usuario reportado exitosamente. Lo revisaremos.' });
+   } catch (error) { res.status(500).json({ message: 'Error al procesar el reporte' }); }
+ };
+ 
++exports.listarReportesAdmin = async (req, res) => {
++  try {
++    if (!assertAdmin(req, res)) return;
++    const { estado = 'pendiente' } = req.query;
++    const filtro = estado === 'todos' ? {} : { estado };
++    const reportes = await Reporte.find(filtro)
++      .populate('denunciante', 'nombre email foto')
++      .populate('reportado', 'nombre email foto edad ciudad region')
++      .populate('revisadoPor', 'nombre email')
++      .sort({ createdAt: -1 })
++      .limit(80)
++      .lean();
++    res.json({ reportes });
++  } catch (error) {
++    res.status(500).json({ message: 'Error cargando reportes' });
++  }
++};
++
++exports.resolverReporteAdmin = async (req, res) => {
++  try {
++    if (!assertAdmin(req, res)) return;
++    const { estado, resolucion } = req.body;
++    const estadosValidos = ['revisado', 'resuelto', 'descartado'];
++    if (!estadosValidos.includes(estado)) {
++      return res.status(400).json({ message: 'Estado invalido.' });
++    }
++    if (!resolucion || resolucion.trim().length < 4) {
++      return res.status(400).json({ message: 'Explica brevemente la resolucion.' });
++    }
++    const reporte = await Reporte.findByIdAndUpdate(
++      req.params.id,
++      {
++        estado,
++        resolucion: resolucion.trim(),
++        revisadoPor: req.user._id,
++        revisadoEn: new Date(),
++      },
++      { new: true }
++    )
++      .populate('denunciante', 'nombre email foto')
++      .populate('reportado', 'nombre email foto edad ciudad region')
++      .populate('revisadoPor', 'nombre email');
++    if (!reporte) return res.status(404).json({ message: 'Reporte no encontrado.' });
++    res.json({ reporte, message: 'Reporte actualizado.' });
++  } catch (error) {
++    res.status(500).json({ message: 'Error actualizando reporte' });
++  }
++};
++
+ exports.actualizarFotosMult = async (req, res) => {
+   try {
+     let fotosMantenidas = req.body.fotosExistentes ? JSON.parse(req.body.fotosExistentes) : [];
+     let nuevasFotos = req.files && req.files.length > 0 ? await Promise.all(req.files.map(subirFotoPerfil)) : [];
++    const fotoSocialBloqueada = req.body.fotoSocialBloqueada === 'true' || nuevasFotos.length > 0;
+ 
+     // ├░┼©┼Æ┼© BLINDAJE: Evita que crashee si dbUser es nulo
+     let dbUser = await User.findById(req.user._id);
+@@ -274,18 +341,19 @@ exports.actualizarFotosMult = async (req, res) => {
+     const tieneFotosActuales = dbUser && dbUser.fotos && dbUser.fotos.length > 0;
+ 
+     if (fotosMantenidas.length === 0 && nuevasFotos.length === 0) {
+-      if (!tieneFotosActuales) {
+-        nuevasFotos.push('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=400');
+-      } else {
+-        return res.json(dbUser);
+-      }
++      const usuario = await User.findByIdAndUpdate(
++        req.user._id,
++        { fotos: [], foto: '', fotoSocialBloqueada: true },
++        { new: true, upsert: true }
++      ).select('-password');
++      return res.json(usuario);
+     }
+ 
+     const fotosFinales = [...fotosMantenidas, ...nuevasFotos].slice(0, 6);
+     
+     const usuario = await User.findByIdAndUpdate(
+       req.user._id, 
+-      { fotos: fotosFinales, foto: fotosFinales[0] || '' }, 
++      { fotos: fotosFinales, foto: fotosFinales[0] || '', fotoSocialBloqueada }, 
+       { new: true, upsert: true } // Upsert salvar├â┬í el d├â┬¡a si el ID ven├â┬¡a pero no estaba creado
+     ).select('-password');
+ 
+diff --git a/server/models/Reporte.js b/server/models/Reporte.js
+index f47e1ca..6b618f5 100644
+--- a/server/models/Reporte.js
++++ b/server/models/Reporte.js
+@@ -4,7 +4,12 @@ const reporteSchema = new mongoose.Schema({
+   denunciante: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+   reportado:   { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+   motivo:      { type: String, default: 'Comportamiento inapropiado' },
+-  estado:      { type: String, enum: ['pendiente', 'revisado', 'resuelto'], default: 'pendiente' }
++  detalle:     { type: String, default: '', trim: true, maxlength: 1000 },
++  origen:      { type: String, enum: ['perfil', 'chat'], default: 'perfil' },
++  estado:      { type: String, enum: ['pendiente', 'revisado', 'resuelto', 'descartado'], default: 'pendiente' },
++  resolucion:  { type: String, default: '', trim: true, maxlength: 1000 },
++  revisadoPor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
++  revisadoEn:  { type: Date, default: null },
+ }, { timestamps: true });
+ 
+-module.exports = mongoose.model('Reporte', reporteSchema);
+\ No newline at end of file
++module.exports = mongoose.model('Reporte', reporteSchema);
+diff --git a/server/models/User.js b/server/models/User.js
+index 10216ee..c65edf7 100644
+--- a/server/models/User.js
++++ b/server/models/User.js
+@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema({
+   password:    { type: String, required: true },
+   foto:        { type: String, default: '' },
+   fotos:       { type: [String], default: [] },
++  fotoSocialBloqueada: { type: Boolean, default: false },
+   ciudad:      { type: String, default: 'Por definir' },
+   region:      { type: String, default: 'Por definir' },
+ 
+diff --git a/server/routes/socialRoutes.js b/server/routes/socialRoutes.js
+index 76ab0b5..e21649a 100644
+--- a/server/routes/socialRoutes.js
++++ b/server/routes/socialRoutes.js
+@@ -12,6 +12,10 @@ router.post('/historias/:id/reaccionar', socialController.reaccionarHistoria);
+ router.post('/historias/:id/comentar', socialController.comentarHistoria);
+ router.post('/historias/:id/sumarse', socialController.sumarseHistoria);
+ 
++router.get('/historias-exito', socialController.listarHistoriasExito);
++router.post('/historias-exito', upload.single('imagen'), socialController.crearHistoriaExito);
++router.patch('/historias-exito/:id/revisar', socialController.revisarHistoriaExito);
++
+ router.get('/cahuin-dia', socialController.getCahuinDiario);
+ router.post('/cahuin-dia/votar', socialController.votarCahuinDiario);
+ 
+diff --git a/server/routes/userRoutes.js b/server/routes/userRoutes.js
+index 65ea168..c6e4570 100644
+--- a/server/routes/userRoutes.js
++++ b/server/routes/userRoutes.js
+@@ -10,6 +10,8 @@ router.get('/me', proteger, userController.getMiPerfil);
+ router.get('/me/vistas', proteger, userController.getVistas);
+ router.get('/me/likes', proteger, userController.getLikesRecibidos);
+ router.get('/me/analytics', proteger, userController.getAnalyticsPerfil);
++router.get('/admin/reportes', proteger, userController.listarReportesAdmin);
++router.patch('/admin/reportes/:id', proteger, userController.resolverReporteAdmin);
+ router.get('/trending', proteger, userController.getTrending); 
+ router.put('/me', proteger, userController.actualizarPerfil);
+ router.get('/descubrir', proteger, userController.descubrir);

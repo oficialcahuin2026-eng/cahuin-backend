@@ -1,0 +1,958 @@
+﻿diff --git a/src/screens/CahuinDelDiaScreen.jsx b/src/screens/CahuinDelDiaScreen.jsx
+index 77a69e0..00e30e9 100644
+--- a/src/screens/CahuinDelDiaScreen.jsx
++++ b/src/screens/CahuinDelDiaScreen.jsx
+@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
+ import { Ionicons } from '@expo/vector-icons';
+ import { LinearGradient } from 'expo-linear-gradient';
+ import { useTheme } from '../context/ThemeContext';
++import { useAuth } from '../context/AuthContext';
+ import { socialService } from '../services/api';
+ import CahuinModal from '../components/CahuinModal';
+ import { FONTS, SHADOWS, SPACING } from '../utils/theme';
+@@ -17,9 +18,13 @@ const FALLBACK_CAHUIN = {
+   miVoto: null,
+ };
+ 
++const ADMIN_EMAIL = 'oficialcahuin2026@gmail.com';
++
+ export default function CahuinDelDiaScreen({ navigation }) {
++  const { usuario } = useAuth();
+   const { COLORS, isDarkMode } = useTheme();
+   const styles = getStyles(COLORS, isDarkMode);
++  const esAdmin = (usuario?.email || '').toLowerCase() === ADMIN_EMAIL;
+   const [data, setData] = useState(null);
+   const [cargando, setCargando] = useState(true);
+   const [votando, setVotando] = useState(false);
+@@ -71,6 +76,11 @@ export default function CahuinDelDiaScreen({ navigation }) {
+       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
+         <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
+       </TouchableOpacity>
++      {esAdmin ? (
++        <TouchableOpacity onPress={() => navigation.navigate('HistoriasExito')} style={styles.adminShortcut}>
++          <Ionicons name="share-social" size={22} color={COLORS.primario} />
++        </TouchableOpacity>
++      ) : null}
+       <Text style={styles.title}>Cahu├¡n del D├¡a</Text>
+       <Text style={styles.subtitle}>Todos votan. Ma├▒ana tus primeros matches priorizan gente que piensa igual.</Text>
+ 
+@@ -113,6 +123,7 @@ export default function CahuinDelDiaScreen({ navigation }) {
+ const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
+   safe: { flex: 1, backgroundColor: COLORS.bg, padding: SPACING[5] },
+   back: { width: 44, height: 44, borderRadius: 22, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : COLORS.tarjeta, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : COLORS.border, alignItems: 'center', justifyContent: 'center', marginBottom: SPACING[5], ...(isDarkMode ? {} : SHADOWS.light) },
++  adminShortcut: { position: 'absolute', top: SPACING[5], right: SPACING[5], width: 44, height: 44, borderRadius: 22, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : COLORS.tarjeta, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : COLORS.border, alignItems: 'center', justifyContent: 'center', zIndex: 5, ...(isDarkMode ? {} : SHADOWS.light) },
+   title: { color: COLORS.textPrimary, fontSize: 36, fontWeight: '900', fontFamily: FONTS.display },
+   subtitle: { color: COLORS.textMuted, fontSize: 16, lineHeight: 23, marginTop: 8, marginBottom: SPACING[6] },
+   card: { borderRadius: 30, padding: SPACING[5], minHeight: 460, justifyContent: 'center', ...SHADOWS.dark },
+diff --git a/src/screens/EditarPerfilScreen.jsx b/src/screens/EditarPerfilScreen.jsx
+index 4e635f8..f83686a 100644
+--- a/src/screens/EditarPerfilScreen.jsx
++++ b/src/screens/EditarPerfilScreen.jsx
+@@ -146,11 +146,12 @@ export default function EditarPerfilScreen({ navigation }) {
+     try {
+       const formData = new FormData();
+       formData.append('fotosExistentes', JSON.stringify(fotosGaleria.filter((f) => typeof f === 'string' && f.startsWith('http'))));
++      formData.append('fotoSocialBloqueada', 'true');
+       const fotosNuevas = fotosGaleria.filter((f) => typeof f === 'string' && !f.startsWith('http'));
+       fotosNuevas.forEach((uri, idx) => {
+         formData.append('nuevasFotos', { uri: Platform.OS === 'android' ? uri : uri.replace('file://', ''), name: `f_${idx}.jpg`, type: 'image/jpeg' });
+       });
+-      await userService.actualizarFotos(formData);
++      const fotoRes = await userService.actualizarFotos(formData);
+ 
+       const res = await userService.actualizar({
+         nombre,
+@@ -165,8 +166,11 @@ export default function EditarPerfilScreen({ navigation }) {
+         cancion,
+         fechasDisponibles,
+       });
++      const usuarioFotos = fotoRes?.usuario || fotoRes || {};
++      const fotosGuardadas = Array.isArray(usuarioFotos.fotos) ? usuarioFotos.fotos : fotosGaleria;
+       actualizarUsuario({
+         ...(res.usuario || {}),
++        ...usuarioFotos,
+         nombre,
+         descripcion,
+         altura,
+@@ -178,7 +182,9 @@ export default function EditarPerfilScreen({ navigation }) {
+         categoriasExplorar,
+         cancion,
+         fechasDisponibles,
+-        fotos: fotosGaleria // Asumimos que se guardaron correctamente para actualizar local
++        fotos: fotosGuardadas,
++        foto: usuarioFotos.foto || fotosGuardadas[0] || '',
++        fotoSocialBloqueada: true,
+       });
+       setModalInfo({
+         title: '┬íPerfil Actualizado!',
+diff --git a/src/screens/HistoriasExitoScreen.jsx b/src/screens/HistoriasExitoScreen.jsx
+index ed2d7d5..2252b52 100644
+--- a/src/screens/HistoriasExitoScreen.jsx
++++ b/src/screens/HistoriasExitoScreen.jsx
+@@ -1,22 +1,30 @@
+-import React, { useState } from 'react';
++import React, { useCallback, useState } from 'react';
+ import {
++  ActivityIndicator,
+   Image,
+   KeyboardAvoidingView,
++  Modal,
+   Platform,
+   SafeAreaView,
+   ScrollView,
++  Share,
+   StyleSheet,
+   Text,
+   TextInput,
+   TouchableOpacity,
+   View,
+ } from 'react-native';
++import { useFocusEffect } from '@react-navigation/native';
+ import { Ionicons } from '@expo/vector-icons';
+ import * as ImagePicker from 'expo-image-picker';
+ import { LinearGradient } from 'expo-linear-gradient';
++import { useAuth } from '../context/AuthContext';
+ import { useTheme } from '../context/ThemeContext';
+ import CahuinModal from '../components/CahuinModal';
+ import { FONTS, SHADOWS, SPACING } from '../utils/theme';
++import { socialService, userService } from '../services/api';
++
++const ADMIN_EMAIL = 'oficialcahuin2026@gmail.com';
+ 
+ const FORM_INICIAL = {
+   nombres: '',
+@@ -26,62 +34,248 @@ const FORM_INICIAL = {
+ };
+ 
+ export default function HistoriasExitoScreen({ navigation }) {
++  const { usuario } = useAuth();
+   const { COLORS } = useTheme();
+   const styles = getStyles(COLORS);
++  const esAdmin = (usuario?.email || '').toLowerCase() === ADMIN_EMAIL;
++
+   const [form, setForm] = useState(FORM_INICIAL);
+   const [foto, setFoto] = useState(null);
++  const [historiasPublicas, setHistoriasPublicas] = useState([]);
++  const [historiasPendientes, setHistoriasPendientes] = useState([]);
++  const [reportes, setReportes] = useState([]);
++  const [tabAdmin, setTabAdmin] = useState('historias');
++  const [cargando, setCargando] = useState(true);
++  const [enviando, setEnviando] = useState(false);
+   const [modalInfo, setModalInfo] = useState(null);
++  const [revision, setRevision] = useState(null);
++  const [motivoRevision, setMotivoRevision] = useState('');
+ 
+   const setCampo = (campo, valor) => setForm((actual) => ({ ...actual, [campo]: valor }));
+ 
++  const cargar = async () => {
++    setCargando(true);
++    try {
++      const publicas = await socialService.listarHistoriasExito('publicadas');
++      setHistoriasPublicas(publicas.historias || []);
++
++      if (esAdmin) {
++        const [pendientesRes, reportesRes] = await Promise.all([
++          socialService.listarHistoriasExito('pendiente'),
++          userService.listarReportesAdmin('pendiente'),
++        ]);
++        setHistoriasPendientes(pendientesRes.historias || []);
++        setReportes(reportesRes.reportes || []);
++      }
++    } catch (error) {
++      setModalInfo({
++        title: 'No pudimos cargar',
++        message: error.message || 'Intenta de nuevo en un rato.',
++        tone: 'danger',
++      });
++    } finally {
++      setCargando(false);
++    }
++  };
++
++  useFocusEffect(useCallback(() => { cargar(); }, [esAdmin]));
++
+   const elegirFoto = async () => {
+     const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
+     if (!permiso.granted) {
+       setModalInfo({
+         title: 'Permiso necesario',
+         message: 'Necesitamos acceso a tus fotos para adjuntar la imagen de la historia.',
+-        emoji: '­ƒô©',
+         tone: 'danger',
+       });
+       return;
+     }
+ 
+     const result = await ImagePicker.launchImageLibraryAsync({
+-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
++      mediaTypes: ['images'],
+       allowsEditing: true,
+       aspect: [4, 3],
+       quality: 0.75,
+     });
+ 
+     if (!result.canceled && result.assets?.[0]?.uri) {
+-      setFoto(result.assets[0].uri);
++      const asset = result.assets[0];
++      setFoto({
++        uri: asset.uri,
++        name: asset.fileName || 'historia-exito.jpg',
++        type: asset.mimeType || 'image/jpeg',
++      });
+     }
+   };
+ 
+-  const enviarHistoria = () => {
++  const enviarHistoria = async () => {
+     const nombres = form.nombres.trim();
+     const historia = form.historia.trim();
+ 
+     if (!nombres || !historia || !foto) {
+       setModalInfo({
+         title: 'Falta completar',
+-        message: 'Agrega los nombres, la historia y una foto de ambos para dejarla lista.',
+-        emoji: '­ƒÆò',
++        message: 'Agrega nombres, historia y una foto donde salgan ambos.',
+         tone: 'danger',
+       });
+       return;
+     }
+ 
+-    setForm(FORM_INICIAL);
+-    setFoto(null);
+-    setModalInfo({
+-      title: 'Historia recibida',
+-      message: 'Quedara guardada solo en esta version de prueba. Mas adelante la cuenta admin podra revisar estos formularios.',
+-      emoji: 'Ô£¿',
+-      accent: COLORS.primario,
++    setEnviando(true);
++    try {
++      await socialService.crearHistoriaExito({ ...form, imagen: foto });
++      setForm(FORM_INICIAL);
++      setFoto(null);
++      setModalInfo({
++        title: 'Historia enviada',
++        message: 'La cuenta oficial la revisara antes de publicarla. Si falta algo, podras enviarla de nuevo corregida.',
++        accent: COLORS.primario,
++      });
++      await cargar();
++    } catch (error) {
++      setModalInfo({ title: 'Error', message: error.message || 'No pudimos enviar la historia.', tone: 'danger' });
++    } finally {
++      setEnviando(false);
++    }
++  };
++
++  const compartirHistoria = async (historia) => {
++    await Share.share({
++      message: `${historia.nombres} encontraron su Cahuin. ${historia.historia}`,
++      url: historia.imagen,
++      title: 'Historia de exito Cahu├¡n',
+     });
+   };
+ 
++  const aprobarHistoria = async (historia) => {
++    try {
++      await socialService.revisarHistoriaExito(historia._id, { accion: 'aprobar' });
++      setModalInfo({ title: 'Publicada', message: 'La historia ya aparece en Historias de exito.' });
++      await cargar();
++    } catch (error) {
++      setModalInfo({ title: 'Error', message: error.message || 'No se pudo aprobar.', tone: 'danger' });
++    }
++  };
++
++  const abrirRechazoHistoria = (historia) => {
++    setRevision({ tipo: 'historia', item: historia });
++    setMotivoRevision('');
++  };
++
++  const abrirResolucionReporte = (reporte, estado) => {
++    setRevision({ tipo: 'reporte', item: reporte, estado });
++    setMotivoRevision('');
++  };
++
++  const confirmarRevision = async () => {
++    if (!motivoRevision.trim()) return;
++    try {
++      if (revision?.tipo === 'historia') {
++        await socialService.revisarHistoriaExito(revision.item._id, {
++          accion: 'rechazar',
++          motivo: motivoRevision,
++        });
++        setModalInfo({
++          title: 'Rechazada',
++          message: 'Se guardo la razon. La pareja puede volver a enviar el formulario corregido.',
++        });
++      } else if (revision?.tipo === 'reporte') {
++        await userService.resolverReporteAdmin(revision.item._id, {
++          estado: revision.estado,
++          resolucion: motivoRevision,
++        });
++        setModalInfo({ title: 'Reporte actualizado', message: 'La resolucion quedo guardada.' });
++      }
++      setRevision(null);
++      setMotivoRevision('');
++      await cargar();
++    } catch (error) {
++      setModalInfo({ title: 'Error', message: error.message || 'No se pudo guardar.', tone: 'danger' });
++    }
++  };
++
++  const renderForm = () => (
++    <View style={styles.formCard}>
++      <View style={styles.sectionTitleRow}>
++        <Ionicons name="sparkles" size={22} color={COLORS.primario} />
++        <Text style={styles.sectionTitle}>Enviar historia</Text>
++      </View>
++
++      <TouchableOpacity activeOpacity={0.88} style={styles.photoPicker} onPress={elegirFoto}>
++        {foto ? (
++          <Image source={{ uri: foto.uri }} style={styles.photoPreview} />
++        ) : (
++          <View style={styles.photoEmpty}>
++            <Ionicons name="camera" size={32} color={COLORS.primario} />
++            <Text style={styles.photoTitle}>Foto de ambos</Text>
++            <Text style={styles.photoHint}>Debe verse la pareja para aprobarla.</Text>
++          </View>
++        )}
++      </TouchableOpacity>
++
++      <Field COLORS={COLORS} icon="people" label="Nombres" placeholder="Ej: Fran y Mati" value={form.nombres} onChangeText={(text) => setCampo('nombres', text)} />
++      <Field COLORS={COLORS} icon="location" label="Ciudad" placeholder="Ej: Temuco" value={form.ciudad} onChangeText={(text) => setCampo('ciudad', text)} />
++      <Field COLORS={COLORS} icon="chatbubble-ellipses" label="Su historia" placeholder="Cuenta como se conocieron en Cahuin..." value={form.historia} onChangeText={(text) => setCampo('historia', text)} multiline maxLength={1200} />
++      <Field COLORS={COLORS} icon="mail" label="Contacto opcional" placeholder="Instagram o correo para coordinar" value={form.contacto} onChangeText={(text) => setCampo('contacto', text)} />
++
++      <TouchableOpacity activeOpacity={0.9} style={styles.submitButton} onPress={enviarHistoria} disabled={enviando}>
++        {enviando ? <ActivityIndicator color="#FFF" /> : <Ionicons name="send" size={21} color="#FFF" />}
++        <Text style={styles.submitText}>Enviar a revision</Text>
++      </TouchableOpacity>
++    </View>
++  );
++
++  const renderHistoria = (historia, admin = false) => (
++    <View key={historia._id} style={styles.storyCard}>
++      <Image source={{ uri: historia.imagen }} style={styles.storyImage} />
++      <View style={styles.storyBody}>
++        <Text style={styles.storyNames}>{historia.nombres}</Text>
++        <Text style={styles.storyCity}>{historia.ciudad || 'Chile'}</Text>
++        <Text style={styles.storyText}>{historia.historia}</Text>
++        {historia.contacto && admin ? <Text style={styles.metaText}>Contacto: {historia.contacto}</Text> : null}
++        {historia.autor?.email && admin ? <Text style={styles.metaText}>Enviado por: {historia.autor.email}</Text> : null}
++        <View style={styles.actionRow}>
++          {!admin && esAdmin ? (
++            <TouchableOpacity style={styles.smallAction} onPress={() => compartirHistoria(historia)}>
++              <Ionicons name="share-social" size={16} color={COLORS.primario} />
++              <Text style={styles.smallActionText}>Compartir</Text>
++            </TouchableOpacity>
++          ) : null}
++          {admin ? (
++            <>
++              <TouchableOpacity style={[styles.smallAction, styles.approveAction]} onPress={() => aprobarHistoria(historia)}>
++                <Text style={styles.approveText}>Aceptar</Text>
++              </TouchableOpacity>
++              <TouchableOpacity style={[styles.smallAction, styles.rejectAction]} onPress={() => abrirRechazoHistoria(historia)}>
++                <Text style={styles.rejectText}>Rechazar</Text>
++              </TouchableOpacity>
++            </>
++          ) : null}
++        </View>
++      </View>
++    </View>
++  );
++
++  const renderReporte = (reporte) => (
++    <View key={reporte._id} style={styles.reportCard}>
++      <View style={styles.reportHeader}>
++        <Text style={styles.reportTitle}>{reporte.motivo}</Text>
++        <Text style={styles.reportOrigin}>{reporte.origen}</Text>
++      </View>
++      <Text style={styles.metaText}>Reportado: {reporte.reportado?.nombre || 'Usuario'} - {reporte.reportado?.email || 'sin correo'}</Text>
++      <Text style={styles.metaText}>Denunciante: {reporte.denunciante?.email || 'sin correo'}</Text>
++      {reporte.detalle ? <Text style={styles.reportDetail}>{reporte.detalle}</Text> : null}
++      <View style={styles.actionRow}>
++        <TouchableOpacity style={[styles.smallAction, styles.approveAction]} onPress={() => abrirResolucionReporte(reporte, 'resuelto')}>
++          <Text style={styles.approveText}>Resolver</Text>
++        </TouchableOpacity>
++        <TouchableOpacity style={[styles.smallAction, styles.rejectAction]} onPress={() => abrirResolucionReporte(reporte, 'descartado')}>
++          <Text style={styles.rejectText}>Descartar</Text>
++        </TouchableOpacity>
++      </View>
++    </View>
++  );
++
+   return (
+     <SafeAreaView style={styles.safe}>
+       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+@@ -91,92 +285,91 @@ export default function HistoriasExitoScreen({ navigation }) {
+               <Ionicons name="arrow-back" size={28} color={COLORS.textPrimary} />
+             </TouchableOpacity>
+             <Text style={styles.headerTitulo}>Historias de exito</Text>
+-            <View style={{ width: 48 }} />
++            {esAdmin ? (
++              <View style={styles.adminPill}>
++                <Ionicons name="shield-checkmark" size={18} color={COLORS.primario} />
++              </View>
++            ) : <View style={{ width: 48 }} />}
+           </View>
+ 
+           <LinearGradient colors={['rgba(255,70,92,0.24)', COLORS.tarjeta]} style={styles.hero}>
+             <View style={styles.heroIcon}>
+               <Ionicons name="heart" size={34} color={COLORS.primario} />
+             </View>
+-            <Text style={styles.heroTitle}>Encontraron su cahuin</Text>
++            <Text style={styles.heroTitle}>Encontraron su Cahuin</Text>
+             <Text style={styles.heroText}>
+-              Comparte una historia real para que el equipo la pueda revisar cuando activemos la cuenta admin.
++              Historias reales revisadas por el equipo antes de publicarse.
+             </Text>
+           </LinearGradient>
+ 
+-          <View style={styles.formCard}>
+-            <View style={styles.sectionTitleRow}>
+-              <Ionicons name="sparkles" size={22} color={COLORS.primario} />
+-              <Text style={styles.sectionTitle}>Enviar historia</Text>
++          {esAdmin ? (
++            <View style={styles.adminTabs}>
++              <TabButton label={`Historias (${historiasPendientes.length})`} active={tabAdmin === 'historias'} onPress={() => setTabAdmin('historias')} COLORS={COLORS} />
++              <TabButton label={`Reportes (${reportes.length})`} active={tabAdmin === 'reportes'} onPress={() => setTabAdmin('reportes')} COLORS={COLORS} />
+             </View>
++          ) : null}
+ 
+-            <TouchableOpacity activeOpacity={0.88} style={styles.photoPicker} onPress={elegirFoto}>
+-              {foto ? (
+-                <Image source={{ uri: foto }} style={styles.photoPreview} />
+-              ) : (
+-                <View style={styles.photoEmpty}>
+-                  <Ionicons name="camera" size={32} color={COLORS.primario} />
+-                  <Text style={styles.photoTitle}>Foto de ambos</Text>
+-                  <Text style={styles.photoHint}>Toca para elegir una imagen</Text>
+-                </View>
+-              )}
+-            </TouchableOpacity>
+-
+-            <Field
+-              COLORS={COLORS}
+-              icon="people"
+-              label="Nombres"
+-              placeholder="Ej: Fran y Mati"
+-              value={form.nombres}
+-              onChangeText={(text) => setCampo('nombres', text)}
+-            />
+-            <Field
+-              COLORS={COLORS}
+-              icon="location"
+-              label="Ciudad"
+-              placeholder="Ej: Temuco"
+-              value={form.ciudad}
+-              onChangeText={(text) => setCampo('ciudad', text)}
+-            />
+-            <Field
+-              COLORS={COLORS}
+-              icon="chatbubble-ellipses"
+-              label="Su historia"
+-              placeholder="Cuenta como se conocieron en Cahu├¡n..."
+-              value={form.historia}
+-              onChangeText={(text) => setCampo('historia', text)}
+-              multiline
+-              maxLength={700}
+-            />
+-            <Field
+-              COLORS={COLORS}
+-              icon="mail"
+-              label="Contacto opcional"
+-              placeholder="Instagram o correo para coordinar"
+-              value={form.contacto}
+-              onChangeText={(text) => setCampo('contacto', text)}
+-            />
++          {cargando ? <ActivityIndicator color={COLORS.primario} style={{ marginTop: 24 }} /> : null}
+ 
+-            <TouchableOpacity activeOpacity={0.9} style={styles.submitButton} onPress={enviarHistoria}>
+-              <Ionicons name="send" size={21} color="#FFF" />
+-              <Text style={styles.submitText}>Enviar historia</Text>
+-            </TouchableOpacity>
+-          </View>
++          {esAdmin && tabAdmin === 'historias' ? (
++            <View style={styles.adminCard}>
++              <Text style={styles.sectionTitle}>Pendientes de revision</Text>
++              {historiasPendientes.length ? historiasPendientes.map((item) => renderHistoria(item, true)) : <Text style={styles.emptyText}>No hay historias pendientes.</Text>}
++            </View>
++          ) : null}
+ 
+-          <View style={styles.emptyCard}>
+-            <Ionicons name="shield-checkmark" size={26} color={COLORS.primario} />
+-            <View style={styles.emptyCopy}>
+-              <Text style={styles.emptyTitle}>Aun no hay historias publicadas</Text>
+-              <Text style={styles.emptyText}>Solo apareceran historias reales revisadas por el equipo.</Text>
++          {esAdmin && tabAdmin === 'reportes' ? (
++            <View style={styles.adminCard}>
++              <Text style={styles.sectionTitle}>Reportes pendientes</Text>
++              {reportes.length ? reportes.map(renderReporte) : <Text style={styles.emptyText}>No hay reportes pendientes.</Text>}
+             </View>
++          ) : null}
++
++          {renderForm()}
++
++          <View style={styles.publicCard}>
++            <Text style={styles.sectionTitle}>Publicadas</Text>
++            {historiasPublicas.length ? historiasPublicas.map((item) => renderHistoria(item)) : (
++              <Text style={styles.emptyText}>Aun no hay historias publicadas.</Text>
++            )}
+           </View>
+         </ScrollView>
+       </KeyboardAvoidingView>
++
++      <Modal visible={!!revision} transparent animationType="fade" onRequestClose={() => setRevision(null)}>
++        <View style={styles.modalBackdrop}>
++          <View style={styles.reasonModal}>
++            <Text style={styles.reasonTitle}>{revision?.tipo === 'historia' ? 'Motivo del rechazo' : 'Resolucion del reporte'}</Text>
++            <Text style={styles.reasonHint}>
++              {revision?.tipo === 'historia'
++                ? 'Explica que falta para que puedan volver a enviar el formulario corregido.'
++                : 'Deja una nota interna sobre por que se resolvio o descarto.'}
++            </Text>
++            <TextInput
++              value={motivoRevision}
++              onChangeText={setMotivoRevision}
++              placeholder="Escribe la razon..."
++              placeholderTextColor={COLORS.textMuted}
++              multiline
++              textAlignVertical="top"
++              style={styles.reasonInput}
++            />
++            <View style={styles.modalActions}>
++              <TouchableOpacity style={[styles.modalBtn, styles.cancelBtn]} onPress={() => setRevision(null)}>
++                <Text style={styles.cancelText}>Cancelar</Text>
++              </TouchableOpacity>
++              <TouchableOpacity style={[styles.modalBtn, styles.confirmBtn]} onPress={confirmarRevision}>
++                <Text style={styles.confirmText}>Guardar</Text>
++              </TouchableOpacity>
++            </View>
++          </View>
++        </View>
++      </Modal>
++
+       <CahuinModal
+         visible={!!modalInfo}
+         title={modalInfo?.title}
+         message={modalInfo?.message}
+-        emoji={modalInfo?.emoji}
+         accent={modalInfo?.accent}
+         tone={modalInfo?.tone}
+         onClose={() => setModalInfo(null)}
+@@ -204,21 +397,27 @@ function Field({ COLORS, icon, label, multiline, ...props }) {
+   );
+ }
+ 
++function TabButton({ label, active, onPress, COLORS }) {
++  const styles = tabStyles(COLORS);
++  return (
++    <TouchableOpacity style={[styles.tab, active && styles.tabActive]} onPress={onPress}>
++      <Text style={[styles.tabText, active && styles.tabTextActive]}>{label}</Text>
++    </TouchableOpacity>
++  );
++}
++
++const tabStyles = (COLORS) => StyleSheet.create({
++  tab: { flex: 1, minHeight: 42, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.tarjeta, borderWidth: 1, borderColor: COLORS.border },
++  tabActive: { backgroundColor: COLORS.primario, borderColor: COLORS.primario },
++  tabText: { color: COLORS.textMuted, fontWeight: '900', fontSize: 13 },
++  tabTextActive: { color: '#FFF' },
++});
++
+ const fieldStyles = (COLORS) => StyleSheet.create({
+   wrap: { marginTop: SPACING[4] },
+   labelRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+   label: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '900' },
+-  input: {
+-    minHeight: 56,
+-    borderRadius: 18,
+-    borderWidth: 1,
+-    borderColor: COLORS.border,
+-    backgroundColor: COLORS.bg,
+-    color: COLORS.textPrimary,
+-    fontSize: 16,
+-    fontWeight: '700',
+-    paddingHorizontal: 16,
+-  },
++  input: { minHeight: 56, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.bg, color: COLORS.textPrimary, fontSize: 16, fontWeight: '700', paddingHorizontal: 16 },
+   textarea: { minHeight: 132, paddingTop: 14, lineHeight: 22 },
+ });
+ 
+@@ -229,13 +428,17 @@ const getStyles = (COLORS) => StyleSheet.create({
+   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: SPACING[5] },
+   backButton: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.tarjeta, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.light },
+   headerTitulo: { fontSize: 24, fontWeight: '900', color: COLORS.textPrimary, fontFamily: FONTS.display },
++  adminPill: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.tarjeta, borderWidth: 1, borderColor: COLORS.border },
+   hero: { marginHorizontal: SPACING[5], borderRadius: 28, padding: SPACING[5], alignItems: 'center', borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.light },
+   heroIcon: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.softRed, marginBottom: 12 },
+   heroTitle: { color: COLORS.textPrimary, fontSize: 30, fontWeight: '900', fontFamily: FONTS.display, textAlign: 'center' },
+   heroText: { color: COLORS.textMuted, fontSize: 16, lineHeight: 23, textAlign: 'center', marginTop: 10 },
++  adminTabs: { flexDirection: 'row', gap: 10, marginHorizontal: SPACING[5], marginTop: SPACING[4] },
++  adminCard: { margin: SPACING[5], marginBottom: 0, padding: SPACING[4], borderRadius: 24, backgroundColor: COLORS.tarjeta, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.light },
+   formCard: { margin: SPACING[5], marginBottom: SPACING[4], padding: SPACING[5], borderRadius: 28, backgroundColor: COLORS.tarjeta, borderWidth: 1, borderColor: COLORS.border, ...SHADOWS.light },
++  publicCard: { marginHorizontal: SPACING[5], padding: SPACING[4], borderRadius: 24, backgroundColor: COLORS.tarjeta, borderWidth: 1, borderColor: COLORS.border },
+   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: SPACING[4] },
+-  sectionTitle: { color: COLORS.textPrimary, fontSize: 22, fontWeight: '900', fontFamily: FONTS.display },
++  sectionTitle: { color: COLORS.textPrimary, fontSize: 22, fontWeight: '900', fontFamily: FONTS.display, marginBottom: SPACING[3] },
+   photoPicker: { height: 210, borderRadius: 24, overflow: 'hidden', borderWidth: 1.5, borderColor: COLORS.border, backgroundColor: COLORS.bg },
+   photoPreview: { width: '100%', height: '100%' },
+   photoEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING[4] },
+@@ -243,8 +446,35 @@ const getStyles = (COLORS) => StyleSheet.create({
+   photoHint: { color: COLORS.textMuted, fontSize: 14, marginTop: 4 },
+   submitButton: { minHeight: 58, borderRadius: 29, backgroundColor: COLORS.primario, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, marginTop: SPACING[5], ...SHADOWS.light },
+   submitText: { color: '#FFF', fontSize: 17, fontWeight: '900', fontFamily: FONTS.display },
+-  emptyCard: { marginHorizontal: SPACING[5], borderRadius: 22, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.tarjeta, padding: SPACING[4], flexDirection: 'row', gap: 12, alignItems: 'center' },
+-  emptyCopy: { flex: 1 },
+-  emptyTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '900' },
+-  emptyText: { color: COLORS.textMuted, fontSize: 13, lineHeight: 18, marginTop: 3 },
++  storyCard: { borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.bg, marginBottom: SPACING[4] },
++  storyImage: { width: '100%', height: 210, backgroundColor: COLORS.border },
++  storyBody: { padding: SPACING[4] },
++  storyNames: { color: COLORS.textPrimary, fontSize: 20, fontWeight: '900', fontFamily: FONTS.display },
++  storyCity: { color: COLORS.primario, fontSize: 13, fontWeight: '900', marginTop: 2 },
++  storyText: { color: COLORS.textPrimary, fontSize: 15, lineHeight: 22, marginTop: 10 },
++  metaText: { color: COLORS.textMuted, fontSize: 12, lineHeight: 17, marginTop: 8 },
++  actionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: SPACING[4] },
++  smallAction: { minHeight: 40, borderRadius: 20, paddingHorizontal: 14, borderWidth: 1, borderColor: COLORS.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
++  smallActionText: { color: COLORS.primario, fontWeight: '900' },
++  approveAction: { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' },
++  rejectAction: { backgroundColor: '#FEE2E2', borderColor: '#FCA5A5' },
++  approveText: { color: '#166534', fontWeight: '900' },
++  rejectText: { color: '#991B1B', fontWeight: '900' },
++  reportCard: { borderRadius: 20, backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border, padding: SPACING[4], marginBottom: SPACING[3] },
++  reportHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
++  reportTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '900', flex: 1 },
++  reportOrigin: { color: COLORS.primario, fontSize: 12, fontWeight: '900', textTransform: 'uppercase' },
++  reportDetail: { color: COLORS.textPrimary, fontSize: 14, lineHeight: 20, marginTop: 10 },
++  emptyText: { color: COLORS.textMuted, fontSize: 14, lineHeight: 20 },
++  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.58)', justifyContent: 'center', padding: SPACING[5] },
++  reasonModal: { borderRadius: 24, backgroundColor: COLORS.tarjeta, borderWidth: 1, borderColor: COLORS.border, padding: SPACING[5] },
++  reasonTitle: { color: COLORS.textPrimary, fontSize: 22, fontWeight: '900', fontFamily: FONTS.display },
++  reasonHint: { color: COLORS.textMuted, fontSize: 14, lineHeight: 20, marginTop: 8 },
++  reasonInput: { minHeight: 130, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.bg, color: COLORS.textPrimary, padding: 14, marginTop: SPACING[4], fontWeight: '700' },
++  modalActions: { flexDirection: 'row', gap: 10, marginTop: SPACING[4] },
++  modalBtn: { flex: 1, minHeight: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
++  cancelBtn: { backgroundColor: COLORS.bg, borderWidth: 1, borderColor: COLORS.border },
++  confirmBtn: { backgroundColor: COLORS.primario },
++  cancelText: { color: COLORS.textPrimary, fontWeight: '900' },
++  confirmText: { color: '#FFF', fontWeight: '900' },
+ });
+diff --git a/src/screens/OtroPerfilScreen.jsx b/src/screens/OtroPerfilScreen.jsx
+index 8b61503..6569773 100644
+--- a/src/screens/OtroPerfilScreen.jsx
++++ b/src/screens/OtroPerfilScreen.jsx
+@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
+ import {
+   ActivityIndicator,
+   Image,
++  Modal,
+   SafeAreaView,
+   ScrollView,
+   StyleSheet,
+@@ -17,6 +18,15 @@ import CahuinModal from '../components/CahuinModal';
+ import CahuinTextField from '../components/CahuinTextField';
+ import { FONTS, RADIUS, SHADOWS, SPACING } from '../utils/theme';
+ 
++const MOTIVOS_REPORTE = [
++  'Perfil falso o suplantacion',
++  'Acoso o insultos',
++  'Fotos o contenido inapropiado',
++  'Spam o intento de estafa',
++  'Menor de edad',
++  'Otro',
++];
++
+ export default function OtroPerfilScreen({ route, navigation }) {
+   const { usuario: perfilResumido } = route.params;
+   const [perfil, setPerfil] = useState(perfilResumido);
+@@ -25,6 +35,10 @@ export default function OtroPerfilScreen({ route, navigation }) {
+   const [preguntaAnonima, setPreguntaAnonima] = useState('');
+   const [enviandoPregunta, setEnviandoPregunta] = useState(false);
+   const [modalInfo, setModalInfo] = useState(null);
++  const [modalReporteVisible, setModalReporteVisible] = useState(false);
++  const [motivoReporte, setMotivoReporte] = useState('');
++  const [detalleReporte, setDetalleReporte] = useState('');
++  const [enviandoReporte, setEnviandoReporte] = useState(false);
+ 
+   const { COLORS } = useTheme();
+   const styles = getStyles(COLORS);
+@@ -60,22 +74,35 @@ export default function OtroPerfilScreen({ route, navigation }) {
+   };
+ 
+   const reportarPerfil = () => {
+-    avisar('Reportar perfil', `Vamos a revisar el perfil de ${perfil.nombre}.`, '­ƒøí´©Å', [
+-      { label: 'Cancelar', variant: 'secondary', onPress: () => setModalInfo(null) },
+-      {
+-        label: 'Reportar',
+-        variant: 'danger',
+-        onPress: async () => {
+-          setModalInfo(null);
+-          try {
+-            await userService.reportar(perfil._id);
+-            avisar('Listo', 'Gracias. Revisaremos este perfil.', '­ƒøí´©Å');
+-          } catch {
+-            avisar('Error', 'No pudimos reportar el perfil.');
+-          }
+-        },
+-      },
+-    ]);
++    setMotivoReporte('');
++    setDetalleReporte('');
++    setModalReporteVisible(true);
++  };
++
++  const enviarReporte = async () => {
++    if (!motivoReporte) {
++      avisar('Falta motivo', 'Elige por que quieres reportar este perfil.');
++      return;
++    }
++    if (motivoReporte === 'Otro' && detalleReporte.trim().length < 4) {
++      avisar('Cuentanos mas', 'Escribe brevemente que paso.');
++      return;
++    }
++
++    setEnviandoReporte(true);
++    try {
++      await userService.reportar(perfil._id, {
++        motivo: motivoReporte,
++        detalle: detalleReporte,
++        origen: 'perfil',
++      });
++      setModalReporteVisible(false);
++      avisar('Listo', 'Gracias. La cuenta oficial revisara este reporte.', '???');
++    } catch {
++      avisar('Error', 'No pudimos reportar el perfil.');
++    } finally {
++      setEnviandoReporte(false);
++    }
+   };
+ 
+   return (
+@@ -187,6 +214,42 @@ export default function OtroPerfilScreen({ route, navigation }) {
+           <View style={{ height: 40 }} />
+         </View>
+       </ScrollView>
++      <Modal visible={modalReporteVisible} transparent animationType="fade" onRequestClose={() => setModalReporteVisible(false)}>
++        <View style={styles.modalBackdrop}>
++          <View style={styles.reporteModal}>
++            <Text style={styles.reporteTitle}>Reportar perfil</Text>
++            <Text style={styles.reporteSubtitle}>Elige el motivo. La cuenta oficial revisara el caso.</Text>
++            <View style={styles.motivosWrap}>
++              {MOTIVOS_REPORTE.map((motivo) => (
++                <TouchableOpacity
++                  key={motivo}
++                  style={[styles.motivoChip, motivoReporte === motivo && styles.motivoChipActive]}
++                  onPress={() => setMotivoReporte(motivo)}
++                >
++                  <Text style={[styles.motivoChipText, motivoReporte === motivo && styles.motivoChipTextActive]}>{motivo}</Text>
++                </TouchableOpacity>
++              ))}
++            </View>
++            <TextInput
++              value={detalleReporte}
++              onChangeText={setDetalleReporte}
++              placeholder={motivoReporte === 'Otro' ? 'Explica que paso...' : 'Detalle opcional'}
++              placeholderTextColor={COLORS.textMuted}
++              multiline
++              textAlignVertical="top"
++              style={styles.detalleReporteInput}
++            />
++            <View style={styles.reporteActions}>
++              <TouchableOpacity style={[styles.reporteBtn, styles.reporteCancel]} onPress={() => setModalReporteVisible(false)}>
++                <Text style={styles.reporteCancelText}>Cancelar</Text>
++              </TouchableOpacity>
++              <TouchableOpacity style={[styles.reporteBtn, styles.reporteSubmit]} onPress={enviarReporte} disabled={enviandoReporte}>
++                {enviandoReporte ? <ActivityIndicator color="#FFF" /> : <Text style={styles.reporteSubmitText}>Enviar</Text>}
++              </TouchableOpacity>
++            </View>
++          </View>
++        </View>
++      </Modal>
+       <CahuinModal visible={!!modalInfo} title={modalInfo?.title} message={modalInfo?.message} emoji={modalInfo?.emoji} actions={modalInfo?.actions || []} onClose={() => setModalInfo(null)} />
+     </SafeAreaView>
+   );
+@@ -232,4 +295,20 @@ const getStyles = (COLORS) => StyleSheet.create({
+   cancionInfo: { flex: 1 },
+   cancionLabel: { color: COLORS.gris, fontSize: 12, marginBottom: 2 },
+   cancionNombre: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '900' },
++  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.62)', justifyContent: 'center', padding: SPACING[5] },
++  reporteModal: { backgroundColor: COLORS.tarjeta, borderRadius: 24, borderWidth: 1, borderColor: COLORS.border, padding: SPACING[5] },
++  reporteTitle: { color: COLORS.textPrimary, fontSize: 24, fontWeight: '900', fontFamily: FONTS.display },
++  reporteSubtitle: { color: COLORS.textMuted, fontSize: 14, lineHeight: 20, marginTop: 8 },
++  motivosWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: SPACING[4] },
++  motivoChip: { borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, paddingVertical: 9, paddingHorizontal: 12, backgroundColor: COLORS.fondo },
++  motivoChipActive: { backgroundColor: COLORS.primario, borderColor: COLORS.primario },
++  motivoChipText: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '800' },
++  motivoChipTextActive: { color: '#FFF' },
++  detalleReporteInput: { minHeight: 110, borderRadius: 18, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.fondo, color: COLORS.textPrimary, padding: 14, marginTop: SPACING[4], fontWeight: '700' },
++  reporteActions: { flexDirection: 'row', gap: 10, marginTop: SPACING[4] },
++  reporteBtn: { flex: 1, minHeight: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
++  reporteCancel: { backgroundColor: COLORS.fondo, borderWidth: 1, borderColor: COLORS.border },
++  reporteSubmit: { backgroundColor: COLORS.primario },
++  reporteCancelText: { color: COLORS.textPrimary, fontWeight: '900' },
++  reporteSubmitText: { color: '#FFF', fontWeight: '900' },
+ });
+diff --git a/src/screens/SalaChatScreen.jsx b/src/screens/SalaChatScreen.jsx
+index f83a27c..19f882b 100644
+--- a/src/screens/SalaChatScreen.jsx
++++ b/src/screens/SalaChatScreen.jsx
+@@ -18,6 +18,15 @@ const KARAOKE_SONGS = [
+   { artista: 'Los Bunkers', cancion: 'Bailando solo', parte: 'uno pregunta y el otro contesta con el coro' },
+ ];
+ 
++const MOTIVOS_REPORTE = [
++  'Perfil falso o suplantacion',
++  'Acoso o insultos',
++  'Fotos o contenido inapropiado',
++  'Spam o intento de estafa',
++  'Menor de edad',
++  'Otro',
++];
++
+ const PREGUNTAS_MADRUGADA = [
+   '┬┐Qu├® cosa te da calma cuando todo est├í raro?',
+   '┬┐Cu├íl fue la ├║ltima decisi├│n que te cambi├│ un poquito?',
+@@ -57,6 +66,10 @@ export default function SalaChatScreen({ route, navigation }) {
+ 
+   // ­ƒîƒ NUEVO ESTADO PARA EL CALENDARIO
+   const [modalFechasVisible, setModalFechasVisible] = useState(false);
++  const [modalReporteVisible, setModalReporteVisible] = useState(false);
++  const [motivoReporte, setMotivoReporte] = useState('');
++  const [detalleReporte, setDetalleReporte] = useState('');
++  const [enviandoReporte, setEnviandoReporte] = useState(false);
+ 
+   const flatListRef = useRef();
+   const socketRef = useRef(null);
+@@ -142,15 +155,50 @@ export default function SalaChatScreen({ route, navigation }) {
+   const ejecutarAccionSeguridad = async (accion, mensajeExito) => {
+     try {
+       if (accion === 'bloquear') await userService.bloquear(otroUsuario._id);
+-      else await userService.reportar(otroUsuario._id);
+-      avisar('Listo ­ƒøí´©Å', mensajeExito, '­ƒøí´©Å');
++      else {
++        await userService.reportar(otroUsuario._id, {
++          motivo: motivoReporte || 'Comportamiento inapropiado',
++          detalle: detalleReporte,
++          origen: 'chat',
++        });
++      }
++      avisar('Listo', mensajeExito, '???');
++      navigation.goBack();
++    } catch (error) { avisar('Error', 'No se pudo completar la accion'); }
++  };
++
++  const abrirReporteChat = () => {
++    setModalCahuin(null);
++    setMotivoReporte('');
++    setDetalleReporte('');
++    setModalReporteVisible(true);
++  };
++
++  const enviarReporteChat = async () => {
++    if (!motivoReporte) {
++      avisar('Falta motivo', 'Elige por que quieres reportar este chat.');
++      return;
++    }
++    if (motivoReporte === 'Otro' && detalleReporte.trim().length < 4) {
++      avisar('Cuentanos mas', 'Escribe brevemente que paso.');
++      return;
++    }
++    setEnviandoReporte(true);
++    try {
++      await userService.reportar(otroUsuario._id, { motivo: motivoReporte, detalle: detalleReporte, origen: 'chat' });
++      setModalReporteVisible(false);
++      avisar('Listo', 'Usuario reportado.', '???');
+       navigation.goBack();
+-    } catch (error) { avisar('Error', 'No se pudo completar la acci├│n'); }
++    } catch {
++      avisar('Error', 'No se pudo completar la accion');
++    } finally {
++      setEnviandoReporte(false);
++    }
+   };
+ 
+   const mostrarMenuSeguridad = () => {
+     avisar('Seguridad', '┬┐Qu├® quieres hacer con este chat?', '­ƒøí´©Å', [
+-      { label: 'Reportar', variant: 'danger', onPress: () => { setModalCahuin(null); ejecutarAccionSeguridad('reportar', 'Usuario reportado.'); } },
++      { label: 'Reportar', variant: 'danger', onPress: abrirReporteChat },
+       { label: 'Bloquear', variant: 'danger', onPress: () => { setModalCahuin(null); ejecutarAccionSeguridad('bloquear', 'Usuario bloqueado.'); } },
+       { label: 'Cancelar', variant: 'secondary', onPress: () => setModalCahuin(null) },
+     ]);
+@@ -476,6 +524,35 @@ export default function SalaChatScreen({ route, navigation }) {
+       </Modal>
+ 
+       {/* ­ƒîƒ MODAL DE DISPONIBILIDAD DEL MATCH */}
++      <Modal visible={modalReporteVisible} transparent animationType="fade" onRequestClose={() => setModalReporteVisible(false)}>
++        <View style={styles.modalFondo}>
++          <View style={styles.modalCard}>
++            <Text style={styles.modalTitulo}>Reportar chat</Text>
++            <Text style={styles.modalSubtitulo}>Elige el motivo. La cuenta oficial revisara el reporte.</Text>
++            <View style={styles.motivosWrap}>
++              {MOTIVOS_REPORTE.map((motivo) => (
++                <TouchableOpacity key={motivo} style={[styles.motivoChip, motivoReporte === motivo && styles.motivoChipActive]} onPress={() => setMotivoReporte(motivo)}>
++                  <Text style={[styles.motivoChipText, motivoReporte === motivo && styles.motivoChipTextActive]}>{motivo}</Text>
++                </TouchableOpacity>
++              ))}
++            </View>
++            <TextInput
++              value={detalleReporte}
++              onChangeText={setDetalleReporte}
++              placeholder={motivoReporte === 'Otro' ? 'Explica que paso...' : 'Detalle opcional'}
++              placeholderTextColor={COLORS.textMuted}
++              multiline
++              textAlignVertical="top"
++              style={styles.detalleReporteInput}
++            />
++            <View style={styles.modalBotones}>
++              <TouchableOpacity style={styles.btnCancelar} onPress={() => setModalReporteVisible(false)}><Text style={styles.btnCancelarTexto}>Cancelar</Text></TouchableOpacity>
++              <TouchableOpacity style={styles.btnGuardar} onPress={enviarReporteChat} disabled={enviandoReporte}>{enviandoReporte ? <ActivityIndicator color="#FFF" /> : <Text style={styles.btnGuardarTexto}>Enviar</Text>}</TouchableOpacity>
++            </View>
++          </View>
++        </View>
++      </Modal>
++
+       <Modal visible={modalFechasVisible} transparent animationType="fade">
+         <View style={styles.modalFondo}>
+           <View style={[styles.modalCard, { height: 'auto', paddingBottom: 40 }]}>
+diff --git a/src/services/api.js b/src/services/api.js
+index 135a6fa..51721d5 100644
+--- a/src/services/api.js
++++ b/src/services/api.js
+@@ -98,7 +98,9 @@ export const userService = {
+   },
+   getPerfil:        (id)            => api.get(`/users/${id}`),
+   bloquear:         (id)            => api.post(`/users/${id}/bloquear`, {}),
+-  reportar:         (id)            => api.post(`/users/${id}/reportar`, {}),
++  reportar:         (id, data = {}) => api.post(`/users/${id}/reportar`, data),
++  listarReportesAdmin: (estado = 'pendiente') => api.get('/users/admin/reportes', { params: { estado } }),
++  resolverReporteAdmin: (id, data) => api.patch(`/users/admin/reportes/${id}`, data),
+   calificar:        (id, rating)    => api.post(`/users/${id}/calificar`, { rating }),
+   registrarVista:   (id)            => api.post(`/users/${id}/visto`, {}),
+   getVistasPremium: ()              => api.get('/users/me/vistas'),
+@@ -205,6 +207,26 @@ export const socialService = {
+   reaccionarHistoria: (id) => api.post(`/social/historias/${id}/reaccionar`, {}),
+   comentarHistoria: (id, texto) => api.post(`/social/historias/${id}/comentar`, { texto }),
+   sumarseHistoria: (id) => api.post(`/social/historias/${id}/sumarse`, {}),
++  listarHistoriasExito: (estado = 'publicadas') => api.get('/social/historias-exito', { params: { estado } }),
++  crearHistoriaExito: async (data) => {
++    const formData = new FormData();
++    formData.append('nombres', data.nombres || '');
++    formData.append('ciudad', data.ciudad || '');
++    formData.append('historia', data.historia || '');
++    formData.append('contacto', data.contacto || '');
++    formData.append('imagen', {
++      uri: data.imagen.uri,
++      name: data.imagen.name || 'historia-exito.jpg',
++      type: data.imagen.type || 'image/jpeg',
++    });
++    const respuesta = await fetch(`${BASE_URL}/social/historias-exito`, {
++      method: 'POST',
++      body: formData,
++      headers: await getAuthHeader(),
++    });
++    return parseFetchResponse(respuesta);
++  },
++  revisarHistoriaExito: (id, data) => api.patch(`/social/historias-exito/${id}/revisar`, data),
+   getCahuinDia: () => api.get('/social/cahuin-dia'),
+   votarCahuinDia: (opcion) => api.post('/social/cahuin-dia/votar', { opcion }),
+   getSwipePanoramas: () => api.get('/social/swipe-panoramas'),

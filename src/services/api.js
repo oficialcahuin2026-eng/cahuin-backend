@@ -98,7 +98,9 @@ export const userService = {
   },
   getPerfil:        (id)            => api.get(`/users/${id}`),
   bloquear:         (id)            => api.post(`/users/${id}/bloquear`, {}),
-  reportar:         (id)            => api.post(`/users/${id}/reportar`, {}),
+  reportar:         (id, data = {}) => api.post(`/users/${id}/reportar`, data),
+  listarReportesAdmin: (estado = 'pendiente') => api.get('/users/admin/reportes', { params: { estado } }),
+  resolverReporteAdmin: (id, data) => api.patch(`/users/admin/reportes/${id}`, data),
   calificar:        (id, rating)    => api.post(`/users/${id}/calificar`, { rating }),
   registrarVista:   (id)            => api.post(`/users/${id}/visto`, {}),
   getVistasPremium: ()              => api.get('/users/me/vistas'),
@@ -205,6 +207,26 @@ export const socialService = {
   reaccionarHistoria: (id) => api.post(`/social/historias/${id}/reaccionar`, {}),
   comentarHistoria: (id, texto) => api.post(`/social/historias/${id}/comentar`, { texto }),
   sumarseHistoria: (id) => api.post(`/social/historias/${id}/sumarse`, {}),
+  listarHistoriasExito: (estado = 'publicadas') => api.get('/social/historias-exito', { params: { estado } }),
+  crearHistoriaExito: async (data) => {
+    const formData = new FormData();
+    formData.append('nombres', data.nombres || '');
+    formData.append('ciudad', data.ciudad || '');
+    formData.append('historia', data.historia || '');
+    formData.append('contacto', data.contacto || '');
+    formData.append('imagen', {
+      uri: data.imagen.uri,
+      name: data.imagen.name || 'historia-exito.jpg',
+      type: data.imagen.type || 'image/jpeg',
+    });
+    const respuesta = await fetch(`${BASE_URL}/social/historias-exito`, {
+      method: 'POST',
+      body: formData,
+      headers: await getAuthHeader(),
+    });
+    return parseFetchResponse(respuesta);
+  },
+  revisarHistoriaExito: (id, data) => api.patch(`/social/historias-exito/${id}/revisar`, data),
   getCahuinDia: () => api.get('/social/cahuin-dia'),
   votarCahuinDia: (opcion) => api.post('/social/cahuin-dia/votar', { opcion }),
   getSwipePanoramas: () => api.get('/social/swipe-panoramas'),
