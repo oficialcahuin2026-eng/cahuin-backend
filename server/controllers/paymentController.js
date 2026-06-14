@@ -1,4 +1,4 @@
-﻿const { MercadoPagoConfig, Preference } = require('mercadopago');
+const { MercadoPagoConfig, Preference } = require('mercadopago');
 const {
   Environment,
   IntegrationApiKeys,
@@ -9,8 +9,8 @@ const {
 const PaymentIntent = require('../models/PaymentIntent');
 const User = require('../models/User');
 
-const WEB_URL = process.env.CAHUIN_WEB_URL || 'http://localhost:3000';
-const API_URL = process.env.CAHUIN_API_PUBLIC_URL || `http://localhost:${process.env.PORT || 5000}`;
+const WEB_URL = process.env.CAHUIN_WEB_URL && !process.env.CAHUIN_WEB_URL.includes('localhost') ? process.env.CAHUIN_WEB_URL : 'https://www.cahuin.app';
+const API_URL = process.env.CAHUIN_API_PUBLIC_URL && !process.env.CAHUIN_API_PUBLIC_URL.includes('localhost') ? process.env.CAHUIN_API_PUBLIC_URL : 'https://cahuin-backend-1.onrender.com';
 
 const PRODUCTS = {
   cahuin_piola_monthly: {

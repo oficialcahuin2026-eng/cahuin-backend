@@ -49,18 +49,6 @@ export default function WebShell() {
 
   return (
     <>
-      {Platform.OS === 'web' && (
-        <style type="text/css">{`
-          @font-face {
-            font-family: 'Ionicons';
-            src: url('https://unpkg.com/ionicons@4.5.2/dist/fonts/ionicons.ttf') format('truetype');
-          }
-          @font-face {
-            font-family: 'MaterialCommunityIcons';
-            src: url('https://cdn.jsdelivr.net/npm/@mdi/font@5.9.55/fonts/materialdesignicons-webfont.ttf') format('truetype');
-          }
-        `}</style>
-      )}
       {loading ? <FullLoader /> : (!device ? <DeviceChooser onChoose={chooseDevice} /> : (device === 'mobile' ? <MobileWebApp onChangeDevice={() => setDevice(null)} /> : <DesktopWebApp onChangeDevice={() => setDevice(null)} />))}
     </>
   );
@@ -598,8 +586,8 @@ const styles = StyleSheet.create({
   deviceButton: { marginTop: 22, height: 48, borderRadius: 8, backgroundColor: '#F0444F', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   deviceButtonHot: { backgroundColor: '#F59E0B' },
   deviceButtonText: { color: '#FFF', fontSize: 16, fontWeight: '900' },
-  mobileRoot: { flex: 1, minHeight: '100vh', backgroundColor: '#000' },
-  switchFloating: { position: 'absolute', right: 18, top: 18, zIndex: 50, backgroundColor: 'rgba(0,0,0,0.72)', borderRadius: 8, paddingHorizontal: 12, height: 34, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
+  mobileRoot: { flex: 1, height: '100vh', overflow: 'hidden', backgroundColor: '#000' },
+  switchFloating: { position: 'absolute', right: 18, bottom: 100, zIndex: 50, backgroundColor: 'rgba(0,0,0,0.72)', borderRadius: 8, paddingHorizontal: 12, height: 34, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
   switchFloatingText: { color: '#FFF', fontWeight: '800', fontSize: 12 },
   desktopRoot: { flex: 1, minHeight: '100vh', flexDirection: 'row' },
   desktopLoginHero: { flex: 1, padding: 54, justifyContent: 'center' },
