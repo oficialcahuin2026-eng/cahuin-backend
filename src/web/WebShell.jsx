@@ -62,51 +62,82 @@ function FullLoader() {
 }
 
 function DeviceChooser({ onChoose }) {
-  return (
-    <LinearGradient colors={['#05070D', '#120B12', '#080A12']} style={styles.choiceRoot}>
-      <View style={styles.choiceWrap}>
-        <View style={styles.choiceBrand}>
-          <CahuinLogo style={styles.choiceLogo} size={30} />
-          <Text style={styles.choiceTitle}>¿Desde dónde te conectas?</Text>
-          <Text style={styles.choiceCopy}>
-            Usa la experiencia tipo app en móvil o entra a la versión nativa para PC con más espacio para radar, panoramas, chat y perfil.
-          </Text>
-        </View>
+  const { COLORS, isDarkMode } = useTheme();
 
-        <View style={styles.choiceGrid}>
-          <DeviceCard
-            icon="phone-portrait"
-            title="Móvil"
-            subtitle="Misma sensación de la app, optimizada para navegador del teléfono."
-            bullets={['Radar por swipe', 'Tabs inferiores', 'Ubicación y notificaciones']}
-            onPress={() => onChoose('mobile')}
-          />
-          <DeviceCard
-            icon="desktop"
-            title="PC"
-            subtitle="Interfaz amplia para usar Cahuín cómodo desde notebook o escritorio."
-            bullets={['Dashboard lateral', 'Paneles simultáneos', 'Mercado Pago web']}
-            onPress={() => onChoose('desktop')}
-            highlighted
-          />
-        </View>
-      </View>
-    </LinearGradient>
+  return (
+    <>
+      <style type="text/css">{`
+        @font-face {
+          font-family: 'Ionicons';
+          src: url('https://unpkg.com/ionicons@4.5.2/dist/fonts/ionicons.ttf') format('truetype');
+        }
+        @font-face {
+          font-family: 'MaterialCommunityIcons';
+          src: url('https://cdn.jsdelivr.net/npm/@mdi/font@5.9.55/fonts/materialdesignicons-webfont.ttf') format('truetype');
+        }
+      `}</style>
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+        <LinearGradient
+          colors={isDarkMode ? ['#05070D', '#120B12', '#080A12'] : ['#FFF3F3', '#FFF1E6', '#F4F2FF']}
+          style={styles.choiceRoot}
+        >
+          <View style={styles.choiceWrap}>
+            <View style={styles.choiceBrand}>
+              <CahuinLogo style={styles.choiceLogo} size={36} />
+              <Text style={[styles.choiceTitle, { color: COLORS.textPrimary }]}>¿Desde dónde te conectas?</Text>
+              <Text style={[styles.choiceCopy, { color: COLORS.textMuted }]}>
+                Usa la experiencia tipo app en móvil o entra a la versión nativa para PC con más espacio para radar, panoramas, chat y perfil.
+              </Text>
+            </View>
+
+            <View style={styles.choiceGrid}>
+              <DeviceCard
+                icon="phone-portrait"
+                title="Móvil"
+                subtitle="Misma sensación de la app, optimizada para navegador del teléfono."
+                bullets={['Radar por swipe', 'Tabs inferiores', 'Ubicación y notificaciones']}
+                onPress={() => onChoose('mobile')}
+                colors={COLORS}
+                isDarkMode={isDarkMode}
+              />
+              <DeviceCard
+                icon="desktop"
+                title="PC"
+                subtitle="Interfaz amplia para usar Cahuín cómodo desde notebook o escritorio."
+                bullets={['Dashboard lateral', 'Paneles simultáneos', 'Mercado Pago web']}
+                onPress={() => onChoose('desktop')}
+                highlighted
+                colors={COLORS}
+                isDarkMode={isDarkMode}
+              />
+            </View>
+          </View>
+        </LinearGradient>
+      </ScrollView>
+    </>
   );
 }
 
-function DeviceCard({ icon, title, subtitle, bullets, highlighted, onPress }) {
+function DeviceCard({ icon, title, subtitle, bullets, highlighted, onPress, colors, isDarkMode }) {
+  const bg = highlighted
+    ? (isDarkMode ? 'rgba(255,209,102,0.08)' : 'rgba(245,158,11,0.05)')
+    : (isDarkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)');
+  const border = highlighted
+    ? (isDarkMode ? 'rgba(255,209,102,0.4)' : 'rgba(245,158,11,0.3)')
+    : (isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)');
+  const iconColor = highlighted ? (isDarkMode ? '#FFD166' : '#F59E0B') : colors.primario;
+
   return (
-    <TouchableOpacity activeOpacity={0.9} onPress={onPress} style={[styles.deviceCard, highlighted && styles.deviceCardHot]}>
-      <View style={styles.deviceIcon}>
-        <Ionicons name={icon} size={28} color={highlighted ? '#FFD166' : '#F0444F'} />
+    <TouchableOpacity activeOpacity={0.9} onPress={onPress} style={[styles.deviceCard, { backgroundColor: bg, borderColor: border }]}>
+      <View style={[styles.deviceIcon, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}>
+        <Ionicons name={icon} size={28} color={iconColor} />
       </View>
-      <Text style={styles.deviceTitle}>{title}</Text>
-      <Text style={styles.deviceSubtitle}>{subtitle}</Text>
+      <Text style={[styles.deviceTitle, { color: colors.textPrimary }]}>{title}</Text>
+      <Text style={[styles.deviceSubtitle, { color: colors.textMuted }]}>{subtitle}</Text>
       {bullets.map((bullet) => (
         <View key={bullet} style={styles.bulletRow}>
-          <Ionicons name="checkmark-circle" size={16} color={highlighted ? '#FFD166' : '#F0444F'} />
-          <Text style={styles.bulletText}>{bullet}</Text>
+          <Ionicons name="checkmark-circle" size={16} color={iconColor} />
+          <Text style={[styles.bulletText, { color: colors.textPrimary }]}>{bullet}</Text>
         </View>
       ))}
       <View style={[styles.deviceButton, highlighted && styles.deviceButtonHot]}>
@@ -220,19 +251,19 @@ function DesktopWebApp({ onChangeDevice }) {
 
   if (!usuario) {
     return (
-      <View style={[styles.desktopRoot, { backgroundColor: '#07080D' }]}>
+      <View style={[styles.desktopRoot, { backgroundColor: COLORS.bg }]}>
         <View style={styles.desktopLoginHero}>
           <CahuinLogo label="Cahuín Web" style={styles.desktopLogo} size={30} />
-          <Text style={styles.desktopLoginTitle}>Tu misma cuenta, ahora también en PC.</Text>
-          <Text style={styles.desktopLoginCopy}>
+          <Text style={[styles.desktopLoginTitle, { color: COLORS.textPrimary }]}>Tu misma cuenta, ahora también en PC.</Text>
+          <Text style={[styles.desktopLoginCopy, { color: COLORS.textMuted }]}>
             Inicia sesión y el plan comprado en app o web se mantiene sincronizado desde el backend.
           </Text>
-          <TouchableOpacity onPress={onChangeDevice} style={styles.desktopGhostButton}>
-            <Ionicons name="swap-horizontal" size={18} color="#FFF" />
-            <Text style={styles.desktopGhostText}>Cambiar dispositivo</Text>
+          <TouchableOpacity onPress={onChangeDevice} style={[styles.desktopGhostButton, { borderColor: COLORS.border }]}>
+            <Ionicons name="swap-horizontal" size={18} color={COLORS.textPrimary} />
+            <Text style={[styles.desktopGhostText, { color: COLORS.textPrimary }]}>Cambiar dispositivo</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.desktopLoginPanel}>
+        <View style={[styles.desktopLoginPanel, { borderColor: COLORS.border }]}>
           <AppNavigator />
         </View>
       </View>

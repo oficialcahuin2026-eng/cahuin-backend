@@ -273,8 +273,8 @@ export default function AppNavigator() {
     );
   }
 
-  // Condición para saber si le faltan datos vitales (Volvemos a pedir el teléfono)
-  const necesitaOnboarding = !usuario || !usuario.fechaNacimiento || !usuario.telefono;
+  // Condición para saber si le faltan datos vitales
+  const necesitaOnboarding = !usuario || (!usuario.fechaNacimiento && !usuario.edad);
 
   return (
     <NavigationContainer>

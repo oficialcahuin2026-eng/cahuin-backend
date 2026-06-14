@@ -285,6 +285,12 @@ export function ThemeProvider({ children }) {
   const [isDarkMode,   setIsDarkMode]   = useState(deviceTheme === 'dark');
   const [regionActual, setRegionActual] = useState('default');
 
+  useEffect(() => {
+    if (deviceTheme) {
+      setIsDarkMode(deviceTheme === 'dark');
+    }
+  }, [deviceTheme]);
+
   const toggleTheme = () => setIsDarkMode(prev => !prev);
 
   // Función para que AuthContext actualice la región al cargar el usuario
