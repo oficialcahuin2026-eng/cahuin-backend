@@ -78,12 +78,20 @@ const eventosOficiales = [
   { region: 'Antofagasta', lugar: 'Enjoy Antofagasta', titulo: 'Los Vásquez - Amores de Invierno (Día 2)', descripcion: 'Segunda noche de la residencia ininterrumpida del dúo musical.', fecha: new Date('2026-07-31T21:00:00Z'), categoria: 'Música', emoji: '🎸', imagen: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?q=80&w=900' },
 
 
-  // 🌟 ATACAMA
-  { region: 'Atacama', lugar: 'Teatro Municipal, Copiapó', titulo: 'Inti-Illimani', descripcion: 'Música latinoamericana y folclore.', fecha: new Date('2026-06-06T19:30:00Z'), emoji: '🪈' },
-  { region: 'Atacama', lugar: 'Antay Casino Hotel, Copiapó', titulo: 'Manuel García', descripcion: 'Cantautor (nueva canción/folk).', fecha: new Date('2026-06-07T20:00:00Z'), emoji: '🎸' },
-  { region: 'Atacama', lugar: 'Teatro Municipal, Copiapó', titulo: 'Orquesta Sinfónica: "De Aranjuez a la Euforia"', descripcion: 'Música sinfónica.', fecha: new Date('2026-06-12T19:00:00Z'), emoji: '🎻' },
-  { region: 'Atacama', lugar: 'Teatro Municipal, Copiapó', titulo: 'Los Jaivas', descripcion: 'Rock progresivo y folclore.', fecha: new Date('2026-06-14T20:00:00Z'), emoji: '🏔️' },
-  { region: 'Atacama', lugar: 'Teatro Municipal, Copiapó', titulo: 'Orquesta Sinfónica: "Beatles Sinfónico"', descripcion: 'Tributo sinfónico a The Beatles.', fecha: new Date('2026-06-25T19:00:00Z'), emoji: '🎻' },
+  // 🌟 ATACAMA (Junio)
+  { region: 'Atacama', lugar: 'Teatro Municipal, Copiapó', titulo: 'Inti-Illimani', descripcion: 'Música latinoamericana y folclore.', fecha: new Date('2026-06-06T19:30:00Z'), categoria: 'Música', emoji: '🪈' },
+  { region: 'Atacama', lugar: 'Antay Casino Hotel, Copiapó', titulo: 'Manuel García', descripcion: 'Cantautor (nueva canción/folk).', fecha: new Date('2026-06-07T20:00:00Z'), categoria: 'Música', emoji: '🎸' },
+  { region: 'Atacama', lugar: 'Teatro Municipal, Copiapó', titulo: 'Orquesta Sinfónica: "De Aranjuez a la Euforia"', descripcion: 'Música sinfónica.', fecha: new Date('2026-06-12T19:00:00Z'), categoria: 'Cultura', emoji: '🎻' },
+  { region: 'Atacama', lugar: 'Teatro Municipal, Copiapó', titulo: 'Los Jaivas', descripcion: 'Rock progresivo y folclore.', fecha: new Date('2026-06-14T20:00:00Z'), categoria: 'Música', emoji: '🏔️' },
+  { region: 'Atacama', lugar: 'Teatro Municipal, Copiapó', titulo: 'Orquesta Sinfónica: "Beatles Sinfónico"', descripcion: 'Tributo sinfónico a The Beatles.', fecha: new Date('2026-06-25T19:00:00Z'), categoria: 'Cultura', emoji: '🎻' },
+  // 🌟 ATACAMA (Julio)
+  { region: 'Atacama', lugar: 'Estadio El Cobre, El Salvador', titulo: 'Cobresal vs. Cobreloa', descripcion: 'Duelo fundamental por la fase de grupos de la Copa Chile.', fecha: new Date('2026-07-05T12:00:00Z'), categoria: 'Deporte', emoji: '⚽', imagen: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?q=80&w=900' },
+  { region: 'Atacama', lugar: 'Hotel Antay, Copiapó', titulo: 'La Sociedad', descripcion: 'Presentación en vivo del clásico dúo chileno.', fecha: new Date('2026-07-09T20:00:00Z'), categoria: 'Música', emoji: '🎸', imagen: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?q=80&w=900' },
+  { region: 'Atacama', lugar: 'Copiapó', titulo: 'Jornadas Regionales SOCHED 2026', descripcion: 'Encuentro científico de la Sociedad Chilena de Endocrinología.', fecha: new Date('2026-07-10T10:00:00Z'), categoria: 'Cultura', emoji: '🔬', imagen: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?q=80&w=900' },
+  { region: 'Atacama', lugar: 'Kaya Social Club, Copiapó', titulo: 'Groove 11 de Julio - Campolo (+22)', descripcion: 'Fiesta de club nocturno orientada estrictamente al público adulto.', fecha: new Date('2026-07-11T23:00:00Z'), categoria: 'Música', emoji: '🪩', imagen: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?q=80&w=900' },
+  { region: 'Atacama', lugar: 'Estadio Luis Valenzuela Hermosilla', titulo: 'Deportes Copiapó vs. Deportes Puerto Montt', descripcion: 'Encuentro válido por la división de la Liga de Ascenso chilena.', fecha: new Date('2026-07-19T12:00:00Z'), categoria: 'Deporte', emoji: '⚽', imagen: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?q=80&w=900' },
+  { region: 'Atacama', lugar: 'Hotel Antay, Copiapó', titulo: 'Ella Baila Sola - Tour 30 Aniversario', descripcion: 'Concierto inmersivo de pop europeo de los noventa.', fecha: new Date('2026-07-23T20:00:00Z'), categoria: 'Música', emoji: '🎤', imagen: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?q=80&w=900' },
+  { region: 'Atacama', lugar: 'Amma Club, Copiapó', titulo: 'Bersuit Vergarabat', descripcion: 'Espectáculo en vivo de una de las agrupaciones insignes del rock argentino.', fecha: new Date('2026-07-26T21:00:00Z'), categoria: 'Música', emoji: '🎸', imagen: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?q=80&w=900' },
 
   // 🌟 COQUIMBO
   { region: 'Coquimbo', lugar: 'Colegio Alemán, La Serena', titulo: 'Edith Fischer - Tesoro Vivo', descripcion: 'Recital de piano clásico.', fecha: new Date('2026-06-05T19:00:00Z'), emoji: '🎹' },
