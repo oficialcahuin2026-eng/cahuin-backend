@@ -14,7 +14,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import AppNavigator from '../navigation/AppNavigator';
+import AppNavigator, { navigationRef } from '../navigation/AppNavigator';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { matchService, panoramaService, paymentService, socialService, userService } from '../services/api';
@@ -169,6 +169,15 @@ function DesktopWebApp({ onChangeDevice }) {
   useEffect(() => {
     if (!usuario) return;
     cargarDatos();
+
+    const unsubscribe = navigationRef.addListener('state', () => {
+      const currentRoute = navigationRef.current?.getCurrentRoute();
+      if (currentRoute) {
+        setActive(currentRoute.name);
+      }
+    });
+
+    return unsubscribe;
   }, [usuario?._id]);
 
   const cargarDatos = async () => {
@@ -227,13 +236,13 @@ function DesktopWebApp({ onChangeDevice }) {
   };
 
   const navItems = useMemo(() => ([
-    ['radar', 'Radar', 'flame'],
-    ['explorar', 'Explorar', 'compass'],
-    ['panoramas', 'Panoramas', 'planet'],
-    ['chat', 'Chat', 'chatbubbles'],
-    ['perfil', 'Perfil', 'person'],
-    ['premium', 'Planes', 'sparkles'],
-    ['ajustes', 'Ajustes', 'settings'],
+    ['Radar', 'Radar', 'flame'],
+    ['Explorar', 'Explorar', 'compass'],
+    ['Panoramas', 'Panoramas', 'planet'],
+    ['Chat', 'Chat', 'chatbubbles'],
+    ['Perfil', 'Perfil', 'person'],
+    ['Premium', 'Planes', 'sparkles'],
+    ['Ajustes', 'Ajustes', 'settings'],
   ]), []);
 
   if (cargando) return <FullLoader />;
@@ -267,7 +276,10 @@ function DesktopWebApp({ onChangeDevice }) {
           <Text style={[styles.sidebarUser, { color: COLORS.textMuted }]}>{usuario.nombre || 'Cahuinero'} · {usuario.premiumPlan || 'Gratis'}</Text>
           <View style={styles.navStack}>
             {navItems.map(([key, label, icon]) => (
-              <TouchableOpacity key={key} onPress={() => setActive(key)} style={[styles.navItem, active === key && { backgroundColor: COLORS.primario }]}>
+              <TouchableOpacity key={key} onPress={() => {
+                setActive(key);
+                navigationRef.current?.navigate(key);
+              }} style={[styles.navItem, active === key && { backgroundColor: COLORS.primario }]}>
                 <Ionicons name={active === key ? icon : `${icon}-outline`} size={20} color={active === key ? '#FFF' : COLORS.textMuted} />
                 <Text style={[styles.navText, { color: active === key ? '#FFF' : COLORS.textPrimary }]}>{label}</Text>
               </TouchableOpacity>
@@ -287,11 +299,14 @@ function DesktopWebApp({ onChangeDevice }) {
         </View>
       )}
 
-      <ScrollView style={styles.desktopMain} contentContainerStyle={styles.desktopContent}>
+      <View style={styles.desktopMain}>
         {compact && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.topTabs}>
             {navItems.map(([key, label, icon]) => (
-              <TouchableOpacity key={key} onPress={() => setActive(key)} style={[styles.topTab, active === key && { backgroundColor: COLORS.primario }]}>
+              <TouchableOpacity key={key} onPress={() => {
+                setActive(key);
+                navigationRef.current?.navigate(key);
+              }} style={[styles.topTab, active === key && { backgroundColor: COLORS.primario }]}>
                 <Ionicons name={icon} size={18} color={active === key ? '#FFF' : COLORS.textMuted} />
                 <Text style={[styles.topTabText, { color: active === key ? '#FFF' : COLORS.textPrimary }]}>{label}</Text>
               </TouchableOpacity>
@@ -299,23 +314,10 @@ function DesktopWebApp({ onChangeDevice }) {
           </ScrollView>
         )}
 
-        {active === 'radar' && <RadarDesktop profile={profile} COLORS={COLORS} onNext={() => setProfileIndex((profileIndex + 1) % profiles.length)} />}
-        {active === 'explorar' && <ExplorarDesktop COLORS={COLORS} cahuinDia={cahuinDia} />}
-        {active === 'panoramas' && <PanoramasDesktop COLORS={COLORS} panoramas={panoramas} />}
-        {active === 'chat' && <ChatDesktop COLORS={COLORS} matches={matches} />}
-        {active === 'perfil' && <PerfilDesktop COLORS={COLORS} usuario={usuario} />}
-        {active === 'premium' && <PremiumDesktop COLORS={COLORS} comprarPlan={comprarPlan} loading={paymentLoading} />}
-        {active === 'ajustes' && (
-          <AjustesDesktop
-            COLORS={COLORS}
-            isDarkMode={isDarkMode}
-            toggleTheme={toggleTheme}
-            pedirUbicacion={pedirUbicacion}
-            pedirNotificaciones={pedirNotificaciones}
-            permissionStatus={permissionStatus}
-          />
-        )}
-      </ScrollView>
+        <View style={styles.desktopAppWrapper}>
+          <AppNavigator />
+        </View>
+      </View>
 
       {!!toast && (
         <TouchableOpacity onPress={() => setToast('')} style={styles.toast}>
@@ -611,9 +613,9 @@ const styles = StyleSheet.create({
   themeButtonText: { color: '#FFF', fontWeight: '900' },
   changeLink: { alignItems: 'center', paddingVertical: 8 },
   changeText: { fontWeight: '800' },
-  desktopMain: { flex: 1 },
-  desktopContent: { padding: 28, paddingBottom: 60, gap: 18 },
-  topTabs: { marginBottom: 18 },
+  desktopMain: { flex: 1, backgroundColor: '#05070D' },
+  desktopAppWrapper: { flex: 1, overflow: 'hidden', alignSelf: 'center', width: '100%', maxWidth: 640, borderLeftWidth: 1, borderRightWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  topTabs: { marginBottom: 18, maxHeight: 60, paddingHorizontal: 12 },
   topTab: { height: 42, borderRadius: 8, paddingHorizontal: 14, marginRight: 8, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 7 },
   topTabText: { fontWeight: '900' },
   sectionHead: { marginBottom: 18 },

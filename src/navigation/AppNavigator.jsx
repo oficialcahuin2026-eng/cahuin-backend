@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { View, ActivityIndicator, StyleSheet, Text, Platform, useWindowDimensions } from 'react-native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -45,6 +45,8 @@ import ModoPatrioScreen from '../screens/ModoPatrioScreen';
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
 
+export const navigationRef = createNavigationContainerRef();
+
 function AuthNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -59,60 +61,34 @@ function AuthNavigator() {
 }
 
 function MainTabs() {
-  const { COLORS } = useTheme();
+  const { COLORS, isDarkMode } = useTheme();
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width > 980;
   const { usuario } = useAuth();
-  const [badges, setBadges] = useState({ Radar: 0, Explorar: 0, Panoramas: 0, Chat: 0, Perfil: 0 });
+  const [badges, setBadges] = useState({});
+
+  const checkBadges = async () => {
+    try {
+      const [matchesRes, panoramasRes, cahuinRes] = await Promise.allSettled([
+        matchService.getMisMatches(),
+        panoramaService.listar({ region: usuario?.region }),
+        socialService.getCahuinDia(),
+      ]);
+      const newBadges = { Chat: 0, Panoramas: 0, Explorar: 0 };
+      if (matchesRes.status === 'fulfilled') newBadges.Chat = matchesRes.value.matches?.filter((m) => m.mensajesSinLeer > 0).length || 0;
+      if (panoramasRes.status === 'fulfilled') newBadges.Panoramas = panoramasRes.value.panoramas?.length || 0;
+      if (cahuinRes.status === 'fulfilled' && cahuinRes.value) newBadges.Explorar = 1;
+      setBadges(newBadges);
+    } catch (e) {
+      console.log('Error badges:', e);
+    }
+  };
 
   useEffect(() => {
-    let activo = true;
-
-    const cargarIndicadores = async () => {
-      try {
-        const [matchesRes, likesRes, preguntasRes, panoramasRes, cahuinDiaRes] = await Promise.allSettled([
-          matchService.getMisMatches(),
-          userService.getLikesRecibidos(),
-          userService.getMisPreguntasAnonimas(),
-          panoramaService.listar({ region: usuario?.region, ciudad: usuario?.ciudad }),
-          socialService.getCahuinDia(),
-        ]);
-
-        const matches = matchesRes.status === 'fulfilled' ? (matchesRes.value.matches || []) : [];
-        const likes = likesRes.status === 'fulfilled' ? (likesRes.value.likes || []) : [];
-        const preguntas = preguntasRes.status === 'fulfilled' ? (preguntasRes.value.preguntas || []) : [];
-        const panoramas = panoramasRes.status === 'fulfilled' ? (panoramasRes.value.panoramas || []) : [];
-        const cahuinDia = cahuinDiaRes.status === 'fulfilled' ? cahuinDiaRes.value : null;
-
-        const chatPendiente = matches.reduce((total, match) => total + (match.noLeidos || 0), 0)
-          + matches.filter((match) => !match.yaRespondi || (match.yaRespondi && !match.elYaRespondio)).length;
-        const likesPendientes = likes.length;
-        const preguntasPendientes = preguntas.filter((pregunta) => !pregunta.respondida).length;
-        const panoramasRecientes = panoramas.filter((panorama) => {
-          if (!panorama.createdAt) return false;
-          return Date.now() - new Date(panorama.createdAt).getTime() < 48 * 60 * 60 * 1000;
-        }).length;
-        const cahuinDiaPendiente = cahuinDia && !cahuinDia.yaVote ? 1 : 0;
-
-        if (activo) {
-          setBadges({
-            Radar: usuario?.boostGratisDisponibles > 0 ? usuario.boostGratisDisponibles : 0,
-            Explorar: cahuinDiaPendiente,
-            Panoramas: panoramasRecientes,
-            Chat: chatPendiente,
-            Perfil: likesPendientes + preguntasPendientes,
-          });
-        }
-      } catch {
-        if (activo) setBadges({ Radar: 0, Explorar: 0, Panoramas: 0, Chat: 0, Perfil: 0 });
-      }
-    };
-
-    cargarIndicadores();
-    const timer = setInterval(cargarIndicadores, 60000);
-    return () => {
-      activo = false;
-      clearInterval(timer);
-    };
-  }, [usuario?.boostGratisDisponibles, usuario?.ciudad, usuario?.region]);
+    checkBadges();
+    const iv = setInterval(checkBadges, 60000);
+    return () => clearInterval(iv);
+  }, []);
 
   const TAB_ICONS = {
     Radar:     { active: 'flame',       inactive: 'flame-outline' },
@@ -122,20 +98,12 @@ function MainTabs() {
     Perfil:    { active: 'person',      inactive: 'person-outline' },
   };
 
-  const TAB_LABELS = {
-    Radar: 'Radar',
-    Explorar: 'Explorar',
-    Panoramas: 'Panoramas',
-    Chat: 'Chat',
-    Perfil: 'Perfil',
-  };
-
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarShowLabel: false,
-        tabBarStyle: {
+        tabBarStyle: isDesktop ? { display: 'none' } : {
           position: 'absolute',
           left: 20,
           right: 20,
@@ -277,7 +245,7 @@ export default function AppNavigator() {
   const necesitaOnboarding = !usuario || (!usuario.fechaNacimiento && !usuario.edad);
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       {!necesitaOnboarding ? (
         <MainNavigator />
       ) : (
