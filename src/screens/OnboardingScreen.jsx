@@ -338,6 +338,7 @@ export default function OnboardingScreen() {
                     </TouchableOpacity>
 
                   </View>
+                  )}
                 </View>
               )}
 
