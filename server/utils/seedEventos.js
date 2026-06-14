@@ -1,3 +1,43 @@
+const mongoose = require('mongoose');
+const Panorama = require('../models/Panorama'); 
+require('dotenv').config(); 
+
+// 🌟 FIX 1: Importamos tu conexión real de la app (la que sabemos que funciona perfecto)
+const conectarDB = require('../config/db'); 
+
+const eventosOficiales = [
+  // 🌟 ARICA Y PARINACOTA (Junio)
+  { region: 'Arica y Parinacota', lugar: 'Antay Hotel & Spa, Arica', titulo: 'Luis Jara - "Más que Suerte"', descripcion: 'Concierto pop/romántico.', fecha: new Date('2026-06-05T20:00:00Z'), categoria: 'Música', emoji: '🎤' },
+  { region: 'Arica y Parinacota', lugar: 'Maestranza Brasil #117, Arica', titulo: 'Tren Turístico Arica – Central', descripcion: 'Experiencia cultural y musical en tren histórico.', fecha: new Date('2026-06-06T10:00:00Z'), categoria: 'Cultura', emoji: '🚂' },
+  { region: 'Arica y Parinacota', lugar: 'Chapiquiña, Putre', titulo: 'Festival de la Papa Chiquiza', descripcion: 'Festival andino con música y tradiciones locales.', fecha: new Date('2026-06-06T12:00:00Z'), categoria: 'Feria', emoji: '🥔' },
+  { region: 'Arica y Parinacota', lugar: 'Centro Cultural Junta de Adelanto, Arica', titulo: 'Festival Suena Norte 2026', descripcion: 'Festival regional de música.', fecha: new Date('2026-06-13T19:00:00Z'), categoria: 'Música', emoji: '🏜️' },
+  { region: 'Arica y Parinacota', lugar: 'Hotel del Valle, Arica', titulo: 'La Sociedad - "El Regreso"', descripcion: 'Pop romántico chileno.', fecha: new Date('2026-06-25T21:00:00Z'), categoria: 'Música', emoji: '🎸' },
+  { region: 'Arica y Parinacota', lugar: 'Arica', titulo: 'Pastor Rocha', descripcion: 'Stand up comedy nacional.', fecha: new Date('2026-06-25T22:00:00Z'), categoria: 'Comedia', emoji: '😂' },
+  // 🌟 ARICA Y PARINACOTA (Julio)
+  { region: 'Arica y Parinacota', lugar: 'Terraza Mestiza, Arica', titulo: 'Luis Hachen en Arica', descripcion: 'Show del comediante Luis Hachen en formato club.', fecha: new Date('2026-07-04T20:00:00Z'), categoria: 'Comedia', emoji: '😂', imagen: 'https://images.unsplash.com/photo-1585699324551-f6c309eedeca?q=80&w=900' },
+  { region: 'Arica y Parinacota', lugar: 'Complejo Valle Nuevo, Arica', titulo: 'San Marcos de Arica Fem vs Cobreloa Fem', descripcion: 'Fecha del Campeonato de Ascenso Femenino.', fecha: new Date('2026-07-05T12:00:00Z'), categoria: 'Deporte', emoji: '⚽', imagen: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?q=80&w=900' },
+  { region: 'Arica y Parinacota', lugar: 'Hotel Antay Arica', titulo: 'Brain Damage – Pink Floyd Tour 2026', descripcion: 'Tributo internacional a Pink Floyd.', fecha: new Date('2026-07-10T20:00:00Z'), categoria: 'Música', emoji: '🎸', imagen: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?q=80&w=900' },
+  { region: 'Arica y Parinacota', lugar: 'Morro de Arica / Playa La Lisera', titulo: 'Panamericano de Parapente', descripcion: 'Competencia internacional de parapente de precisión.', fecha: new Date('2026-07-10T10:00:00Z'), categoria: 'Deporte', emoji: '🪂', imagen: 'https://images.unsplash.com/photo-1506544777-64cfbe1142df?q=80&w=900' },
+  { region: 'Arica y Parinacota', lugar: 'Teatro Municipal de Arica', titulo: 'Claudio Michaux presenta Isabel', descripcion: 'Stand up comedy nacional.', fecha: new Date('2026-07-11T20:00:00Z'), categoria: 'Comedia', emoji: '😂', imagen: 'https://images.unsplash.com/photo-1585699324551-f6c309eedeca?q=80&w=900' },
+  { region: 'Arica y Parinacota', lugar: 'Hotel Antay de Arica', titulo: 'Los Jaivas - 45 años', descripcion: 'Concierto de la gira aniversario Alturas de Macchu Picchu.', fecha: new Date('2026-07-11T20:00:00Z'), categoria: 'Música', emoji: '🎹', imagen: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?q=80&w=900' },
+  { region: 'Arica y Parinacota', lugar: 'Teatro Municipal de Arica', titulo: 'Concierto FOJI Arica y Parinacota', descripcion: 'Concierto de la Orquesta Sinfónica Juvenil Regional.', fecha: new Date('2026-07-12T18:00:00Z'), categoria: 'Cultura', emoji: '🎻', imagen: 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?q=80&w=900' },
+  { region: 'Arica y Parinacota', lugar: 'Complejo Valle Nuevo, Arica', titulo: 'SM Arica Fem vs Dep. Antofagasta Fem', descripcion: 'Fecha del Campeonato de Ascenso Femenino.', fecha: new Date('2026-07-12T12:00:00Z'), categoria: 'Deporte', emoji: '⚽', imagen: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?q=80&w=900' },
+  { region: 'Arica y Parinacota', lugar: 'Club Nizza Arica', titulo: 'Iberia Unlimited', descripcion: 'Fiesta nocturna y aniversario de Casa Iberia.', fecha: new Date('2026-07-15T22:00:00Z'), categoria: 'Feria', emoji: '🥳', imagen: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=900' },
+  { region: 'Arica y Parinacota', lugar: 'Teatro Municipal de Arica', titulo: 'Chofi y Tapia - Por Amor o la Fuerza', descripcion: 'Show de stand up comedy en formato dúo.', fecha: new Date('2026-07-25T20:00:00Z'), categoria: 'Comedia', emoji: '😂', imagen: 'https://images.unsplash.com/photo-1585699324551-f6c309eedeca?q=80&w=900' },
+  { region: 'Arica y Parinacota', lugar: 'Complejo Valle Nuevo, Arica', titulo: 'SM Arica Fem vs Deportes Copiapó Fem', descripcion: 'Fecha del Campeonato de Ascenso Femenino.', fecha: new Date('2026-07-25T12:00:00Z'), categoria: 'Deporte', emoji: '⚽', imagen: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?q=80&w=900' },
+  { region: 'Arica y Parinacota', lugar: 'Estadio Carlos Dittborn, Arica', titulo: 'San Marcos de Arica vs Magallanes', descripcion: 'Partido del Campeonato de Ascenso.', fecha: new Date('2026-07-28T20:15:00Z'), categoria: 'Deporte', emoji: '⚽', imagen: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?q=80&w=900' },
+
+  // 🌟 TARAPACÁ
+  { region: 'Tarapacá', lugar: 'Hotel Gavina, Iquique', titulo: 'Luis Jara', descripcion: 'Concierto pop/romántico.', fecha: new Date('2026-06-06T20:30:00Z'), emoji: '🎤' },
+  { region: 'Tarapacá', lugar: 'Curupucho Bar & Grill, Iquique', titulo: 'KeChevere', descripcion: 'Show de rock/pop local.', fecha: new Date('2026-06-06T22:00:00Z'), emoji: '🎸' },
+  { region: 'Tarapacá', lugar: 'Club Casa Negra, Iquique', titulo: 'ChysteMC', descripcion: 'Rap y hip hop chileno.', fecha: new Date('2026-06-20T21:00:00Z'), emoji: '🧢' },
+  { region: 'Tarapacá', lugar: 'Hotel OX, Iquique', titulo: 'La Sociedad', descripcion: 'Pop romántico chileno.', fecha: new Date('2026-06-26T21:00:00Z'), emoji: '🎸' },
+
+  // 🌟 ANTOFAGASTA
+  { region: 'Antofagasta', lugar: 'Enjoy Antofagasta', titulo: 'Los Jaivas', descripcion: '45 años Alturas de Macchu Picchu.', fecha: new Date('2026-06-05T21:00:00Z'), emoji: '🏔️' },
+  { region: 'Antofagasta', lugar: 'Teatro Municipal de Antofagasta', titulo: 'Manuel García', descripcion: 'Cantautor folk/rock chileno.', fecha: new Date('2026-06-06T20:00:00Z'), emoji: '🎸' },
+  { region: 'Antofagasta', lugar: 'Antofagasta', titulo: 'Pame Leiva', descripcion: 'Stand up comedy nacional.', fecha: new Date('2026-06-13T21:00:00Z'), emoji: '😂' },
+  { region: 'Antofagasta', lugar: 'Teatro Municipal de Antofagasta', titulo: 'La Sociedad', descripcion: 'Pop romántico chileno.', fecha: new Date('2026-06-27T21:00:00Z'), emoji: '🎸' },
 
   // 🌟 ATACAMA
   { region: 'Atacama', lugar: 'Teatro Municipal, Copiapó', titulo: 'Inti-Illimani', descripcion: 'Música latinoamericana y folclore.', fecha: new Date('2026-06-06T19:30:00Z'), emoji: '🪈' },
