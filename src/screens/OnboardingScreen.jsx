@@ -286,23 +286,28 @@ export default function OnboardingScreen() {
                   {titleWithAccent('De dónde ', 'eres?')}
                   <Text style={styles.subtitle}>Activa tu ubicación para conectar con gente y panoramas en tu misma zona. Si viajas, se actualizará.</Text>
                   
-                  <TouchableOpacity 
-                    style={[styles.bigInputModern, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#F0444F', borderWidth: 0, marginTop: 20 }]} 
-                    onPress={obtenerUbicacion}
-                    disabled={cargandoUbicacion}
-                  >
-                    {cargandoUbicacion ? (
-                      <ActivityIndicator color="#FFF" />
-                    ) : (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                        <Ionicons name="location" size={24} color="#FFF" />
-                        <Text style={{ color: '#FFF', fontSize: 18, fontWeight: '700' }}>Activar ubicación</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
+                  {Platform.OS !== 'web' && (
+                    <TouchableOpacity 
+                      style={[styles.bigInputModern, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#F0444F', borderWidth: 0, marginTop: 20 }]} 
+                      onPress={obtenerUbicacion}
+                      disabled={cargandoUbicacion}
+                    >
+                      {cargandoUbicacion ? (
+                        <ActivityIndicator color="#FFF" />
+                      ) : (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                          <Ionicons name="location" size={24} color="#FFF" />
+                          <Text style={{ color: '#FFF', fontSize: 18, fontWeight: '700' }}>Activar ubicación</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  )}
 
-                  <View style={{ marginTop: 24, gap: 14 }}>
-                    <Text style={{ color: '#6B7280', fontSize: 14, textAlign: 'center' }}>O selecciona tu ubicación:</Text>
+                  {(Platform.OS === 'web' || (!region && !ciudad)) && (
+                    <View style={{ marginTop: 24, gap: 14 }}>
+                      <Text style={{ color: '#6B7280', fontSize: 14, textAlign: 'center' }}>
+                        {Platform.OS === 'web' ? 'Selecciona tu ubicación:' : 'O selecciona tu ubicación manualmente:'}
+                      </Text>
                     
                     <TouchableOpacity 
                       style={[styles.bigInputModern, { backgroundColor: 'rgba(10,12,18,0.72)', borderWidth: 1.5, borderColor: '#F0444F', padding: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
