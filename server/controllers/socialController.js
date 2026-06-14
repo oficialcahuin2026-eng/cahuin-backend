@@ -98,7 +98,7 @@ const eventosFallbackPorRegion = (region) => {
     .map((evento, index) => ({
       ...evento,
       _id: `fallback-${normalizarTexto(regionNorm)}-${index}`,
-      categoria: 'Evento Oficial',
+      categoria: evento.categoria || 'Evento Oficial',
       esOficial: true,
       activo: true,
       maxPersonas: 9999,
@@ -123,7 +123,7 @@ const asegurarEventosOficialesRegion = async (region) => {
     direccion: evento.direccion || evento.lugar,
     region: normalizarRegionChile(region),
     fecha: evento.fecha,
-    categoria: 'Evento Oficial',
+    categoria: evento.categoria || 'Evento Oficial',
     emoji: evento.emoji || '🎟️',
     imagen: evento.imagen || '',
     maxPersonas: 9999,

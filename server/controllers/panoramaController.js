@@ -32,7 +32,8 @@ const eventosFallbackPorRegion = (region) => {
     .map((evento, index) => ({
       ...evento,
       _id: `fallback-${normalizarTexto(regionFinal)}-${index}`,
-      categoria: 'Evento Oficial',
+      categoria: evento.categoria || 'Evento Oficial',
+      imagen: evento.imagen || '',
       esOficial: true,
       activo: true,
       maxPersonas: 9999,

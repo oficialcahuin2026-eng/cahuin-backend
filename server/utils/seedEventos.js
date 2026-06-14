@@ -1,30 +1,3 @@
-const mongoose = require('mongoose');
-const Panorama = require('../models/Panorama'); 
-require('dotenv').config(); 
-
-// 🌟 FIX 1: Importamos tu conexión real de la app (la que sabemos que funciona perfecto)
-const conectarDB = require('../config/db'); 
-
-const eventosOficiales = [
-  // 🌟 ARICA Y PARINACOTA
-  { region: 'Arica y Parinacota', lugar: 'Antay Hotel & Spa, Arica', titulo: 'Luis Jara - "Más que Suerte"', descripcion: 'Concierto pop/romántico.', fecha: new Date('2026-06-05T20:00:00Z'), emoji: '🎤' },
-  { region: 'Arica y Parinacota', lugar: 'Maestranza Brasil #117, Arica', titulo: 'Tren Turístico Arica – Central', descripcion: 'Experiencia cultural y musical en tren histórico.', fecha: new Date('2026-06-06T10:00:00Z'), emoji: '🚂' },
-  { region: 'Arica y Parinacota', lugar: 'Chapiquiña, Putre', titulo: 'Festival de la Papa Chiquiza', descripcion: 'Festival andino con música y tradiciones locales.', fecha: new Date('2026-06-06T12:00:00Z'), emoji: '🥔' },
-  { region: 'Arica y Parinacota', lugar: 'Centro Cultural Junta de Adelanto, Arica', titulo: 'Festival Suena Norte 2026', descripcion: 'Festival regional de música.', fecha: new Date('2026-06-13T19:00:00Z'), emoji: '🏜️' },
-  { region: 'Arica y Parinacota', lugar: 'Hotel del Valle, Arica', titulo: 'La Sociedad - "El Regreso"', descripcion: 'Pop romántico chileno.', fecha: new Date('2026-06-25T21:00:00Z'), emoji: '🎸' },
-  { region: 'Arica y Parinacota', lugar: 'Arica', titulo: 'Pastor Rocha', descripcion: 'Stand up comedy nacional.', fecha: new Date('2026-06-25T22:00:00Z'), emoji: '😂' },
-
-  // 🌟 TARAPACÁ
-  { region: 'Tarapacá', lugar: 'Hotel Gavina, Iquique', titulo: 'Luis Jara', descripcion: 'Concierto pop/romántico.', fecha: new Date('2026-06-06T20:30:00Z'), emoji: '🎤' },
-  { region: 'Tarapacá', lugar: 'Curupucho Bar & Grill, Iquique', titulo: 'KeChevere', descripcion: 'Show de rock/pop local.', fecha: new Date('2026-06-06T22:00:00Z'), emoji: '🎸' },
-  { region: 'Tarapacá', lugar: 'Club Casa Negra, Iquique', titulo: 'ChysteMC', descripcion: 'Rap y hip hop chileno.', fecha: new Date('2026-06-20T21:00:00Z'), emoji: '🧢' },
-  { region: 'Tarapacá', lugar: 'Hotel OX, Iquique', titulo: 'La Sociedad', descripcion: 'Pop romántico chileno.', fecha: new Date('2026-06-26T21:00:00Z'), emoji: '🎸' },
-
-  // 🌟 ANTOFAGASTA
-  { region: 'Antofagasta', lugar: 'Enjoy Antofagasta', titulo: 'Los Jaivas', descripcion: '45 años Alturas de Macchu Picchu.', fecha: new Date('2026-06-05T21:00:00Z'), emoji: '🏔️' },
-  { region: 'Antofagasta', lugar: 'Teatro Municipal de Antofagasta', titulo: 'Manuel García', descripcion: 'Cantautor folk/rock chileno.', fecha: new Date('2026-06-06T20:00:00Z'), emoji: '🎸' },
-  { region: 'Antofagasta', lugar: 'Antofagasta', titulo: 'Pame Leiva', descripcion: 'Stand up comedy nacional.', fecha: new Date('2026-06-13T21:00:00Z'), emoji: '😂' },
-  { region: 'Antofagasta', lugar: 'Teatro Municipal de Antofagasta', titulo: 'La Sociedad', descripcion: 'Pop romántico chileno.', fecha: new Date('2026-06-27T21:00:00Z'), emoji: '🎸' },
 
   // 🌟 ATACAMA
   { region: 'Atacama', lugar: 'Teatro Municipal, Copiapó', titulo: 'Inti-Illimani', descripcion: 'Música latinoamericana y folclore.', fecha: new Date('2026-06-06T19:30:00Z'), emoji: '🪈' },
