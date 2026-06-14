@@ -23,6 +23,15 @@ import {
   ScreenScaffold,
   SegmentedControl,
 } from '../components/CahuinUI';
+
+const categoryImages = {
+  'Música': require('../assets/categorias/musica.jpg'),
+  'Deporte': require('../assets/categorias/deporte.jpg'),
+  'Cultura': require('../assets/categorias/cultura.jpg'),
+  'Comedia': require('../assets/categorias/comedia.jpg'),
+  'Feria': require('../assets/categorias/ferias.jpg'),
+  'Gastronomía': require('../assets/categorias/gastronomia.jpg'),
+};
 import { FONTS, SHADOWS, SPACING } from '../utils/theme';
 
 const emptyPanoramas = require('../assets/illustrations/empty-panoramas.png');
@@ -151,7 +160,9 @@ export default function PanoramasScreen({ navigation }) {
   const listaActual = tabActiva === 'eventos' ? panoramasOficiales : panoramasComunidad;
 
   const renderOfficialCard = (item, index) => {
-    const imageUri = item.imagen || fallbackEventImages[index % fallbackEventImages.length];
+    const defaultImg = { uri: item.imagen || fallbackEventImages[index % fallbackEventImages.length] };
+    const imageSource = categoryImages[item.categoria] || defaultImg;
+    
     const d = new Date(item.fecha);
     const dia = d.getDate();
     const mes = MESES[d.getMonth()];
@@ -162,7 +173,7 @@ export default function PanoramasScreen({ navigation }) {
     return (
       <TouchableOpacity key={item._id || index} activeOpacity={0.92} onPress={() => setEventoActivo(item)} style={styles.modernCard}>
         <View style={styles.modernImageContainer}>
-          <Image source={{ uri: imageUri }} style={styles.modernImage} />
+          <Image source={imageSource} style={styles.modernImage} />
           <View style={styles.dateBadgeAbsolute}>
             <Text style={styles.dateBadgeDay}>{dia}</Text>
             <Text style={styles.dateBadgeMonth}>{mes}</Text>
