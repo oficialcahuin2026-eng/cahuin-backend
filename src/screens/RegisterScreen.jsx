@@ -21,6 +21,7 @@ import { useOAuth, useSignUp } from '@clerk/clerk-expo';
 
 import CahuinModal from '../components/CahuinModal';
 import CahuinTextField from '../components/CahuinTextField';
+import CahuinLogo from '../components/CahuinLogo';
 import { FONTS, RADIUS, SHADOWS, SPACING } from '../utils/theme';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -54,6 +55,7 @@ export default function RegisterScreen({ navigation }) {
   // 🌟 Hooks de Clerk
   const { isLoaded, signUp, setActive } = useSignUp();
   const { startOAuthFlow: startGoogleOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
+  const { startOAuthFlow: startAppleOAuthFlow } = useOAuth({ strategy: 'oauth_apple' });
 
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
@@ -131,7 +133,8 @@ export default function RegisterScreen({ navigation }) {
   const loginSocial = async (red) => {
     setCargandoSocial(red);
     try {
-      const { createdSessionId, setActive: setOAuthActive } = await startGoogleOAuthFlow({
+      const flow = red === 'Apple' ? startAppleOAuthFlow : startGoogleOAuthFlow;
+      const { createdSessionId, setActive: setOAuthActive } = await flow({
         redirectUrl: Linking.createURL('/'),
       });
 
@@ -140,7 +143,12 @@ export default function RegisterScreen({ navigation }) {
         revisarOnboarding();
       }
     } catch (error) {
-      avisar(red, error.errors?.[0]?.message || `No pudimos registrarte con ${red}.`);
+      const isSessionExists = error.errors?.some(e => e.code === 'session_exists');
+      if (isSessionExists) {
+        revisarOnboarding();
+      } else {
+        avisar(red, error.errors?.[0]?.message || `No pudimos registrarte con ${red}.`);
+      }
     } finally {
       setCargandoSocial(null);
     }
@@ -154,10 +162,7 @@ export default function RegisterScreen({ navigation }) {
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
               <View style={styles.glow} />
               <View style={styles.header}>
-                <View style={styles.brandRow}>
-                  <Ionicons name="flame" size={24} color="#F0444F" />
-                  <Text style={styles.logo}>Cahuín</Text>
-                </View>
+                <CahuinLogo style={styles.brandRow} size={25} />
                 <Text style={styles.title}>Crear cuenta</Text>
                 <Text style={styles.subtitle}>Solo lo básico para empezar. Luego armaremos tu perfil completo.</Text>
               </View>
@@ -216,10 +221,17 @@ export default function RegisterScreen({ navigation }) {
               </View>
 
               <View style={styles.socialRow}>
-                <TouchableOpacity style={[styles.socialButton, { backgroundColor: '#FFF' }]} onPress={() => loginSocial('Google')} disabled={!!cargandoSocial}>
-                  {cargandoSocial === 'Google' ? <ActivityIndicator color="#111827" /> : <Ionicons name="logo-google" size={22} color="#DB4437" />}
+                <TouchableOpacity style={[styles.socialButton, { backgroundColor: '#FFF', flex: 1 }]} onPress={() => loginSocial('Google')} disabled={!!cargandoSocial}>
+                  {cargandoSocial === 'Google' ? <ActivityIndicator color="#111827" /> : <Ionicons name="logo-google" size={20} color="#DB4437" />}
                   <Text style={[styles.socialText, { color: '#111827' }]}>Google</Text>
                 </TouchableOpacity>
+
+                {Platform.OS !== 'android' && (
+                  <TouchableOpacity style={[styles.socialButton, { backgroundColor: '#FFF', flex: 1 }]} onPress={() => loginSocial('Apple')} disabled={!!cargandoSocial}>
+                    {cargandoSocial === 'Apple' ? <ActivityIndicator color="#111827" /> : <Ionicons name="logo-apple" size={20} color="#111827" />}
+                    <Text style={[styles.socialText, { color: '#111827' }]}>Apple</Text>
+                  </TouchableOpacity>
+                )}
               </View>
 
               <View style={styles.footer}>
@@ -265,7 +277,7 @@ const styles = StyleSheet.create({
   scrollContent: { flexGrow: 1, justifyContent: 'center', padding: SPACING[5] },
   glow: { position: 'absolute', top: 60, right: -80, width: 250, height: 250, borderRadius: 125, backgroundColor: 'rgba(247,19,116,0.16)' },
   header: { alignItems: 'center', marginBottom: 28 },
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
+  brandRow: { marginBottom: 16 },
   logo: { fontSize: 25, fontWeight: '900', color: '#FFF', fontFamily: FONTS.display },
   title: { fontSize: 32, fontWeight: '900', color: '#F0444F', fontFamily: FONTS.display, marginBottom: 8 },
   subtitle: { fontSize: 15, color: '#8B95A7', textAlign: 'center', lineHeight: 22, paddingHorizontal: 18 },

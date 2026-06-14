@@ -1,11 +1,14 @@
 import 'react-native-gesture-handler';
 import React from 'react';
+import { Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider } from './src/context/AuthContext';
 import { ThemeProvider } from './src/context/ThemeContext'; 
 import AppNavigator from './src/navigation/AppNavigator';
+import WebShell from './src/web/WebShell';
 
 // 1. Importar Clerk y el Almacenamiento Seguro de Expo
 import { ClerkProvider } from '@clerk/clerk-expo';
@@ -15,6 +18,9 @@ import * as SecureStore from 'expo-secure-store';
 const tokenCache = {
   async getToken(key) {
     try {
+      if (Platform.OS === 'web') {
+        return AsyncStorage.getItem(key);
+      }
       const item = await SecureStore.getItemAsync(key);
       if (item) {
         console.log(`${key} was used 🔐 \n`);
@@ -30,6 +36,9 @@ const tokenCache = {
   },
   async saveToken(key, value) {
     try {
+      if (Platform.OS === 'web') {
+        return AsyncStorage.setItem(key, value);
+      }
       return SecureStore.setItemAsync(key, value);
     } catch (err) {
       return;
@@ -52,7 +61,7 @@ export default function App() {
         <SafeAreaProvider>
           <ThemeProvider>
             <AuthProvider>
-              <AppNavigator />
+              {Platform.OS === 'web' ? <WebShell /> : <AppNavigator />}
               <StatusBar style="auto" />
             </AuthProvider>
           </ThemeProvider>

@@ -19,6 +19,7 @@ import { useSignIn, useOAuth } from '@clerk/clerk-expo';
 
 import CahuinTextField from '../components/CahuinTextField';
 import CahuinModal from '../components/CahuinModal';
+import CahuinLogo from '../components/CahuinLogo';
 import { FONTS, RADIUS, SHADOWS, SPACING } from '../utils/theme';
 
 // Requisito de Clerk y Expo para que las ventanas de login externo funcionen
@@ -28,6 +29,7 @@ export default function LoginScreen({ navigation }) {
   // 🌟 Hooks de Clerk para manejar la sesión
   const { signIn, setActive, isLoaded } = useSignIn();
   const { startOAuthFlow: startGoogleOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
+  const { startOAuthFlow: startAppleOAuthFlow } = useOAuth({ strategy: 'oauth_apple' });
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -94,7 +96,8 @@ export default function LoginScreen({ navigation }) {
   const loginSocial = async (red) => {
     setCargandoSocial(red);
     try {
-      const { createdSessionId, setActive: setOAuthActive } = await startGoogleOAuthFlow({
+      const flow = red === 'Apple' ? startAppleOAuthFlow : startGoogleOAuthFlow;
+      const { createdSessionId, setActive: setOAuthActive } = await flow({
         redirectUrl: Linking.createURL('/'),
       });
 
@@ -106,11 +109,16 @@ export default function LoginScreen({ navigation }) {
         revisarOnboarding({});
       }
     } catch (error) {
-      showModal(
-        red, 
-        error.errors?.[0]?.message || `No pudimos iniciar sesión con ${red}.`, 
-        '#F0444F'
-      );
+      const isSessionExists = error.errors?.some(e => e.code === 'session_exists');
+      if (isSessionExists) {
+        revisarOnboarding({});
+      } else {
+        showModal(
+          red, 
+          error.errors?.[0]?.message || `No pudimos iniciar sesión con ${red}.`, 
+          '#F0444F'
+        );
+      }
     } finally {
       setCargandoSocial(null);
     }
@@ -123,10 +131,7 @@ export default function LoginScreen({ navigation }) {
           <View style={styles.glow} />
 
           <View style={styles.header}>
-            <View style={styles.brandRow}>
-              <Ionicons name="flame" size={32} color="#F0444F" />
-              <Text style={styles.logo}>Cahuín</Text>
-            </View>
+            <CahuinLogo style={styles.brandRow} size={38} />
             <Text style={styles.subtitle}>Ingresa a tu cuenta para ver qué está pasando cerca tuyo.</Text>
           </View>
 
@@ -161,17 +166,32 @@ export default function LoginScreen({ navigation }) {
 
           <View style={styles.socialRow}>
             <TouchableOpacity
-              style={[styles.socialButton, { backgroundColor: '#FFF' }]}
+              style={[styles.socialButton, { backgroundColor: '#FFF', flex: 1 }]}
               onPress={() => loginSocial('Google')}
               disabled={!!cargandoSocial}
             >
               {cargandoSocial === 'Google' ? (
                 <ActivityIndicator color="#111827" />
               ) : (
-                <Ionicons name="logo-google" size={22} color="#DB4437" />
+                <Ionicons name="logo-google" size={20} color="#DB4437" />
               )}
               <Text style={[styles.socialText, { color: '#111827' }]}>Google</Text>
             </TouchableOpacity>
+
+            {Platform.OS !== 'android' && (
+              <TouchableOpacity
+                style={[styles.socialButton, { backgroundColor: '#FFF', flex: 1 }]}
+                onPress={() => loginSocial('Apple')}
+                disabled={!!cargandoSocial}
+              >
+                {cargandoSocial === 'Apple' ? (
+                  <ActivityIndicator color="#111827" />
+                ) : (
+                  <Ionicons name="logo-apple" size={20} color="#111827" />
+                )}
+                <Text style={[styles.socialText, { color: '#111827' }]}>Apple</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           <View style={styles.footer}>
@@ -214,7 +234,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(240,68,79,0.18)',
   },
   header: { alignItems: 'center', marginBottom: 34 },
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  brandRow: { marginBottom: 10 },
   logo: { fontSize: 38, fontWeight: '900', color: '#FFF', fontFamily: FONTS.display },
   subtitle: { fontSize: 15, color: '#8B95A7', textAlign: 'center', lineHeight: 22, paddingHorizontal: 18 },
   form: { gap: 14 },

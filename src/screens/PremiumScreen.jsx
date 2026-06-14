@@ -12,11 +12,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import Purchases from 'react-native-purchases';
+import Purchases from '../utils/revenuecat';
 import { FONTS, SPACING, SHADOWS } from '../utils/theme';
 import CahuinModal from '../components/CahuinModal';
 import { PLANES_CAHUIN } from '../config/economia';
-import { premiumService } from '../services/api';
+import { paymentService, premiumService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -80,6 +80,25 @@ export default function PremiumScreen({ navigation }) {
   }, [packages]);
 
   const purchasePlan = async (plan) => {
+    if (Platform.OS === 'web') {
+      setPurchasing(true);
+      try {
+        const res = await paymentService.crearMercadoPagoPreference(plan.id);
+        if (res.checkoutUrl && typeof window !== 'undefined') {
+          window.location.href = res.checkoutUrl;
+        } else {
+          setModalMessage(res.message || 'Mercado Pago esta listo para configurarse.');
+          setModalVisible(true);
+        }
+      } catch (e) {
+        setModalMessage(e.message || 'Hubo un error al iniciar Mercado Pago.');
+        setModalVisible(true);
+      } finally {
+        setPurchasing(false);
+      }
+      return;
+    }
+
     const pack = packagesPorPlan[plan.id];
     if (!revenueCatDisponible || !pack) {
       Alert.alert(

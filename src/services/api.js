@@ -171,6 +171,11 @@ export const premiumService = {
   suscribir:  (planId) => api.post('/premium/suscribir', { planId }),
 };
 
+export const paymentService = {
+  getProducts: () => api.get('/payments/products'),
+  crearMercadoPagoPreference: (productId) => api.post('/payments/mercadopago/preference', { productId }),
+};
+
 export const iaService = {
   getWingman: (targetUserId, contextoChat) => api.post('/ia/wingman', { targetUserId, contextoChat }),
   getEnergia: (mensajes) => api.post('/ia/energia', { mensajes })

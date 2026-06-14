@@ -19,6 +19,13 @@ export const usePushNotifications = () => {
   const responseListener = useRef();
 
   useEffect(() => {
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        Notification.requestPermission().then((status) => setExpoPushToken(status === 'granted' ? 'web-notifications-granted' : ''));
+      }
+      return;
+    }
+
     registerForPushNotificationsAsync().then(token => setExpoPushToken(token));
 
     notificationListener.current = Notifications.addNotificationReceivedListener(notification => {

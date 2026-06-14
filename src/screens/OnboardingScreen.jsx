@@ -296,15 +296,21 @@ export default function OnboardingScreen() {
                     )}
                   </TouchableOpacity>
 
-                  {region && ciudad ? (
-                    <View style={{ marginTop: 30, alignItems: 'center' }}>
-                      <Text style={{ color: '#9CA3AF', fontSize: 14, marginBottom: 8 }}>Ubicación detectada:</Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 16, paddingVertical: 12, borderRadius: RADIUS.lg }}>
-                        <Ionicons name="map" size={20} color="#F0444F" />
-                        <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '600' }}>{ciudad}, {region}</Text>
-                      </View>
-                    </View>
-                  ) : null}
+                  <View style={{ marginTop: 24, gap: 14 }}>
+                    <Text style={{ color: '#6B7280', fontSize: 14, textAlign: 'center' }}>O ingresa tu ubicación manualmente:</Text>
+                    <CahuinTextField 
+                      icon="map-outline" 
+                      placeholder="Región (Ej: Araucanía)" 
+                      value={region} 
+                      onChangeText={setRegion} 
+                    />
+                    <CahuinTextField 
+                      icon="business-outline" 
+                      placeholder="Ciudad (Ej: Temuco)" 
+                      value={ciudad} 
+                      onChangeText={setCiudad} 
+                    />
+                  </View>
                 </View>
               )}
 
