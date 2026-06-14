@@ -10,9 +10,12 @@ const { GoogleGenerativeAI } = require('@google/generative-ai'); // 🌟 NUEVO: 
 
 const conectarDB = require('./config/db');
 
-// Modelos para la IA Salva-chats
+// Modelos para la IA Salva-chats y Limpieza
 const Match = require('./models/Match');
 const Mensaje = require('./models/Mensaje');
+const Historia = require('./models/Historia');
+const Panorama = require('./models/Panorama');
+const cloudinary = require('./config/cloudinary');
 
 const app = express();
 const server = http.createServer(app); 
@@ -49,6 +52,50 @@ app.use('/api/recetas',   require('./routes/recetas'));
 app.use('/api/cartas',    require('./routes/cartas'));
 app.use('/api/ia',        require('./routes/iaRoutes'));
 app.use('/api/social',    require('./routes/socialRoutes'));
+
+// 🌟 CRON: Limpieza de almacenamiento y base de datos (Se ejecuta a las 03:00 AM)
+cron.schedule('0 3 * * *', async () => {
+  console.log('🧹 Limpieza de servidor: Buscando historias y eventos caducados...');
+  try {
+    const ahora = new Date();
+    
+    // 1. Limpieza de Historias (borrar de Cloudinary y BD)
+    const historiasVencidas = await Historia.find({ expiraEn: { $lt: ahora } });
+    for (let historia of historiasVencidas) {
+      if (historia.imagen) {
+        const match = historia.imagen.match(/\/v\d+\/(.+)\.\w+$/);
+        if (match && match[1]) {
+          await cloudinary.uploader.destroy(match[1]).catch(() => {});
+        }
+      }
+    }
+    const borradas = await Historia.deleteMany({ expiraEn: { $lt: ahora } });
+    console.log(`🧹 ${borradas.deletedCount} historias eliminadas permanentemente.`);
+
+    // 2. Limpieza de Panoramas de usuarios vencidos hace más de 24 hrs
+    const ayer = new Date(ahora.getTime() - 24 * 60 * 60 * 1000);
+    const eventosVencidos = await Panorama.find({ 
+      fecha: { $lt: ayer },
+      esOficial: { $ne: true } 
+    });
+    for (let evento of eventosVencidos) {
+      if (evento.imagen && evento.imagen.includes('cloudinary')) {
+        const match = evento.imagen.match(/\/v\d+\/(.+)\.\w+$/);
+        if (match && match[1]) {
+          await cloudinary.uploader.destroy(match[1]).catch(() => {});
+        }
+      }
+    }
+    const eventosBorrados = await Panorama.deleteMany({ 
+      fecha: { $lt: ayer },
+      esOficial: { $ne: true } 
+    });
+    console.log(`🧹 ${eventosBorrados.deletedCount} panoramas de usuarios eliminados.`);
+
+  } catch (e) {
+    console.log('Error Limpieza:', e);
+  }
+});
 
 // 🌟 IDEA 1: IA SALVA-CHATS (Se ejecuta todos los días a las 20:00 hrs)
 cron.schedule('0 20 * * *', async () => {
