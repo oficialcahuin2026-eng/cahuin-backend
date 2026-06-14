@@ -32,6 +32,17 @@ const categoryImages = {
   'Feria': require('../assets/categorias/ferias.jpg'),
   'Gastronomía': require('../assets/categorias/gastronomia.jpg'),
 };
+
+const CATEGORY_TABS = [
+  { id: 'Todos', label: 'Todos', icon: null },
+  { id: 'Música', label: 'Música', icon: 'musical-notes-outline' },
+  { id: 'Cultura', label: 'Cultura', icon: 'color-palette-outline' },
+  { id: 'Deporte', label: 'Deporte', icon: 'football-outline' },
+  { id: 'Comedia', label: 'Comedia', icon: 'happy-outline' },
+  { id: 'Feria', label: 'Feria', icon: 'storefront-outline' },
+  { id: 'Gastronomía', label: 'Gastronomía', icon: 'restaurant-outline' },
+];
+
 import { FONTS, SHADOWS, SPACING } from '../utils/theme';
 
 const emptyPanoramas = require('../assets/illustrations/empty-panoramas.png');
@@ -252,15 +263,18 @@ export default function PanoramasScreen({ navigation }) {
           </TouchableOpacity>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll} contentContainerStyle={styles.categoriesContainer}>
-            {CATEGORIAS_OFICIALES.map((cat) => {
-              const active = categoriaOficial === cat;
+            {CATEGORY_TABS.map((tab) => {
+              const active = categoriaOficial === tab.id;
               return (
                 <TouchableOpacity
-                  key={cat}
-                  style={[styles.categoryPill, active && styles.categoryPillActive]}
-                  onPress={() => setCategoriaOficial(cat)}
+                  key={tab.id}
+                  style={[styles.categoryPill, active && styles.categoryPillActive, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}
+                  onPress={() => setCategoriaOficial(tab.id)}
                 >
-                  <Text style={[styles.categoryPillText, active && styles.categoryPillTextActive]}>{cat}</Text>
+                  {tab.icon && (
+                    <Ionicons name={tab.icon} size={16} color={active ? COLORS.textPrimary : COLORS.textMuted} />
+                  )}
+                  <Text style={[styles.categoryPillText, active && styles.categoryPillTextActive]}>{tab.label}</Text>
                 </TouchableOpacity>
               );
             })}
