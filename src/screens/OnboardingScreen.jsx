@@ -12,6 +12,8 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Modal,
+  FlatList,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
@@ -21,7 +23,7 @@ import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/api';
 import CahuinModal from '../components/CahuinModal';
 import CahuinTextField from '../components/CahuinTextField';
-import { REGIONES_CHILE } from '../utils/chileLocations';
+import { REGIONES_CHILE, normalizarTexto } from '../utils/chileLocations';
 import { FONTS, RADIUS, SHADOWS, SPACING } from '../utils/theme';
 
 const DATOS = {
@@ -64,6 +66,9 @@ export default function OnboardingScreen() {
   const [region, setRegion] = useState(usuario?.region && usuario.region !== 'Por definir' ? usuario.region : '');
   const [ciudad, setCiudad] = useState(usuario?.ciudad && usuario.ciudad !== 'Por definir' ? usuario.ciudad : '');
   
+  const [modalLocationVisible, setModalLocationVisible] = useState(false);
+  const [locationStep, setLocationStep] = useState('region');
+  const [locationSearch, setLocationSearch] = useState('');
   const [dia, setDia] = useState('');
   const [mes, setMes] = useState('');
   const [anio, setAno] = useState('');
@@ -297,19 +302,36 @@ export default function OnboardingScreen() {
                   </TouchableOpacity>
 
                   <View style={{ marginTop: 24, gap: 14 }}>
-                    <Text style={{ color: '#6B7280', fontSize: 14, textAlign: 'center' }}>O ingresa tu ubicación manualmente:</Text>
-                    <CahuinTextField 
-                      icon="map-outline" 
-                      placeholder="Región (Ej: Araucanía)" 
-                      value={region} 
-                      onChangeText={setRegion} 
-                    />
-                    <CahuinTextField 
-                      icon="business-outline" 
-                      placeholder="Ciudad (Ej: Temuco)" 
-                      value={ciudad} 
-                      onChangeText={setCiudad} 
-                    />
+                    <Text style={{ color: '#6B7280', fontSize: 14, textAlign: 'center' }}>O selecciona tu ubicación:</Text>
+                    
+                    <TouchableOpacity 
+                      style={[styles.bigInputModern, { backgroundColor: 'rgba(10,12,18,0.72)', borderWidth: 1.5, borderColor: '#F0444F', padding: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
+                      onPress={() => { setLocationStep('region'); setLocationSearch(''); setModalLocationVisible(true); }}
+                    >
+                      <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                        <Ionicons name="map-outline" size={24} color="#FFF" />
+                        <Text style={{ color: region ? '#FFF' : '#6B7280', fontSize: 18, fontWeight: '700' }}>{region || 'Seleccionar Región...'}</Text>
+                      </View>
+                      <Ionicons name="chevron-down" size={24} color="#FFF" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                      style={[styles.bigInputModern, { backgroundColor: 'rgba(10,12,18,0.72)', borderWidth: 1.5, borderColor: region ? '#F0444F' : '#333', padding: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', opacity: region ? 1 : 0.5 }]}
+                      onPress={() => { 
+                        if(region) {
+                          setLocationStep('ciudad'); setLocationSearch(''); setModalLocationVisible(true); 
+                        } else {
+                          avisar('Oops', 'Primero elige una región.');
+                        }
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                        <Ionicons name="business-outline" size={24} color="#FFF" />
+                        <Text style={{ color: ciudad ? '#FFF' : '#6B7280', fontSize: 18, fontWeight: '700' }}>{ciudad || 'Seleccionar Ciudad...'}</Text>
+                      </View>
+                      <Ionicons name="chevron-down" size={24} color={region ? '#FFF' : '#333'} />
+                    </TouchableOpacity>
+
                   </View>
                 </View>
               )}
@@ -391,6 +413,63 @@ export default function OnboardingScreen() {
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
+      
+      <Modal visible={modalLocationVisible} animationType="slide" transparent={true} onRequestClose={() => setModalLocationVisible(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: '#100B12', borderTopLeftRadius: 30, borderTopRightRadius: 30, height: '85%', padding: 24, paddingBottom: Platform.OS === 'ios' ? 40 : 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+            
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <Text style={{ color: '#FFF', fontSize: 24, fontWeight: '900' }}>{locationStep === 'region' ? 'Elige tu Región' : 'Elige tu Ciudad'}</Text>
+              <TouchableOpacity onPress={() => setModalLocationVisible(false)} style={{ padding: 5 }}>
+                <Ionicons name="close" size={28} color="#FFF" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 16, paddingHorizontal: 16, alignItems: 'center', height: 50, marginBottom: 20 }}>
+              <Ionicons name="search" size={20} color="#8B95A7" />
+              <TextInput 
+                style={{ flex: 1, color: '#FFF', fontSize: 16, marginLeft: 10 }}
+                placeholder="Buscar..."
+                placeholderTextColor="#8B95A7"
+                value={locationSearch}
+                onChangeText={setLocationSearch}
+                autoFocus
+              />
+            </View>
+
+            <FlatList
+              data={
+                (locationStep === 'region' ? Object.keys(REGIONES_CHILE) : (REGIONES_CHILE[region] || []))
+                  .filter(item => normalizarTexto(item).includes(normalizarTexto(locationSearch)))
+              }
+              keyExtractor={(item) => item}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => (
+                <TouchableOpacity 
+                  style={{ paddingVertical: 18, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+                  onPress={() => {
+                    if (locationStep === 'region') {
+                      setRegion(item);
+                      setCiudad(''); // Reset ciudad if region changes
+                      setLocationStep('ciudad');
+                      setLocationSearch('');
+                    } else {
+                      setCiudad(item);
+                      setModalLocationVisible(false);
+                    }
+                  }}
+                >
+                  <Text style={{ color: '#FFF', fontSize: 18, fontWeight: '600' }}>{item}</Text>
+                  <Ionicons name="chevron-forward" size={20} color="#F0444F" />
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={<Text style={{ color: '#8B95A7', textAlign: 'center', marginTop: 20 }}>No se encontraron resultados.</Text>}
+            />
+
+          </View>
+        </View>
+      </Modal>
+
     </LinearGradient>
     <CahuinModal
       visible={!!modal}

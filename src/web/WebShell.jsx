@@ -47,10 +47,23 @@ export default function WebShell() {
     setDevice(nextDevice);
   };
 
-  if (loading) return <FullLoader />;
-  if (!device) return <DeviceChooser onChoose={chooseDevice} />;
-  if (device === 'mobile') return <MobileWebApp onChangeDevice={() => setDevice(null)} />;
-  return <DesktopWebApp onChangeDevice={() => setDevice(null)} />;
+  return (
+    <>
+      {Platform.OS === 'web' && (
+        <style type="text/css">{`
+          @font-face {
+            font-family: 'Ionicons';
+            src: url('https://unpkg.com/ionicons@4.5.2/dist/fonts/ionicons.ttf') format('truetype');
+          }
+          @font-face {
+            font-family: 'MaterialCommunityIcons';
+            src: url('https://cdn.jsdelivr.net/npm/@mdi/font@5.9.55/fonts/materialdesignicons-webfont.ttf') format('truetype');
+          }
+        `}</style>
+      )}
+      {loading ? <FullLoader /> : (!device ? <DeviceChooser onChoose={chooseDevice} /> : (device === 'mobile' ? <MobileWebApp onChangeDevice={() => setDevice(null)} /> : <DesktopWebApp onChangeDevice={() => setDevice(null)} />))}
+    </>
+  );
 }
 
 function FullLoader() {
@@ -65,18 +78,7 @@ function DeviceChooser({ onChoose }) {
   const { COLORS, isDarkMode } = useTheme();
 
   return (
-    <>
-      <style type="text/css">{`
-        @font-face {
-          font-family: 'Ionicons';
-          src: url('https://unpkg.com/ionicons@4.5.2/dist/fonts/ionicons.ttf') format('truetype');
-        }
-        @font-face {
-          font-family: 'MaterialCommunityIcons';
-          src: url('https://cdn.jsdelivr.net/npm/@mdi/font@5.9.55/fonts/materialdesignicons-webfont.ttf') format('truetype');
-        }
-      `}</style>
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+    <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
         <LinearGradient
           colors={isDarkMode ? ['#05070D', '#120B12', '#080A12'] : ['#FFF3F3', '#FFF1E6', '#F4F2FF']}
           style={styles.choiceRoot}
@@ -114,7 +116,6 @@ function DeviceChooser({ onChoose }) {
           </View>
         </LinearGradient>
       </ScrollView>
-    </>
   );
 }
 
@@ -597,7 +598,7 @@ const styles = StyleSheet.create({
   deviceButton: { marginTop: 22, height: 48, borderRadius: 8, backgroundColor: '#F0444F', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   deviceButtonHot: { backgroundColor: '#F59E0B' },
   deviceButtonText: { color: '#FFF', fontSize: 16, fontWeight: '900' },
-  mobileRoot: { flex: 1, backgroundColor: '#000' },
+  mobileRoot: { flex: 1, minHeight: '100vh', backgroundColor: '#000' },
   switchFloating: { position: 'absolute', right: 18, top: 18, zIndex: 50, backgroundColor: 'rgba(0,0,0,0.72)', borderRadius: 8, paddingHorizontal: 12, height: 34, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
   switchFloatingText: { color: '#FFF', fontWeight: '800', fontSize: 12 },
   desktopRoot: { flex: 1, minHeight: '100vh', flexDirection: 'row' },

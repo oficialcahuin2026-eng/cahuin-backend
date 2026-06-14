@@ -23,6 +23,7 @@ const io = new Server(server, { cors: { origin: "*" } });
 app.use(cors({
     origin: [
         'https://cahuin.app', 
+        'https://www.cahuin.app',
         'https://cahuin-web-github-student-organization.appwrite.network', 
         'http://localhost:3000',
         'http://localhost:8081' // Para que el emulador de Expo siga funcionando
