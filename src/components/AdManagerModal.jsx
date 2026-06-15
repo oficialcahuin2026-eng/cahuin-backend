@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Modal, View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { RewardedAd, RewardedAdEventType, TestIds } from 'react-native-google-mobile-ads';
+import mobileAds from 'react-native-google-mobile-ads';
 
 const adUnitId = __DEV__ ? TestIds.REWARDED : 'ca-app-pub-9649235284758114/1860146658';
 
@@ -21,6 +22,16 @@ export default function AdManagerModal({ visible, requiredAdsCount = 1, onAdFini
     let unsubscribeEarned = null;
     let unsubscribeClosed = null;
     let unsubscribeError = null;
+
+    const inicializarYCargar = async () => {
+      try {
+        await mobileAds().initialize();
+        cargarSiguienteAnuncio();
+      } catch (err) {
+        console.warn('Error inicializando AdMob:', err);
+        finalizarPorError();
+      }
+    };
 
     const cargarSiguienteAnuncio = () => {
       setLoadingMsg(`Cargando anuncio ${adsWatchedRef.current + 1} de ${requiredAdsCount}...`);
@@ -80,7 +91,7 @@ export default function AdManagerModal({ visible, requiredAdsCount = 1, onAdFini
       onClose();
     };
 
-    cargarSiguienteAnuncio();
+    inicializarYCargar();
 
     return () => {
       limpiarListeners();

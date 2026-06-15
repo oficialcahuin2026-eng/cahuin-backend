@@ -13,14 +13,6 @@ import WebShell from './src/web/WebShell';
 // 1. Importar Clerk y el Almacenamiento Seguro de Expo
 import { ClerkProvider } from '@clerk/clerk-expo';
 import * as SecureStore from 'expo-secure-store';
-import mobileAds from 'react-native-google-mobile-ads';
-
-// Inicializar Google Mobile Ads al arrancar la app para evitar crasheos nativos
-if (Platform.OS !== 'web') {
-  mobileAds().initialize().catch((err) => {
-    console.log('Error inicializando AdMob:', err);
-  });
-}
 
 // 2. Crear el "Caché de Tokens" para que la sesión se quede guardada en el celular
 const tokenCache = {
