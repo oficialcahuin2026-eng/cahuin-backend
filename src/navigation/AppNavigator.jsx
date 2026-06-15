@@ -250,7 +250,7 @@ export default function AppNavigator() {
   }
 
   const noAutenticado = !usuario;
-  const necesitaOnboarding = usuario && (!usuario.fechaNacimiento && !usuario.edad);
+  const necesitaOnboarding = usuario && !usuario.fechaNacimiento;
 
   return (
     <NavigationContainer ref={navigationRef}>
