@@ -230,6 +230,14 @@ function MainNavigator() {
   );
 }
 
+function OnboardingNavigator() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="OnboardingScreen" component={OnboardingScreen} />
+    </Stack.Navigator>
+  );
+}
+
 export default function AppNavigator() {
   const { usuario, cargando } = useAuth();
 
@@ -241,15 +249,17 @@ export default function AppNavigator() {
     );
   }
 
-  // Condición para saber si le faltan datos vitales
-  const necesitaOnboarding = !usuario || (!usuario.fechaNacimiento && !usuario.edad);
+  const noAutenticado = !usuario;
+  const necesitaOnboarding = usuario && (!usuario.fechaNacimiento && !usuario.edad);
 
   return (
     <NavigationContainer ref={navigationRef}>
-      {!necesitaOnboarding ? (
-        <MainNavigator />
-      ) : (
+      {noAutenticado ? (
         <AuthNavigator />
+      ) : necesitaOnboarding ? (
+        <OnboardingNavigator />
+      ) : (
+        <MainNavigator />
       )}
     </NavigationContainer>
   );

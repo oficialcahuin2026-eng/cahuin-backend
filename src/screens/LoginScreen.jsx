@@ -49,18 +49,6 @@ export default function LoginScreen({ navigation }) {
     setModalInfo({ title, message, emoji: '!', accent, tone: 'danger' });
   };
 
-  const revisarOnboarding = (userData) => {
-    const usuarioFinal = userData?.usuario || userData;
-    if (
-      !usuarioFinal?.fechaNacimiento ||
-      !usuarioFinal?.telefono ||
-      !usuarioFinal?.ciudad ||
-      usuarioFinal?.ciudad === 'Por definir'
-    ) {
-      navigation.navigate('OnboardingScreen');
-    }
-  };
-
   const handleLogin = async () => {
     if (!isLoaded) return;
     
@@ -80,10 +68,6 @@ export default function LoginScreen({ navigation }) {
       if (completeSignIn.status === 'complete') {
         // Guardamos la sesión activa en el celular
         await setActive({ session: completeSignIn.createdSessionId });
-        
-        // Pasamos un objeto vacío por ahora para forzar que los usuarios nuevos vayan al Onboarding.
-        // Más adelante puedes reemplazar esto con los datos que traigas de tu MongoDB.
-        revisarOnboarding({});
       }
     } catch (error) {
       // Clerk devuelve los errores en un array 'errors'
@@ -104,15 +88,10 @@ export default function LoginScreen({ navigation }) {
       if (createdSessionId) {
         // Activamos la sesión con Clerk
         await setOAuthActive({ session: createdSessionId });
-        
-        // Redirigimos al onboarding (igual que en el inicio de sesión por correo)
-        revisarOnboarding({});
       }
     } catch (error) {
       const isSessionExists = error.errors?.some(e => e.code === 'session_exists');
-      if (isSessionExists) {
-        revisarOnboarding({});
-      } else {
+      if (!isSessionExists) {
         showModal(
           red, 
           error.errors?.[0]?.message || `No pudimos iniciar sesión con ${red}.`, 
