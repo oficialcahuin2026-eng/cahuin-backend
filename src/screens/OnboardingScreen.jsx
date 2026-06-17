@@ -16,7 +16,6 @@ import {
   FlatList,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
@@ -24,6 +23,7 @@ import { userService } from '../services/api';
 import CahuinModal from '../components/CahuinModal';
 import CahuinTextField from '../components/CahuinTextField';
 import { REGIONES_CHILE, normalizarTexto } from '../utils/chileLocations';
+import { detectarUbicacionChile, obtenerCoordenadasActuales, pedirPermisoUbicacion } from '../utils/location';
 import { FONTS, RADIUS, SHADOWS, SPACING } from '../utils/theme';
 
 const DATOS = {
@@ -95,22 +95,18 @@ export default function OnboardingScreen() {
   const obtenerUbicacion = async () => {
     setCargandoUbicacion(true);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      const { status } = await pedirPermisoUbicacion();
       if (status !== 'granted') {
         avisar('Permiso denegado', 'Necesitamos tu ubicación para mostrarte gente cerca.', '😢');
         return;
       }
 
-      const location = await Location.getCurrentPositionAsync({});
-      const geocode = await Location.reverseGeocodeAsync({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
+      const location = await obtenerCoordenadasActuales();
+      const ubicacion = await detectarUbicacionChile(location.coords);
 
-      if (geocode && geocode.length > 0) {
-        const place = geocode[0];
-        setRegion(place.region || place.subregion || '');
-        setCiudad(place.city || place.subregion || '');
+      if (ubicacion?.ciudad || ubicacion?.region) {
+        setRegion(ubicacion.region || '');
+        setCiudad(ubicacion.ciudad || '');
       } else {
         avisar('Error', 'No pudimos determinar tu ciudad automáticamente.', '😢');
       }

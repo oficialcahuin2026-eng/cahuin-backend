@@ -27,8 +27,7 @@ export const AuthProvider = ({ children }) => {
         });
 
         const userData = response.usuario;
-        response.data = response;
-        const localToken = response.data.token; // 🌟 Capturamos el token del servidor
+        const localToken = response.token; // 🌟 Capturamos el token del servidor
 
         if (!userData || !localToken) {
           throw new Error('El backend no devolvio usuario/token al sincronizar Clerk.');
@@ -44,7 +43,7 @@ export const AuthProvider = ({ children }) => {
         // 🌟 Si tenemos el push token de Expo, lo enviamos al backend para vincularlo a este usuario
         if (expoPushToken) {
           try {
-            await api.put('/users/actualizar', { pushToken: expoPushToken }, { headers: { Authorization: `Bearer ${localToken}` } });
+            await api.put('/users/me', { pushToken: expoPushToken }, { headers: { Authorization: `Bearer ${localToken}` } });
             console.log('Push Token sincronizado con el backend.');
           } catch (e) {
             console.warn('Error enviando push token al backend:', e);

@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Location from 'expo-location';
 import { matchService, userService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -23,7 +22,7 @@ import MatchCelebrationModal from '../components/MatchCelebrationModal';
 import PreferenciasModal from '../components/PreferenciasModal';
 import AdManagerModal from '../components/AdManagerModal';
 import { useSuperLikesDiarios } from '../hooks/useSuperLikesDiarios';
-import { inferirRegionPorCiudad, normalizarCiudadChile, normalizarRegionChile } from '../utils/chileLocations';
+import { consultarPermisoUbicacion, detectarUbicacionChile, obtenerCoordenadasActuales } from '../utils/location';
 import { calcularCompatibilidad, emojiCompatibilidad } from '../hooks/useCompatibilidad';
 import { FONTS, SHADOWS, SPACING, RADIUS } from '../utils/theme';
 
@@ -75,18 +74,24 @@ export default function HomeScreen({ navigation }) {
 
   const iniciarRadarGPS = async () => {
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (usuario?.latitud && usuario?.longitud) {
+        cargarPerfilesConFiltros();
+        return;
+      }
+
+      const { status } = await consultarPermisoUbicacion();
       if (status === 'granted') {
-        const ubicacion = await Location.getCurrentPositionAsync({});
+        const ubicacion = await obtenerCoordenadasActuales();
         const ubicacionPerfil = { latitud: ubicacion.coords.latitude, longitud: ubicacion.coords.longitude };
         try {
-          const [geo] = await Location.reverseGeocodeAsync(ubicacion.coords);
-          const ciudadDetectada = normalizarCiudadChile(geo?.city || geo?.subregion || geo?.district || '');
-          const regionDetectada = normalizarRegionChile(geo?.region || inferirRegionPorCiudad(ciudadDetectada));
+          const ubicacionDetectada = await detectarUbicacionChile(ubicacion.coords);
           const ciudadActual = usuario?.ciudad;
-          if (ciudadDetectada && (!ciudadActual || ciudadActual === 'Por definir' || ciudadActual === 'Santiago' || ciudadActual === ciudadDetectada)) {
-            ubicacionPerfil.ciudad = ciudadDetectada;
-            ubicacionPerfil.region = regionDetectada || inferirRegionPorCiudad(ciudadDetectada);
+          if (
+            ubicacionDetectada?.ciudad &&
+            (!ciudadActual || ciudadActual === 'Por definir' || ciudadActual === 'Santiago' || ciudadActual === ubicacionDetectada.ciudad)
+          ) {
+            ubicacionPerfil.ciudad = ubicacionDetectada.ciudad;
+            ubicacionPerfil.region = ubicacionDetectada.region;
           }
         } catch {
           console.log('No se pudo traducir GPS a ciudad.');

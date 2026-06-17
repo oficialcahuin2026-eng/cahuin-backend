@@ -31,6 +31,12 @@
     "plugins": [
       "expo-asset",
       "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Cahuín usa tu ubicación para mostrarte gente y panoramas cerca de ti."
+        }
+      ],
       "@react-native-community/datetimepicker",
       "expo-font",
       [
