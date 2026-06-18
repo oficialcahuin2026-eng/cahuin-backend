@@ -98,6 +98,14 @@ function MainTabs() {
     Perfil:    { active: 'person',      inactive: 'person-outline' },
   };
 
+  const TAB_LABELS = {
+    Radar: 'Radar',
+    Explorar: 'Explorar',
+    Panoramas: 'Panoramas',
+    Chat: 'Chat',
+    Perfil: 'Perfil',
+  };
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
