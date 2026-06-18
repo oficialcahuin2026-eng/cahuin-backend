@@ -13,6 +13,9 @@ import WebShell from './src/web/WebShell';
 // 1. Importar Clerk y el Almacenamiento Seguro de Expo
 import { ClerkProvider } from '@clerk/clerk-expo';
 import * as SecureStore from 'expo-secure-store';
+import * as WebBrowser from 'expo-web-browser';
+
+WebBrowser.maybeCompleteAuthSession();
 
 // 2. Crear el "Caché de Tokens" para que la sesión se quede guardada en el celular
 const tokenCache = {

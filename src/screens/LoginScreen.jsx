@@ -22,9 +22,6 @@ import CahuinModal from '../components/CahuinModal';
 import CahuinLogo from '../components/CahuinLogo';
 import { FONTS, RADIUS, SHADOWS, SPACING } from '../utils/theme';
 
-// Requisito de Clerk y Expo para que las ventanas de login externo funcionen
-WebBrowser.maybeCompleteAuthSession();
-
 export default function LoginScreen({ navigation }) {
   // 🌟 Hooks de Clerk para manejar la sesión
   const { signIn, setActive, isLoaded } = useSignIn();

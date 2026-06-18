@@ -24,7 +24,7 @@ import CahuinTextField from '../components/CahuinTextField';
 import CahuinLogo from '../components/CahuinLogo';
 import { FONTS, RADIUS, SHADOWS, SPACING } from '../utils/theme';
 
-WebBrowser.maybeCompleteAuthSession();
+
 
 const onlyNumbers = (text) => text.replace(/\D/g, '');
 
@@ -78,9 +78,7 @@ export default function RegisterScreen({ navigation }) {
 
   const avisar = (title, message) => setModal({ title, message, emoji: '!' });
 
-  const revisarOnboarding = () => {
-    navigation.navigate('OnboardingScreen');
-  };
+
 
   const handleRegistro = async () => {
     if (!isLoaded) return;
@@ -118,7 +116,6 @@ export default function RegisterScreen({ navigation }) {
       if (result.status === 'complete') {
         // Si no pide código de verificación, activa la sesión y entra
         await setActive({ session: result.createdSessionId });
-        revisarOnboarding();
       } else {
         // Si Clerk tiene encendida la Verificación de correo
         avisar('Revisa tu correo', 'Clerk te ha enviado un código de verificación. (Puedes desactivar esto en el dashboard de Clerk).');
@@ -140,13 +137,10 @@ export default function RegisterScreen({ navigation }) {
 
       if (createdSessionId) {
         await setOAuthActive({ session: createdSessionId });
-        revisarOnboarding();
       }
     } catch (error) {
       const isSessionExists = error.errors?.some(e => e.code === 'session_exists');
-      if (isSessionExists) {
-        revisarOnboarding();
-      } else {
+      if (!isSessionExists) {
         avisar(red, error.errors?.[0]?.message || `No pudimos registrarte con ${red}.`);
       }
     } finally {

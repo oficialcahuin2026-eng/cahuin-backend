@@ -167,7 +167,7 @@ export default function PanoramasScreen({ navigation }) {
   };
 
   const panoramasOficiales = panoramas.filter((p) => p.esOficial && (categoriaOficial === 'Todos' || p.categoria === categoriaOficial));
-  const panoramasComunidad = panoramas.filter((p) => !p.esOficial);
+  const panoramasComunidad = panoramas.filter((p) => !p.esOficial && (categoriaOficial === 'Todos' || p.categoria === categoriaOficial));
   const listaActual = tabActiva === 'eventos' ? panoramasOficiales : panoramasComunidad;
 
   const renderOfficialCard = (item, index) => {
@@ -251,6 +251,24 @@ export default function PanoramasScreen({ navigation }) {
         ]}
       />
 
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll} contentContainerStyle={styles.categoriesContainer}>
+        {CATEGORY_TABS.map((tab) => {
+          const active = categoriaOficial === tab.id;
+          return (
+            <TouchableOpacity
+              key={tab.id}
+              style={[styles.categoryPill, active && styles.categoryPillActive, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}
+              onPress={() => setCategoriaOficial(tab.id)}
+            >
+              {tab.icon && (
+                <Ionicons name={tab.icon} size={16} color={active ? COLORS.textPrimary : COLORS.textMuted} />
+              )}
+              <Text style={[styles.categoryPillText, active && styles.categoryPillTextActive]}>{tab.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
       {tabActiva === 'eventos' ? (
         <View style={styles.modernHeader}>
           <Text style={styles.modernHeaderTitle}>Eventos Oficiales</Text>
@@ -261,24 +279,6 @@ export default function PanoramasScreen({ navigation }) {
             <Text style={styles.modernRegionText} numberOfLines={1}>{regionOficial}</Text>
             <Ionicons name="chevron-down" size={20} color={COLORS.textMuted} />
           </TouchableOpacity>
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll} contentContainerStyle={styles.categoriesContainer}>
-            {CATEGORY_TABS.map((tab) => {
-              const active = categoriaOficial === tab.id;
-              return (
-                <TouchableOpacity
-                  key={tab.id}
-                  style={[styles.categoryPill, active && styles.categoryPillActive, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}
-                  onPress={() => setCategoriaOficial(tab.id)}
-                >
-                  {tab.icon && (
-                    <Ionicons name={tab.icon} size={16} color={active ? COLORS.textPrimary : COLORS.textMuted} />
-                  )}
-                  <Text style={[styles.categoryPillText, active && styles.categoryPillTextActive]}>{tab.label}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
 
           <View style={styles.modernUpcomingRow}>
             <Ionicons name="calendar-outline" size={18} color={COLORS.primario} />
