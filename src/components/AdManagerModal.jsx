@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Modal, View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { RewardedAd, RewardedAdEventType, TestIds } from 'react-native-google-mobile-ads';
+import { AdEventType, RewardedAd, RewardedAdEventType, TestIds } from 'react-native-google-mobile-ads';
 import mobileAds from 'react-native-google-mobile-ads';
 
 const adUnitId = __DEV__ ? TestIds.REWARDED : 'ca-app-pub-9649235284758114/1860146658';
+let mobileAdsInitPromise = null;
 
 export default function AdManagerModal({ visible, requiredAdsCount = 1, onAdFinished, onClose }) {
   const [loadingMsg, setLoadingMsg] = useState('Cargando anuncio...');
@@ -22,15 +23,15 @@ export default function AdManagerModal({ visible, requiredAdsCount = 1, onAdFini
     let unsubscribeEarned = null;
     let unsubscribeClosed = null;
     let unsubscribeError = null;
-
-let hasInitialized = false;
+    let timeoutId = null;
+    let finished = false;
 
     const inicializarYCargar = async () => {
       try {
-        if (!hasInitialized) {
-          await mobileAds().initialize();
-          hasInitialized = true;
+        if (!mobileAdsInitPromise) {
+          mobileAdsInitPromise = mobileAds().initialize();
         }
+        await mobileAdsInitPromise;
         cargarSiguienteAnuncio();
       } catch (err) {
         console.warn('Error inicializando AdMob:', err);
@@ -47,6 +48,10 @@ let hasInitialized = false;
       });
 
       unsubscribeLoaded = ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
         try {
           ad.show();
         } catch (e) {
@@ -59,13 +64,15 @@ let hasInitialized = false;
         earnedRef.current = true;
       });
 
-      unsubscribeClosed = ad.addAdEventListener(RewardedAdEventType.CLOSED, () => {
+      unsubscribeClosed = ad.addAdEventListener(AdEventType.CLOSED, () => {
         limpiarListeners();
         if (earnedRef.current) {
           adsWatchedRef.current += 1;
         }
         
         if (adsWatchedRef.current >= requiredAdsCount) {
+          if (finished) return;
+          finished = true;
           onAdFinished();
           onClose();
         } else {
@@ -75,15 +82,21 @@ let hasInitialized = false;
       });
 
       // Si ocurre un error, por diseño le damos la recompensa para evitar bloqueos/crashes
-      unsubscribeError = ad.addAdEventListener('error', (err) => {
+      unsubscribeError = ad.addAdEventListener(AdEventType.ERROR, (err) => {
         console.warn("AdMob Error Event:", err);
         finalizarPorError();
       });
+
+      timeoutId = setTimeout(() => {
+        console.warn('AdMob no respondió a tiempo.');
+        finalizarPorError();
+      }, 15000);
 
       ad.load();
     };
 
     const limpiarListeners = () => {
+      if (timeoutId) clearTimeout(timeoutId);
       if (unsubscribeLoaded) unsubscribeLoaded();
       if (unsubscribeEarned) unsubscribeEarned();
       if (unsubscribeClosed) unsubscribeClosed();
@@ -91,6 +104,8 @@ let hasInitialized = false;
     };
 
     const finalizarPorError = () => {
+      if (finished) return;
+      finished = true;
       limpiarListeners();
       onAdFinished(); // Fallback reward
       onClose();

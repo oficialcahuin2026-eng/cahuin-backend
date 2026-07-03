@@ -62,6 +62,46 @@ const fallbackEventImages = [
 const CATEGORIAS_OFICIALES = ['Todos', 'Música', 'Cultura', 'Deporte', 'Comedia', 'Feria', 'Gastronomía'];
 const MESES = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
 
+const normalizeCategoryKey = (value) => String(value || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .trim()
+  .toLowerCase();
+
+const CATEGORY_ALIASES = {
+  musica: 'Música',
+  musical: 'Música',
+  concierto: 'Música',
+  conciertos: 'Música',
+  cultura: 'Cultura',
+  cultural: 'Cultura',
+  teatro: 'Cultura',
+  arte: 'Cultura',
+  deporte: 'Deporte',
+  deportes: 'Deporte',
+  deportivo: 'Deporte',
+  comedia: 'Comedia',
+  humor: 'Comedia',
+  standup: 'Comedia',
+  'stand up': 'Comedia',
+  feria: 'Feria',
+  ferias: 'Feria',
+  expo: 'Feria',
+  gastronomia: 'Gastronomía',
+  gastronomico: 'Gastronomía',
+  comida: 'Gastronomía',
+};
+
+const getCanonicalCategory = (category) => {
+  const raw = String(category || '').trim();
+  return CATEGORY_ALIASES[normalizeCategoryKey(raw)] || raw;
+};
+
+const matchesSelectedCategory = (category, selectedCategory) => (
+  selectedCategory === 'Todos'
+  || normalizeCategoryKey(getCanonicalCategory(category)) === normalizeCategoryKey(selectedCategory)
+);
+
 const soloVigentes = (items = []) => {
   const inicio = new Date();
   inicio.setHours(0, 0, 0, 0);
@@ -166,13 +206,14 @@ export default function PanoramasScreen({ navigation }) {
     }
   };
 
-  const panoramasOficiales = panoramas.filter((p) => p.esOficial && (categoriaOficial === 'Todos' || p.categoria === categoriaOficial));
-  const panoramasComunidad = panoramas.filter((p) => !p.esOficial && (categoriaOficial === 'Todos' || p.categoria === categoriaOficial));
+  const panoramasOficiales = panoramas.filter((p) => p.esOficial && matchesSelectedCategory(p.categoria, categoriaOficial));
+  const panoramasComunidad = panoramas.filter((p) => !p.esOficial && matchesSelectedCategory(p.categoria, categoriaOficial));
   const listaActual = tabActiva === 'eventos' ? panoramasOficiales : panoramasComunidad;
 
   const renderOfficialCard = (item, index) => {
     const defaultImg = { uri: item.imagen || fallbackEventImages[index % fallbackEventImages.length] };
-    const imageSource = categoryImages[item.categoria] || defaultImg;
+    const categoriaItem = getCanonicalCategory(item.categoria);
+    const imageSource = categoryImages[categoriaItem] || defaultImg;
     
     const d = new Date(item.fecha);
     const dia = d.getDate();
@@ -193,7 +234,7 @@ export default function PanoramasScreen({ navigation }) {
         <View style={styles.modernContent}>
           <View style={styles.categoryBadgeRow}>
             <View style={styles.categoryBadgePill}>
-              <Text style={styles.categoryBadgeText}>{item.emoji || '✨'} {item.categoria || 'Oficial'}</Text>
+              <Text style={styles.categoryBadgeText}>{item.emoji || '✨'} {categoriaItem || 'Oficial'}</Text>
             </View>
             <TouchableOpacity style={styles.bookmarkBtn} onPress={() => {}}>
               <Ionicons name="bookmark-outline" size={20} color={COLORS.textPrimary} />
