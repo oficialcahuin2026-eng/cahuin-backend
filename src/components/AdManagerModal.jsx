@@ -23,9 +23,14 @@ export default function AdManagerModal({ visible, requiredAdsCount = 1, onAdFini
     let unsubscribeClosed = null;
     let unsubscribeError = null;
 
+let hasInitialized = false;
+
     const inicializarYCargar = async () => {
       try {
-        await mobileAds().initialize();
+        if (!hasInitialized) {
+          await mobileAds().initialize();
+          hasInitialized = true;
+        }
         cargarSiguienteAnuncio();
       } catch (err) {
         console.warn('Error inicializando AdMob:', err);
