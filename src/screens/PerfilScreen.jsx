@@ -185,13 +185,13 @@ export default function PerfilScreen({ navigation }) {
   const completitud = calcularCompletitud();
 
   const lifestyleTags = [
-    usuario?.queBuscas || 'Pololeo serio 💕',
-    usuario?.habitos?.beber || 'Cero alcohol 💧',
-    usuario?.habitos?.fumar || 'No le hago 🚭',
-    usuario?.habitos?.mascotas || 'Dog Lover 🐶',
+    usuario?.queBuscas || 'Pololeo serio',
+    usuario?.habitos?.beber || 'Cero alcohol',
+    usuario?.habitos?.fumar || 'No le hago',
+    usuario?.habitos?.mascotas || 'Dog Lover',
   ].filter(Boolean);
 
-  const intereses = usuario?.intereses?.length ? usuario.intereses : ['Videojuegos 🎮', 'Naturaleza 🌲', 'Astrología ✨', 'Fotografía 📸', 'Cine y Series 🍿'];
+  const intereses = usuario?.intereses?.length ? usuario.intereses : ['Videojuegos', 'Naturaleza', 'Astrología', 'Fotografía', 'Cine y Series'];
   const preguntasPendientes = preguntas.filter((p) => !p.respondida);
   const preguntasRespondidas = preguntas.filter((p) => p.respondida);
   const valoresCompletos = Boolean(
@@ -200,9 +200,9 @@ export default function PerfilScreen({ navigation }) {
     usuario?.mapaValores?.dealBreaker
   );
   const testsPendientes = [
-    !usuario?.tipoApego ? { key: 'apego', label: 'Apego', emoji: '🧠', route: 'TestApego' } : null,
-    !usuario?.arquetipoCahuinero ? { key: 'cahuinero', label: 'Cahuínero', emoji: '🌶️', route: 'TestCahuinero' } : null,
-    !valoresCompletos ? { key: 'valores', label: 'Valores', emoji: '🧭', route: 'MapaValores' } : null,
+    !usuario?.tipoApego ? { key: 'apego', label: 'Apego', icon: 'heart-half-outline', route: 'TestApego' } : null,
+    !usuario?.arquetipoCahuinero ? { key: 'cahuinero', label: 'Cahuínero', icon: 'flame-outline', route: 'TestCahuinero' } : null,
+    !valoresCompletos ? { key: 'valores', label: 'Valores', icon: 'compass-outline', route: 'MapaValores' } : null,
   ].filter(Boolean);
   const mostrarResultadoApego = usuario?.mostrarApego && usuario?.tipoApego;
   const mostrarResultadoArquetipo = usuario?.mostrarArquetipo !== false && usuario?.arquetipoCahuinero;
@@ -288,7 +288,10 @@ export default function PerfilScreen({ navigation }) {
         <LinearGradient colors={['#07111F', '#1A233A']} style={styles.premiumBanner} start={{x: 0, y: 0}} end={{x: 1, y: 1}}>
           <View style={styles.premiumBannerContent}>
             <View>
-              <Text style={styles.premiumBannerTitle}>Cahuín a Fondo 💎</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                <Text style={styles.premiumBannerTitle}>Cahuín a Fondo</Text>
+                <Ionicons name="diamond" size={16} color="#60A5FA" />
+              </View>
               <Text style={styles.premiumBannerSub}>Revela likes, modo destacado y más.</Text>
             </View>
             <View style={styles.premiumBannerBtn}>
@@ -301,14 +304,14 @@ export default function PerfilScreen({ navigation }) {
       {/* ── Stats: Racha + Plan (Rediseñado) ── */}
       <View style={styles.statsRow}>
         <View style={[styles.statPill, { backgroundColor: COLORS.tarjeta }]}>
-          <Text style={styles.statPillEmoji}>🔥</Text>
+          <Ionicons name="flame" size={28} color="#EF4444" />
           <View>
             <Text style={styles.statPillValue}>{usuario?.rachaDias || 1} día</Text>
             <Text style={styles.statPillLabel}>De racha</Text>
           </View>
         </View>
         <View style={[styles.statPill, { backgroundColor: COLORS.tarjeta }]}>
-          <Text style={styles.statPillEmoji}>✨</Text>
+          <Ionicons name="star" size={26} color="#EAB308" />
           <View>
             <Text style={styles.statPillValue}>{usuario?.isPremium ? 'Activo' : 'Gratis'}</Text>
             <Text style={styles.statPillLabel}>Plan Actual</Text>
@@ -339,7 +342,7 @@ export default function PerfilScreen({ navigation }) {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
           {intereses.map((interes, idx) => (
             <View key={`int-${idx}`} style={[styles.chip, { backgroundColor: 'rgba(139,92,246,0.1)', borderColor: 'rgba(139,92,246,0.2)' }]}>
-              <Text style={[styles.chipText, { color: '#A78BFA' }]}>✨ {interes}</Text>
+              <Text style={[styles.chipText, { color: '#A78BFA' }]}>{interes}</Text>
             </View>
           ))}
         </ScrollView>
@@ -348,7 +351,13 @@ export default function PerfilScreen({ navigation }) {
       {/* ── Likes recibidos ── */}
       {(cargandoLikes || hayLikesReales) ? (
         <>
-          <SectionTitle title="Me tincaron" icon="💜" COLORS={COLORS} actionText="Ver todos" onAction={() => navigation.navigate('LikesCahuin')} />
+          <View style={styles.cardTitleRow}>
+            <Ionicons name="heart" size={24} color="#A855F7" />
+            <Text style={styles.infoTitle}>Me tincaron</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('LikesCahuin')}>
+              <Text style={{ color: COLORS.primario, fontWeight: '700', fontSize: 13 }}>Ver todos</Text>
+            </TouchableOpacity>
+          </View>
           <SoftCard COLORS={COLORS} style={styles.likesCard}>
             {likesPreview.length ? (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.likesStrip}>
@@ -384,7 +393,7 @@ export default function PerfilScreen({ navigation }) {
       {/* ── Preguntas anónimas ── */}
       <SoftCard COLORS={COLORS} style={styles.questionsCard}>
         <View style={styles.cardTitleRow}>
-          <SoftIcon name="chatbubble-ellipses" color={COLORS.primario} bg={COLORS.softRed} size={42} rounded={21} />
+          <Ionicons name="chatbubbles-outline" size={28} color={COLORS.textPrimary} />
           <View style={{ flex: 1 }}>
             <Text style={styles.infoTitle}>Preguntas anónimas</Text>
             <Text style={styles.infoSub}>Lo que te mandan desde otros perfiles.</Text>
@@ -423,7 +432,7 @@ export default function PerfilScreen({ navigation }) {
       {testsPendientes.length > 0 ? (
         <SoftCard COLORS={COLORS} style={styles.testsCard}>
           <View style={styles.cardTitleRow}>
-            <SoftIcon name="sparkles" color="#8B5CF6" bg={COLORS.softPurple} size={42} rounded={21} />
+            <Ionicons name="flask-outline" size={28} color={COLORS.textPrimary} />
             <View style={{ flex: 1 }}>
               <Text style={styles.infoTitle}>Tests de personalidad</Text>
               <Text style={styles.infoSub}>Descubre tu apego y arquetipo.</Text>
@@ -432,7 +441,7 @@ export default function PerfilScreen({ navigation }) {
           <View style={styles.testActions}>
             {testsPendientes.map((test) => (
               <TouchableOpacity key={test.key} style={styles.testButton} onPress={() => navigation.navigate(test.route)}>
-                <Text style={styles.testEmoji}>{test.emoji}</Text>
+                <Ionicons name={test.icon} size={26} color={COLORS.primario} style={{ marginBottom: 6 }} />
                 <Text style={styles.testText}>{test.label}</Text>
               </TouchableOpacity>
             ))}
@@ -444,7 +453,7 @@ export default function PerfilScreen({ navigation }) {
       {(mostrarResultadoApego || mostrarResultadoArquetipo) ? (
         <SoftCard COLORS={COLORS} style={styles.testsCard}>
           <View style={styles.cardTitleRow}>
-            <SoftIcon name="checkmark-done" color="#34A853" bg={COLORS.softGreen} size={42} rounded={21} />
+            <Ionicons name="ribbon-outline" size={28} color={COLORS.textPrimary} />
             <View style={{ flex: 1 }}>
               <Text style={styles.infoTitle}>Insignias visibles</Text>
               <Text style={styles.infoSub}>Solo mostramos lo que aceptaste publicar.</Text>
