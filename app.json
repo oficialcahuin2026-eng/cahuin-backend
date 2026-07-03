@@ -6,9 +6,9 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "icon": "./src/assets/icon.png",
+    "icon": "./src/assets/icon.jpg",
     "splash": {
-      "image": "./src/assets/icon.png",
+      "image": "./src/assets/icon.jpg",
       "resizeMode": "contain",
       "backgroundColor": "#C0392B"
     },
@@ -18,7 +18,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/adaptive-icon.png",
+        "foregroundImage": "./src/assets/adaptive-icon.jpg",
         "backgroundColor": "#C0392B"
       },
       "package": "cl.cahuin.app"

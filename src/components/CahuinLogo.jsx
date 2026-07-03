@@ -1,7 +1,7 @@
 import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
-const logo = require('../assets/cahuin-logo.png');
+const logo = require('../assets/cahuin-logo.jpg');
 
 export default function CahuinLogo({
   label = 'Cahuín',
