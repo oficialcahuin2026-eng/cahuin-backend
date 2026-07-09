@@ -153,7 +153,10 @@ exports.actualizarPerfil = async (req, res) => {
     ).select('-password');
 
     res.json({ usuario });
-  } catch (error) { res.status(500).json({ message: 'Error actualizando' }); }
+  } catch (error) { 
+    console.error('Error en actualizarPerfil:', error);
+    res.status(500).json({ message: 'Error actualizando' }); 
+  }
 };
 
 exports.actualizar = exports.actualizarPerfil;
@@ -187,11 +190,7 @@ exports.descubrir = async (req, res) => {
       cuentaPausada: { $ne: true },
     };
 
-    if (miUsuario.edadFlexible === false) {
-      query.edad = { $gte: minAge, $lte: maxAge };
-    } else {
-      query.edad = { $gte: Math.max(18, minAge - 3), $lte: maxAge + 3 };
-    }
+    query.edad = { $gte: minAge, $lte: maxAge };
 
     if (terminosUbicacion.length > 0) {
       query.$or = [
@@ -236,7 +235,6 @@ exports.descubrir = async (req, res) => {
 
     const perfiles = [];
     const limiteDistancia = miUsuario.distanciaMax || 50;
-    const distanciaFlex = miUsuario.distanciaFlexible !== false; // por defecto true
 
     for (let perfil of usuarios) {
       const esVisitante = perfil.viaje && perfil.viaje.ciudadDestino && new Date() < new Date(perfil.viaje.fechaFin);
@@ -245,9 +243,7 @@ exports.descubrir = async (req, res) => {
       const mismaCiudad = ciudadBusqueda && perfil.ciudad === ciudadBusqueda;
       const ubicacionCompatibleSinGps = dist === null && (mismaCiudad || mismaRegion);
 
-      const maxPermitida = distanciaFlex ? limiteDistancia + 40 : limiteDistancia;
-
-      if (esVisitante || (dist !== null && dist <= maxPermitida) || ubicacionCompatibleSinGps) {
+      if (esVisitante || (dist !== null && dist <= limiteDistancia) || ubicacionCompatibleSinGps) {
         const obj = perfil.toObject();
         obj.distanciaKm = esVisitante ? 'Modo Viajero' : (dist !== null ? dist : 'Cerca');
         obj.esVisitante = esVisitante;
@@ -417,8 +413,13 @@ exports.getLikesRecibidos = async (req, res) => {
     const plan = usuario?.premiumPlan || (usuario?.isPremium ? 'gold' : 'free');
     const puedeRevelar = usuario?.isPremium && ['a_fondo', 'gold', 'platinum'].includes(plan);
 
+    // Buscar a quiénes ya he swipeado (like, superlike, dislike) para excluirlos
+    const misSwipesDocs = await Match.find({ remitente: req.user._id }).select('receptor');
+    const misSwipesIds = misSwipesDocs.map(doc => doc.receptor.toString());
+
     const likes = await Match.find({
       receptor: req.user._id,
+      remitente: { $nin: misSwipesIds },
       tipo: { $in: ['like', 'superlike'] },
     })
       .sort({ createdAt: -1 })

@@ -25,6 +25,7 @@ import CartasAnonimasScreen from '../screens/CartasAnonimasScreen';
 
 import PremiumScreen from '../screens/PremiumScreen';
 import LikesCahuinScreen from '../screens/LikesCahuinScreen';
+import VerificacionScreen from '../screens/VerificacionScreen';
 import SalaChatScreen from '../screens/SalaChatScreen';
 import OtroPerfilScreen from '../screens/OtroPerfilScreen';
 import RompehieloScreen from '../screens/RompehieloScreen';
@@ -262,6 +263,7 @@ function MainNavigator() {
       <Stack.Screen name="Botellas" component={BotellasScreen} />
       <Stack.Screen name="ModoPatrio" component={ModoPatrioScreen} />
       <Stack.Screen name="CrearPanorama" component={CrearPanoramaScreen} />
+      <Stack.Screen name="Verificacion" component={VerificacionScreen} />
     </Stack.Navigator>
   );
 }

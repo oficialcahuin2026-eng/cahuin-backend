@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -10,9 +10,14 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Platform
+  Platform,
+  Animated,
+  PanResponder
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { Audio } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
 import { matchService, userService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -51,6 +56,126 @@ export default function HomeScreen({ navigation }) {
   const [accionPendiente, setAccionPendiente] = useState(null);
   const [swipeCount, setSwipeCount] = useState(0);
   const { usadosHoy, registrarSuperLike } = useSuperLikesDiarios();
+  
+  const [soundToPlay, setSoundToPlay] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const toggleAudio = async (uri) => {
+    if (!uri) return;
+    try {
+      if (isPlaying && soundToPlay) {
+        await soundToPlay.pauseAsync();
+        setIsPlaying(false);
+        return;
+      }
+      if (soundToPlay) {
+        await soundToPlay.playAsync();
+        setIsPlaying(true);
+        return;
+      }
+      const { sound } = await Audio.Sound.createAsync({ uri });
+      setSoundToPlay(sound);
+      setIsPlaying(true);
+      await sound.playAsync();
+      sound.setOnPlaybackStatusUpdate(status => {
+        if (status.didJustFinish) setIsPlaying(false);
+      });
+    } catch (e) {
+      console.log('Error playing audio', e);
+    }
+  };
+
+  const stopAudio = async () => {
+    if (soundToPlay) {
+      await soundToPlay.stopAsync();
+      setIsPlaying(false);
+    }
+  };
+  
+  const SCREEN_WIDTH = Dimensions.get('window').width;
+  const SWIPE_THRESHOLD = 0.25 * SCREEN_WIDTH;
+  const SWIPE_OUT_DURATION = 250;
+  
+  const position = useRef(new Animated.ValueXY()).current;
+  
+  const resetPosition = () => {
+    Animated.spring(position, {
+      toValue: { x: 0, y: 0 },
+      useNativeDriver: false
+    }).start();
+  };
+
+  const forceSwipe = (direction) => {
+    if (procesandoAccion) return;
+    setProcesandoAccion(true);
+    const x = direction === 'right' ? SCREEN_WIDTH * 1.5 : (direction === 'left' ? -SCREEN_WIDTH * 1.5 : 0);
+    const y = direction === 'up' ? -SCREEN_WIDTH * 1.5 : 0;
+    
+    Animated.timing(position, {
+      toValue: { x, y },
+      duration: SWIPE_OUT_DURATION,
+      useNativeDriver: false
+    }).start(() => onSwipeComplete(direction));
+  };
+
+  const onSwipeComplete = (direction) => {
+    position.setValue({ x: 0, y: 0 });
+    const action = direction === 'right' ? 'like' : (direction === 'up' ? 'superlike' : 'dislike');
+    setProcesandoAccion(false);
+    procesarInteraccion(action);
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return Math.abs(gestureState.dx) > 10 || Math.abs(gestureState.dy) > 10;
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        position.setValue({ x: gestureState.dx, y: gestureState.dy });
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        if (gestureState.dx > SWIPE_THRESHOLD) {
+          forceSwipe('right');
+        } else if (gestureState.dx < -SWIPE_THRESHOLD) {
+          forceSwipe('left');
+        } else if (gestureState.dy < -SWIPE_THRESHOLD) {
+          forceSwipe('up');
+        } else {
+          resetPosition();
+        }
+      }
+    })
+  ).current;
+
+  const rotate = position.x.interpolate({
+    inputRange: [-SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2],
+    outputRange: ['-10deg', '0deg', '10deg'],
+    extrapolate: 'clamp'
+  });
+
+  const cardStyle = {
+    ...position.getLayout(),
+    transform: [{ rotate }]
+  };
+
+  const likeOpacity = position.x.interpolate({
+    inputRange: [10, SCREEN_WIDTH / 4],
+    outputRange: [0, 1],
+    extrapolate: 'clamp'
+  });
+
+  const nopeOpacity = position.x.interpolate({
+    inputRange: [-SCREEN_WIDTH / 4, -10],
+    outputRange: [1, 0],
+    extrapolate: 'clamp'
+  });
+  
+  const superLikeOpacity = position.y.interpolate({
+    inputRange: [-SCREEN_WIDTH / 4, -10],
+    outputRange: [1, 0],
+    extrapolate: 'clamp'
+  });
 
   const iniciarAnuncioYEjecutar = (accionFn, cantAds = 1) => {
     if (cantAds === 0) {
@@ -102,37 +227,57 @@ export default function HomeScreen({ navigation }) {
 
   const cargarPerfilesConFiltros = async () => {
     try {
+      const cacheKey = '@cahuin_radar_cache';
+      const cachedData = await AsyncStorage.getItem(cacheKey);
+      
+      if (cachedData) {
+        setPerfiles(JSON.parse(cachedData));
+        setCargando(false);
+      }
+
       const data = await userService.descubrir({});
       const recibidos = data.perfiles || data.usuarios || [];
       
-      // Inyección de mock publicitario general
-      if (!usuario?.isPremium && recibidos.length > 2) {
-        recibidos.splice(2, 0, {
-          _id: 'AD_MOCK_' + Date.now(),
-          nombre: 'Oferta Especial',
-          edad: 99,
-          ciudad: 'Publicidad',
-          foto: 'https://i.imgur.com/vHqJk6K.jpeg',
-          fotos: ['https://i.imgur.com/vHqJk6K.jpeg'],
-          descripcion: '¡Promo especial de envío sin costo! Desliza a la derecha para reclamar tu código.',
-          intereses: ['Promoción', 'Descuento'],
-          isAd: true
-        });
-      }
+      if (JSON.stringify(recibidos) !== cachedData) {
+        // Inyección de mock publicitario general
+        if (!usuario?.isPremium && recibidos.length > 2) {
+          recibidos.splice(2, 0, {
+            _id: 'AD_MOCK_' + Date.now(),
+            nombre: 'Oferta Especial',
+            edad: 99,
+            ciudad: 'Publicidad',
+            foto: 'https://i.imgur.com/vHqJk6K.jpeg',
+            fotos: ['https://i.imgur.com/vHqJk6K.jpeg'],
+            descripcion: '¡Promo especial de envío sin costo! Desliza a la derecha para reclamar tu código.',
+            intereses: ['Promoción', 'Descuento'],
+            isAd: true
+          });
+        }
 
-      setPerfiles(recibidos);
+        setPerfiles(recibidos);
+        await AsyncStorage.setItem(cacheKey, JSON.stringify(recibidos));
+      }
     } catch {
-      setPerfiles([]);
+      if (perfiles.length === 0) setPerfiles([]);
     } finally {
       setCargando(false);
     }
   };
 
   const procesarInteraccion = async (tipo) => {
-    if (perfilActual >= perfiles.length || procesandoAccion) return;
+    stopAudio();
+    if (perfilActual >= perfiles.length) return;
     const perfilVisto = perfiles[perfilActual];
-    setProcesandoAccion(true);
     setPerfilActual((prev) => prev + 1);
+    setFotoIndex(0); // Reset photo index for next profile
+
+    if (tipo === 'like') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } else if (tipo === 'superlike') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else if (tipo === 'dislike') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
 
     try {
       if (perfilVisto.isAd) {
@@ -143,12 +288,16 @@ export default function HomeScreen({ navigation }) {
         const data = await matchService.darLike(perfilVisto._id);
         if (data?.usuario) actualizarUsuario(data.usuario);
         if (data?.esMatch) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           setMatchCelebrado(perfilVisto);
         }
       } else if (tipo === 'superlike') {
         const data = await matchService.darSuperLike(perfilVisto._id);
         if (data?.usuario) actualizarUsuario(data.usuario);
-        if (data?.esMatch) setMatchCelebrado(perfilVisto);
+        if (data?.esMatch) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          setMatchCelebrado(perfilVisto);
+        }
       } else {
         const data = await matchService.pasar(perfilVisto._id);
         if (data?.usuario) actualizarUsuario(data.usuario);
@@ -156,8 +305,6 @@ export default function HomeScreen({ navigation }) {
     } catch (error) {
       console.log(error.message);
       // Para efectos del rediseño fluido, ignoramos errores de conexión al dar swipe y seguimos.
-    } finally {
-      setProcesandoAccion(false);
     }
   };
 
@@ -197,7 +344,7 @@ export default function HomeScreen({ navigation }) {
 
     if (hasFree) {
       registrarSuperLike();
-      procesarInteraccion('superlike');
+      forceSwipe('up');
     } else {
       const cantAds = isAFondo || isPiola ? 1 : 2;
       avisar('Super Like', 'Destaca tu perfil con una estrella azul vibrante.', {
@@ -213,7 +360,7 @@ export default function HomeScreen({ navigation }) {
               setModalInfo(null); 
               iniciarAnuncioYEjecutar(() => {
                 registrarSuperLike();
-                procesarInteraccion('superlike');
+                forceSwipe('up');
               }, cantAds); 
             } 
           }
@@ -274,6 +421,40 @@ export default function HomeScreen({ navigation }) {
     try { return calcularCompatibilidad(usuario, perfil); } catch { return 75; }
   };
 
+  const renderLifestylePills = (p, isDark) => {
+    const pills = [];
+    const pushPill = (icon, text) => {
+      if (text) {
+        pills.push(
+          <View key={text+icon} style={isDark ? styles.lsChipDark : styles.lsChipLight}>
+            <Text style={isDark ? styles.lsChipIconDark : styles.lsChipIconLight}>{icon}</Text>
+            <Text style={isDark ? styles.lsChipTextDark : styles.lsChipTextLight}>{text}</Text>
+          </View>
+        );
+      }
+    };
+
+    pushPill('📏', p.altura ? `${p.altura} cm` : null);
+    pushPill('♈', p.zodiaco);
+    pushPill('🧠', p.personalidad);
+    pushPill('🐕', p.mascotas);
+    pushPill('🍷', p.habitos?.beber);
+    pushPill('🚬', p.habitos?.fumar);
+    pushPill('💪', p.habitos?.ejercicio);
+    pushPill('✈️', p.habitos?.vacaciones);
+    pushPill('🎉', p.habitos?.carrete);
+    pushPill('💬', p.estiloComunicacion);
+    pushPill('❤️', p.estiloAmor);
+    
+    if (pills.length === 0) return null;
+
+    return (
+      <View style={styles.lsWrap}>
+        {pills}
+      </View>
+    );
+  };
+
   if (cargando) {
     return (
       <View style={styles.centro}>
@@ -293,11 +474,16 @@ export default function HomeScreen({ navigation }) {
           image={emptyRadar}
           title="No hay más perfiles en tu "
           highlight="radar."
-          subtitle="Hemos mostrado todos los perfiles disponibles por ahora."
+          subtitle="Amplía tu distancia máxima o rango de edad en los ajustes para descubrir más Cahuines."
           action={(
-            <GradientButton onPress={cargarPerfilesConFiltros} icon="refresh" style={{ width: '100%', marginTop: 20 }}>
-              Recargar Radar
-            </GradientButton>
+            <View style={{ width: '100%', gap: 12, marginTop: 20 }}>
+              <GradientButton onPress={() => setModalPreferencias(true)} icon="options-outline" style={{ width: '100%' }}>
+                Ajustar Filtros
+              </GradientButton>
+              <TouchableOpacity onPress={cargarPerfilesConFiltros} style={{ alignItems: 'center', padding: 12 }}>
+                <Text style={{ color: COLORS.textMuted, fontWeight: '700' }}>Reintentar Búsqueda</Text>
+              </TouchableOpacity>
+            </View>
           )}
         />
         <CahuinModal visible={!!modalInfo} title={modalInfo?.title} message={modalInfo?.message} icon={modalInfo?.icon} actions={modalInfo?.actions || []} accent={modalInfo?.accent} tone={modalInfo?.tone} details={modalInfo?.details} onClose={() => setModalInfo(null)} />
@@ -305,226 +491,173 @@ export default function HomeScreen({ navigation }) {
     );
   }
 
-  const fotosGaleria = perfil.fotos?.length > 0 ? perfil.fotos : [perfil.foto || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=800'];
-  const compatPorcentaje = getCompat(perfil);
-  const compatInfo = emojiCompatibilidad(compatPorcentaje);
-  const interesesPerfil = (perfil.intereses || []).slice(0, 4);
+  const renderFloatingActions = () => (
+    <View style={styles.floatingActionRow}>
+      <TouchableOpacity style={styles.actionBtnSmallWrap} onPress={deshacerUltimo} disabled={procesandoAccion}>
+        <View style={[styles.actionBtnSmall, { backgroundColor: 'rgba(30,30,30,0.7)' }]}>
+          <Ionicons name="refresh" size={24} color="#F59E0B" />
+        </View>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.actionBtnLargeWrap} onPress={() => forceSwipe('left')} disabled={procesandoAccion}>
+        <View style={[styles.actionBtnLarge, { borderColor: '#F0444F', borderWidth: 2, backgroundColor: 'rgba(30,30,30,0.5)' }]}>
+          <Ionicons name="close" size={38} color="#F0444F" />
+        </View>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.actionBtnSmallWrap} onPress={intentarSuperLike} disabled={procesandoAccion}>
+        <View style={[styles.actionBtnSmall, { backgroundColor: 'rgba(30,30,30,0.7)' }]}>
+          <Ionicons name="star" size={24} color="#3B82F6" />
+        </View>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.actionBtnLargeWrap} onPress={() => forceSwipe('right')} disabled={procesandoAccion}>
+        <LinearGradient colors={['#F0444F', '#E91E63']} style={styles.actionBtnLarge}>
+          <Ionicons name="heart" size={36} color="#FFF" />
+        </LinearGradient>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.actionBtnSmallWrap} onPress={activarBoost}>
+        <View style={[styles.actionBtnSmall, { backgroundColor: 'rgba(139,92,246,0.3)' }]}>
+          <Ionicons name="flash" size={24} color="#8B5CF6" />
+          {usuario?.boostGratisDisponibles > 0 && (
+            <View style={styles.boostBadge}><Text style={styles.boostBadgeText}>{usuario.boostGratisDisponibles}</Text></View>
+          )}
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
 
-  return (
-    <SafeAreaView style={styles.safe}>
+  const renderCard = (p, isTopCard) => {
+    if (!p) return null;
+    const fotosGaleria = p.fotos?.length > 0 ? p.fotos : [p.foto || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=800'];
+    const compatPorcentaje = getCompat(p);
+    const compatInfo = emojiCompatibilidad(compatPorcentaje);
+    const interesesPerfil = (p.intereses || []).slice(0, 4);
 
-      {isDarkMode ? (
-        // ── DARK MODE: Full Screen Tinder Card ──
-        <View style={styles.cardWrapper}>
-          <ImageBackground source={{ uri: fotosGaleria[fotoIndex] }} style={styles.fullScreenImage} imageStyle={styles.imageRadius}>
-            <LinearGradient colors={['rgba(0,0,0,0.6)', 'transparent']} style={styles.topGradient}>
-              <View style={styles.innerHeader}>
-                  <TouchableOpacity onPress={() => setModalPreferencias(true)} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Ionicons name="options-outline" size={24} color="#FFF" style={{ marginRight: 8 }} />
-                  </TouchableOpacity>
-                <TouchableOpacity style={styles.planPill} onPress={() => navigation.navigate('Premium')} activeOpacity={0.85}>
-                  <Ionicons name="sparkles" size={16} color="#F59E0B" />
+    const dynamicWrapperStyle = isTopCard 
+      ? [styles.cardWrapper, cardStyle] 
+      : [styles.cardWrapper, { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: -1, transform: [{ scale: 0.95 }] }];
+
+    return (
+      <Animated.View key={p._id} style={dynamicWrapperStyle} {...(isTopCard ? panResponder.panHandlers : {})}>
+        <ImageBackground source={{ uri: fotosGaleria[isTopCard ? fotoIndex : 0] }} style={styles.fullScreenImage} imageStyle={styles.imageRadius}>
+          {isTopCard && (
+            <>
+              <Animated.View style={[styles.likeStamp, { opacity: likeOpacity }]} pointerEvents="none">
+                <Text style={styles.likeStampText}>CAHUÍN</Text>
+              </Animated.View>
+              <Animated.View style={[styles.nopeStamp, { opacity: nopeOpacity }]} pointerEvents="none">
+                <Text style={styles.nopeStampText}>PASO</Text>
+              </Animated.View>
+              <Animated.View style={[styles.superStamp, { opacity: superLikeOpacity }]} pointerEvents="none">
+                <Text style={styles.superStampText}>SUPER</Text>
+              </Animated.View>
+            </>
+          )}
+          
+          <LinearGradient colors={['rgba(0,0,0,0.6)', 'transparent']} style={styles.topGradient}>
+            <View style={styles.innerHeader}>
+                <TouchableOpacity onPress={() => setModalPreferencias(true)} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="options-outline" size={24} color="#FFF" style={{ marginRight: 8 }} />
                 </TouchableOpacity>
+              <TouchableOpacity style={styles.planPill} onPress={() => navigation.navigate('Premium')} activeOpacity={0.85}>
+                <Ionicons name="sparkles" size={16} color="#F59E0B" />
+              </TouchableOpacity>
+            </View>
+            {isTopCard && fotosGaleria.length > 1 && (
+              <View style={styles.barrasContainer}>
+                {fotosGaleria.map((_, i) => (
+                  <View key={i} style={[styles.barraFoto, { backgroundColor: i === fotoIndex ? '#FFF' : 'rgba(255,255,255,0.3)' }]} />
+                ))}
               </View>
-              {fotosGaleria.length > 1 && (
-                <View style={styles.barrasContainer}>
-                  {fotosGaleria.map((_, i) => (
-                    <View key={i} style={[styles.barraFoto, { backgroundColor: i === fotoIndex ? '#FFF' : 'rgba(255,255,255,0.3)' }]} />
-                  ))}
-                </View>
-              )}
-              <View style={styles.topBadgesRow}>
-                <View style={styles.ubicacionBadge}>
-                  <Ionicons name="location" size={14} color="#FFF" />
-                  <Text style={styles.ubicacionBadgeText}>{perfil.ciudad || 'Chile'}</Text>
-                </View>
+            )}
+            <View style={styles.topBadgesRow}>
+              <View style={styles.ubicacionBadge}>
+                <Ionicons name="location" size={14} color="#FFF" />
+                <Text style={styles.ubicacionBadgeText}>{p.ciudad || 'Chile'}</Text>
+              </View>
+              {isTopCard && (
                 <TouchableOpacity style={styles.iaButton} onPress={abrirTransparencia}>
                   <Ionicons name="sparkles" size={18} color="#FFF" />
                 </TouchableOpacity>
-              </View>
-            </LinearGradient>
-            <TouchableOpacity style={styles.zonaTactilIzq} onPress={() => { if (fotoIndex > 0) setFotoIndex(fotoIndex - 1); }} />
-            <TouchableOpacity style={styles.zonaTactilDer} onPress={() => { if (fotoIndex < fotosGaleria.length - 1) setFotoIndex(fotoIndex + 1); }} />
-            <LinearGradient colors={['transparent', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.95)']} style={styles.bottomGradient}>
-              <View style={styles.infoScrollWrap}>
-                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
-                  <View style={styles.nombreRow}>
-                    <Text style={styles.nombre}>{perfil.nombre}<Text style={styles.edad}>, {perfil.edad}</Text></Text>
-                    {perfil.verificado && <MaterialCommunityIcons name="check-decagram" size={26} color="#3B82F6" style={{ marginLeft: 8 }} />}
-                  </View>
-                  {(perfil.arquetipoCahuinero || perfil.arquetipo?.nombre) && (
-                    <View style={[styles.arquetipoChip, { backgroundColor: perfil.arquetipo?.color || COLORS.primario }]}>
-                      <Text style={styles.arquetipoTexto}>{perfil.arquetipoCahuinero || perfil.arquetipo?.nombre}</Text>
-                    </View>
-                  )}
-                  <Text style={styles.bioTexto}>{perfil.descripcion || perfil.biografia || 'En busca de buenas vibras y algo piola.'}</Text>
-                  {(perfil.profesion || perfil.universidad) && (
-                    <View style={styles.metaRow}>
-                      {perfil.profesion && <View style={styles.metaChip}><Ionicons name="briefcase-outline" size={14} color="#FFF" /><Text style={styles.metaText}>{perfil.profesion}</Text></View>}
-                      {perfil.universidad && <View style={styles.metaChip}><Ionicons name="school-outline" size={14} color="#FFF" /><Text style={styles.metaText}>{perfil.universidad}</Text></View>}
-                    </View>
-                  )}
-                  {interesesPerfil.length > 0 && (
-                    <View style={styles.chipsWrap}>
-                      {interesesPerfil.map((interes, idx) => (
-                        <View key={idx} style={styles.interesChip}>
-                          <Text style={styles.interesText}>{interes}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                  <View style={styles.compatBox}>
-                    <View style={styles.compatCircleWrap}>
-                      <Text style={styles.compatPercent}>{compatPorcentaje}%</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.compatLabel}>{compatInfo}</Text>
-                      <Text style={styles.compatDesc}>Tienen intereses compatibles.</Text>
-                    </View>
-                  </View>
-                </ScrollView>
-              </View>
-            </LinearGradient>
-            <View style={styles.floatingActionRow}>
-              <TouchableOpacity style={styles.actionBtnSmallWrap} onPress={deshacerUltimo} disabled={procesandoAccion}>
-                <View style={[styles.actionBtnSmall, { backgroundColor: 'rgba(30,30,30,0.7)' }]}>
-                  <Ionicons name="refresh" size={24} color="#F59E0B" />
-                </View>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionBtnLargeWrap} onPress={() => procesarInteraccion('dislike')} disabled={procesandoAccion}>
-                <View style={[styles.actionBtnLarge, { borderColor: '#F0444F', borderWidth: 2, backgroundColor: 'rgba(30,30,30,0.5)' }]}>
-                  <Ionicons name="close" size={38} color="#F0444F" />
-                </View>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionBtnSmallWrap} onPress={intentarSuperLike} disabled={procesandoAccion}>
-                <View style={[styles.actionBtnSmall, { backgroundColor: 'rgba(30,30,30,0.7)' }]}>
-                  <Ionicons name="star" size={24} color="#3B82F6" />
-                </View>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionBtnLargeWrap} onPress={() => procesarInteraccion('like')} disabled={procesandoAccion}>
-                <LinearGradient colors={['#F0444F', '#E91E63']} style={styles.actionBtnLarge}>
-                  <Ionicons name="heart" size={36} color="#FFF" />
-                </LinearGradient>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionBtnSmallWrap} onPress={activarBoost}>
-                <View style={[styles.actionBtnSmall, { backgroundColor: 'rgba(139,92,246,0.3)' }]}>
-                  <Ionicons name="flash" size={24} color="#8B5CF6" />
-                  {usuario?.boostGratisDisponibles > 0 && (
-                    <View style={styles.boostBadge}><Text style={styles.boostBadgeText}>{usuario.boostGratisDisponibles}</Text></View>
-                  )}
-                </View>
-              </TouchableOpacity>
+              )}
             </View>
-          </ImageBackground>
-        </View>
-      ) : (
-        // ── LIGHT MODE: Split Photo + White Info Panel ──
-        <>
-          {/* ── Photo ── */}
-          <View style={styles.lmPhotoWrap}>
-            <ImageBackground source={{ uri: fotosGaleria[fotoIndex] }} style={StyleSheet.absoluteFill} imageStyle={{ borderRadius: 20 }}>
-              <LinearGradient colors={['rgba(0,0,0,0.45)', 'transparent']} style={styles.topGradient}>
-                <View style={styles.innerHeader}>
-                  <TouchableOpacity onPress={() => setModalPreferencias(true)} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Ionicons name="options-outline" size={24} color="#FFF" style={{ marginRight: 8 }} />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.planPill} onPress={() => navigation.navigate('Premium')} activeOpacity={0.85}>
-                    <Ionicons name="sparkles" size={16} color="#F59E0B" />
-                  </TouchableOpacity>
+          </LinearGradient>
+
+          {isTopCard && (
+            <>
+              <TouchableOpacity style={styles.zonaTactilIzq} onPress={() => { if (fotoIndex > 0) setFotoIndex(fotoIndex - 1); }} />
+              <TouchableOpacity style={styles.zonaTactilDer} onPress={() => { if (fotoIndex < fotosGaleria.length - 1) setFotoIndex(fotoIndex + 1); }} />
+            </>
+          )}
+
+          <LinearGradient colors={['transparent', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.95)']} style={styles.bottomGradient}>
+            <View style={styles.infoScrollWrap}>
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }} scrollEnabled={isTopCard}>
+                <View style={styles.nombreRow}>
+                  <Text style={styles.nombre}>{p.nombre}<Text style={styles.edad}>, {p.edad}</Text></Text>
+                  {p.verificado && <MaterialCommunityIcons name="check-decagram" size={26} color="#3B82F6" style={{ marginLeft: 8 }} />}
                 </View>
-                {fotosGaleria.length > 1 && (
-                  <View style={styles.barrasContainer}>
-                    {fotosGaleria.map((_, i) => (
-                      <View key={i} style={[styles.barraFoto, { backgroundColor: i === fotoIndex ? '#FFF' : 'rgba(255,255,255,0.35)' }]} />
+                {(p.arquetipoCahuinero || p.arquetipo?.nombre) && (
+                  <View style={[styles.arquetipoChip, { backgroundColor: p.arquetipo?.color || COLORS.primario }]}>
+                    <Text style={styles.arquetipoTexto}>{p.arquetipoCahuinero || p.arquetipo?.nombre}</Text>
+                  </View>
+                )}
+                <Text style={styles.bioTexto}>{p.descripcion || p.biografia || 'En busca de buenas vibras y algo piola.'}</Text>
+                
+                {renderLifestylePills(p, true)}
+                
+                {(p.profesion || p.universidad) && (
+                  <View style={styles.metaRow}>
+                    {p.profesion && <View style={styles.metaChip}><Ionicons name="briefcase-outline" size={14} color="#FFF" /><Text style={styles.metaText}>{p.profesion}</Text></View>}
+                    {p.universidad && <View style={styles.metaChip}><Ionicons name="school-outline" size={14} color="#FFF" /><Text style={styles.metaText}>{p.universidad}</Text></View>}
+                  </View>
+                )}
+
+                {p.audioRompehielos && (
+                  <View style={{ backgroundColor: 'rgba(168, 85, 247, 0.2)', padding: 12, borderRadius: 15, flexDirection: 'row', alignItems: 'center', marginVertical: 10 }}>
+                    <TouchableOpacity onPress={() => toggleAudio(p.audioRompehielos)} disabled={!isTopCard} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#A855F7', alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name={isPlaying ? "pause" : "play"} size={22} color="#FFF" />
+                    </TouchableOpacity>
+                    <View style={{ marginLeft: 12, flex: 1 }}>
+                      <Text style={{ color: '#A855F7', fontWeight: 'bold', fontSize: 15 }}>Mi Voz 🎤</Text>
+                      <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 2 }}>{isPlaying ? "Reproduciendo..." : "Toca para escuchar mi saludo"}</Text>
+                    </View>
+                  </View>
+                )}
+
+                {interesesPerfil.length > 0 && (
+                  <View style={styles.chipsWrap}>
+                    {interesesPerfil.map((interes, idx) => (
+                      <View key={idx} style={styles.interesChip}>
+                        <Text style={styles.interesText}>{interes}</Text>
+                      </View>
                     ))}
                   </View>
                 )}
-                <View style={styles.topBadgesRow}>
-                  <View style={styles.ubicacionBadge}>
-                    <Ionicons name="location" size={14} color="#FFF" />
-                    <Text style={styles.ubicacionBadgeText}>{perfil.ciudad || 'Chile'}</Text>
+                <View style={styles.compatBox}>
+                  <View style={styles.compatCircleWrap}>
+                    <Text style={styles.compatPercent}>{compatPorcentaje}%</Text>
                   </View>
-                  <TouchableOpacity style={styles.iaButton} onPress={abrirTransparencia}>
-                    <Ionicons name="sparkles" size={18} color="#FFF" />
-                  </TouchableOpacity>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.compatLabel}>{compatInfo}</Text>
+                    <Text style={styles.compatDesc}>Tienen intereses compatibles.</Text>
+                  </View>
                 </View>
-              </LinearGradient>
-              <TouchableOpacity style={styles.zonaTactilIzq} onPress={() => { if (fotoIndex > 0) setFotoIndex(fotoIndex - 1); }} />
-              <TouchableOpacity style={styles.zonaTactilDer} onPress={() => { if (fotoIndex < fotosGaleria.length - 1) setFotoIndex(fotoIndex + 1); }} />
-            </ImageBackground>
-          </View>
-
-          {/* ── White Info Panel ── */}
-          <ScrollView style={{ flex: 1, backgroundColor: COLORS.bg }} contentContainerStyle={styles.lmInfoPanel} showsVerticalScrollIndicator={false} bounces={false}>
-            <View style={styles.lmNombreRow}>
-              <Text style={styles.lmNombre}>{perfil.nombre}
-                <Text style={styles.lmEdad}>, {perfil.edad}</Text>
-              </Text>
-              {perfil.verificado && <MaterialCommunityIcons name="check-decagram" size={22} color="#3B82F6" style={{ marginLeft: 8 }} />}
-              <TouchableOpacity style={{ marginLeft: 'auto' }} onPress={abrirTransparencia}>
-                <View style={styles.lmIaBtn}>
-                  <Ionicons name="analytics-outline" size={18} color={COLORS.primario} />
-                </View>
-              </TouchableOpacity>
+              </ScrollView>
             </View>
+          </LinearGradient>
+        </ImageBackground>
+      </Animated.View>
+    );
+  };
 
-            <View style={styles.lmTagsRow}>
-              {(perfil.arquetipoCahuinero || perfil.arquetipo?.nombre) && (
-                <View style={[styles.lmArqChip, { backgroundColor: perfil.arquetipo?.color || COLORS.primario }]}>
-                  <Text style={styles.lmArqText}>{perfil.arquetipoCahuinero || perfil.arquetipo?.nombre}</Text>
-                </View>
-              )}
-              {perfil.profesion && (
-                <View style={styles.lmMetaChip}>
-                  <Ionicons name="briefcase-outline" size={12} color={COLORS.textMuted} />
-                  <Text style={styles.lmMetaText}>{perfil.profesion}</Text>
-                </View>
-              )}
-              {perfil.universidad && (
-                <View style={styles.lmMetaChip}>
-                  <Ionicons name="school-outline" size={12} color={COLORS.textMuted} />
-                  <Text style={styles.lmMetaText}>{perfil.universidad}</Text>
-                </View>
-              )}
-            </View>
+  const perfilSiguiente = perfilActual + 1 < perfiles.length ? perfiles[perfilActual + 1] : null;
 
-            {(perfil.descripcion || perfil.biografia) ? (
-              <Text style={styles.lmBio} numberOfLines={2}>{perfil.descripcion || perfil.biografia}</Text>
-            ) : null}
-
-            <View style={styles.lmCompatBox}>
-              <View style={styles.lmCompatCircle}>
-                <Text style={styles.lmCompatPct}>{compatPorcentaje}%</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.lmCompatLabel}>{compatInfo}</Text>
-                <Text style={styles.lmCompatDesc}>Tienen intereses compatibles.</Text>
-              </View>
-            </View>
-
-            {/* ── Action buttons ── */}
-            <View style={styles.lmActionRow}>
-              <TouchableOpacity style={styles.lmBtnSm} onPress={deshacerUltimo} disabled={procesandoAccion}>
-                <Ionicons name="refresh" size={22} color="#F59E0B" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.lmBtnLgBorder} onPress={() => procesarInteraccion('dislike')} disabled={procesandoAccion}>
-                <Ionicons name="close" size={36} color="#F0444F" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.lmBtnSm} onPress={intentarSuperLike} disabled={procesandoAccion}>
-                <Ionicons name="star" size={22} color="#3B82F6" />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => procesarInteraccion('like')} disabled={procesandoAccion}>
-                <LinearGradient colors={['#F0444F', '#E91E63']} style={styles.lmBtnLgGrad}>
-                  <Ionicons name="heart" size={32} color="#FFF" />
-                </LinearGradient>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.lmBtnSm, { backgroundColor: '#F3EEFF' }]} onPress={activarBoost}>
-                <Ionicons name="flash" size={22} color="#8B5CF6" />
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        </>
-      )}
+  return (
+    <SafeAreaView style={styles.safe}>
+      <View style={{ flex: 1 }}>
+        {perfilSiguiente && renderCard(perfilSiguiente, false)}
+        {renderCard(perfil, true)}
+        {renderFloatingActions()}
+      </View>
 
       {/* ── Modal transparencia ── */}
       <Modal visible={modalTransparencia} transparent animationType="fade">
@@ -535,12 +668,14 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.modalTitulo}>Radar IA</Text>
             </View>
             <Text style={styles.modalIntro}>¿Por qué te mostramos a {perfil.nombre}?</Text>
-            {motivosAlgoritmo.map((motivo, idx) => (
-              <View key={idx} style={styles.motivoRow}>
-                <Ionicons name="checkmark-circle" size={20} color="#34A853" />
-                <Text style={styles.motivoText}>{motivo}</Text>
-              </View>
-            ))}
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.motivosScroll}>
+              {motivosAlgoritmo.map((motivo, idx) => (
+                <View key={idx} style={styles.motivoRow}>
+                  <Ionicons name="checkmark-circle" size={20} color="#34A853" />
+                  <Text style={styles.motivoText}>{motivo}</Text>
+                </View>
+              ))}
+            </ScrollView>
             <GradientButton onPress={() => setModalTransparencia(false)} style={{ marginTop: 24 }}>
               Entendido
             </GradientButton>
@@ -557,7 +692,7 @@ export default function HomeScreen({ navigation }) {
         miFoto={usuario?.foto || usuario?.fotos?.[0]}
         suFoto={matchCelebrado?.foto || matchCelebrado?.fotos?.[0]}
         suNombre={matchCelebrado?.nombre}
-        compatibilidad={compatPorcentaje}
+        compatibilidad={matchCelebrado ? getCompat(matchCelebrado) : 0}
       />
       <CahuinModal visible={!!modalInfo} title={modalInfo?.title} message={modalInfo?.message} icon={modalInfo?.icon} actions={modalInfo?.actions || []} accent={modalInfo?.accent} tone={modalInfo?.tone} details={modalInfo?.details} onClose={() => setModalInfo(null)} />
       <PreferenciasModal
@@ -584,7 +719,7 @@ const SCREEN_H = Dimensions.get('window').height;
 const PHOTO_H = Math.round(SCREEN_H * 0.54);
 
 const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
-  safe: { flex: 1, backgroundColor: isDarkMode ? '#000' : COLORS.bg },
+  safe: { flex: 1, backgroundColor: '#000' },
   centro: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: isDarkMode ? '#000' : COLORS.bg },
   header: { padding: SPACING[4], alignItems: 'center' },
   headerTitle: { color: COLORS.textPrimary, fontSize: 30, fontWeight: '900', fontFamily: FONTS.display },
@@ -602,44 +737,15 @@ const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
   fullScreenImage: { flex: 1, width: '100%', height: '100%' },
   imageRadius: { borderRadius: 32 },
 
-  // ── Light mode split layout ──
-  lmPhotoWrap: {
-    height: PHOTO_H,
-    marginHorizontal: 12,
-    marginTop: Platform.OS === 'android' ? 30 : 12,
-    borderRadius: 32,
-    overflow: 'hidden',
-    backgroundColor: '#111',
-    ...SHADOWS.dark,
-  },
-  lmInfoPanel: {
-    backgroundColor: COLORS.bg,
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 110,
-    flexGrow: 1,
-  },
-  lmNombreRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  lmNombre: { fontSize: 28, fontWeight: '900', color: COLORS.textPrimary, fontFamily: FONTS.display },
-  lmEdad: { fontSize: 20, fontWeight: '400', color: COLORS.textMuted },
-  lmIaBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: COLORS.softRed, alignItems: 'center', justifyContent: 'center' },
-  lmTagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10, alignItems: 'center' },
-  lmArqChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
-  lmArqText: { color: '#FFF', fontSize: 12, fontWeight: '900', textTransform: 'uppercase' },
-  lmMetaChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.surface, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
-  lmMetaText: { color: COLORS.textPrimary, fontSize: 12, fontWeight: '700' },
-  lmBio: { fontSize: 14, color: COLORS.textMuted, lineHeight: 21, marginBottom: 10 },
-  lmCompatBox: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'transparent', paddingVertical: 10, marginBottom: 6 },
-  lmCompatCircle: { width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: '#A855F7', alignItems: 'center', justifyContent: 'center' },
-  lmCompatPct: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '900' },
-  lmCompatLabel: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '900', marginBottom: 1 },
-  lmCompatDesc: { color: COLORS.textMuted, fontSize: 12 },
-  lmActionRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 14, paddingVertical: 10 },
-  lmBtnSm: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(0,0,0,0.03)', alignItems: 'center', justifyContent: 'center', ...SHADOWS.light },
-  lmBtnLgBorder: { width: 66, height: 66, borderRadius: 33, backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center', ...SHADOWS.medium },
-  lmBtnLgGrad: { width: 66, height: 66, borderRadius: 33, alignItems: 'center', justifyContent: 'center', ...SHADOWS.medium },
+  // ── Stamps ──
+  likeStamp: { position: 'absolute', top: 50, left: 20, zIndex: 100, transform: [{ rotate: '-15deg' }], borderWidth: 4, borderColor: '#4CAF50', borderRadius: 10, padding: 8 },
+  likeStampText: { color: '#4CAF50', fontSize: 32, fontWeight: '900', letterSpacing: 2 },
+  nopeStamp: { position: 'absolute', top: 50, right: 20, zIndex: 100, transform: [{ rotate: '15deg' }], borderWidth: 4, borderColor: '#F44336', borderRadius: 10, padding: 8 },
+  nopeStampText: { color: '#F44336', fontSize: 32, fontWeight: '900', letterSpacing: 2 },
+  superStamp: { position: 'absolute', bottom: 150, alignSelf: 'center', zIndex: 100, transform: [{ rotate: '-5deg' }], borderWidth: 4, borderColor: '#3B82F6', borderRadius: 10, padding: 8, backgroundColor: 'rgba(59, 130, 246, 0.2)' },
+  superStampText: { color: '#3B82F6', fontSize: 28, fontWeight: '900', letterSpacing: 1 },
 
-  // ── Shared header (works in both modes) ──
+  // ── Shared header ──
   topGradient: { padding: 16, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
   innerHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   innerHeaderTitle: { color: '#FFF', fontSize: 32, fontWeight: '900', fontFamily: FONTS.display, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
@@ -677,7 +783,7 @@ const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
   compatDesc: { color: 'rgba(255,255,255,0.7)', fontSize: 12 },
 
   // ── Dark mode floating action buttons ──
-  floatingActionRow: { position: 'absolute', bottom: 20, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16 },
+  floatingActionRow: { position: 'absolute', bottom: 20, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16, zIndex: 1000, elevation: 10 },
   actionBtnSmallWrap: { ...SHADOWS.md },
   actionBtnSmall: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center' },
   actionBtnLargeWrap: { ...SHADOWS.lg },
@@ -693,4 +799,13 @@ const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
   modalIntro: { color: COLORS.textMuted, fontSize: 16, lineHeight: 24, marginBottom: 20 },
   motivoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
   motivoText: { color: COLORS.textPrimary, fontSize: 15, flex: 1, lineHeight: 22, fontWeight: '600' },
+
+  // ── Lifestyle Pills ──
+  lsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  lsChipDark: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  lsChipIconDark: { fontSize: 13 },
+  lsChipTextDark: { color: '#FFF', fontSize: 13, fontWeight: '600' },
+  lsChipLight: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.surface, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border },
+  lsChipIconLight: { fontSize: 13 },
+  lsChipTextLight: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '600' },
 });

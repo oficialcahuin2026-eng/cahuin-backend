@@ -127,40 +127,42 @@ export default function PerfilScreen({ navigation }) {
     }
   };
 
-  const verificarConSelfie = async () => {
-    const permiso = await ImagePicker.requestCameraPermissionsAsync();
-    if (permiso.status !== 'granted') {
-      Alert.alert('Camara', 'Necesitamos permiso de camara para verificar tu perfil.');
-      return;
-    }
-
-    const selfie = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.6,
-    });
-    if (selfie.canceled) return;
-
-    try {
-      const data = await userService.verificar();
-      if (data.usuario) actualizarUsuario(data.usuario);
-      Alert.alert('Perfil verificado', 'Listo. Tu selfie se reviso y ahora tienes insignia.');
-    } catch (error) {
-      Alert.alert('Verificacion', error.message || 'No pudimos verificar ahora.');
-    }
+  const verificarConSelfie = () => {
+    navigation.navigate('Verificacion');
   };
 
-  // Calcular completitud del perfil
+  // Calcular completitud del perfil ponderada
   const calcularCompletitud = () => {
-    const campos = [
-      usuario?.nombre, usuario?.descripcion, usuario?.foto,
-      usuario?.fotos?.length > 0, usuario?.fechaNacimiento,
-      usuario?.ciudad && usuario.ciudad !== 'Por definir',
-      usuario?.intereses?.length > 0, usuario?.queBuscas,
-      usuario?.estiloComunicacion, usuario?.altura,
-    ];
-    return Math.round((campos.filter(Boolean).length / campos.length) * 100);
+    let score = 0;
+    
+    // 1. Fotos (Max 25%)
+    const numFotos = usuario?.fotos?.length || (usuario?.foto ? 1 : 0);
+    if (numFotos >= 1) score += 10;
+    if (numFotos >= 2) score += 5;
+    if (numFotos >= 3) score += 5;
+    if (numFotos >= 4) score += 5;
+
+    // 2. Descripción / Bio (15%)
+    if (usuario?.descripcion?.trim().length > 10) score += 15;
+
+    // 3. Básicos: Ciudad, Altura, Comunicación (20%)
+    if (usuario?.ciudad && usuario.ciudad !== 'Por definir') score += 10;
+    if (usuario?.altura) score += 5;
+    if (usuario?.estiloComunicacion && usuario.estiloComunicacion !== 'Por definir') score += 5;
+
+    // 4. Intereses/Hobbies (15%)
+    if (usuario?.intereses?.length >= 3) score += 15;
+    else if (usuario?.intereses?.length > 0) score += 5;
+
+    // 5. Hábitos e Identidad (25%)
+    const habitosLlenos = Object.values(usuario?.habitos || {}).filter(Boolean).length;
+    if (habitosLlenos >= 4) score += 15; // Tiene al menos 4 hábitos
+    else if (habitosLlenos >= 1) score += 5;
+
+    if (usuario?.genero && usuario.genero !== 'Por definir') score += 5;
+    if (usuario?.orientacionSexual && usuario.orientacionSexual !== 'Por definir') score += 5;
+
+    return Math.min(score, 100);
   };
 
   const completitud = calcularCompletitud();
@@ -300,37 +302,6 @@ export default function PerfilScreen({ navigation }) {
 
       <Divider COLORS={COLORS} />
 
-      {/* ── Estilo de Vida + Gustos (Rediseñado con Chips) ── */}
-      <View style={styles.chipsSection}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.infoTitle}>Estilo de Vida</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('EditarPerfil')}><Ionicons name="add-circle" size={24} color={COLORS.primario} /></TouchableOpacity>
-        </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
-          {lifestyleTags.map((tag, idx) => (
-            <View key={`life-${idx}`} style={[styles.chip, { borderColor: COLORS.border }]}>
-              <Text style={[styles.chipText, { color: COLORS.textPrimary }]}>{tag}</Text>
-            </View>
-          ))}
-        </ScrollView>
-      </View>
-
-      <View style={styles.chipsSection}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.infoTitle}>Mis Gustos</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('EditarPerfil')}><Ionicons name="add-circle" size={24} color={COLORS.primario} /></TouchableOpacity>
-        </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
-          {intereses.map((interes, idx) => (
-            <View key={`int-${idx}`} style={[styles.chip, { borderColor: COLORS.border }]}>
-              <Text style={[styles.chipText, { color: COLORS.textPrimary }]}>{interes}</Text>
-            </View>
-          ))}
-        </ScrollView>
-      </View>
-      <Divider COLORS={COLORS} />
-
-
       <Divider COLORS={COLORS} />
 
       {/* ── Preguntas anónimas ── */}
@@ -390,23 +361,6 @@ export default function PerfilScreen({ navigation }) {
                 <Text style={styles.testText}>{test.label}</Text>
               </TouchableOpacity>
             ))}
-          </View>
-        </SoftCard>
-      ) : null}
-
-      {/* ── Insignias visibles ── */}
-      {(mostrarResultadoApego || mostrarResultadoArquetipo) ? (
-        <SoftCard COLORS={COLORS} style={styles.testsCard}>
-          <View style={styles.cardTitleRow}>
-            <Ionicons name="ribbon-outline" size={28} color={COLORS.textPrimary} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.infoTitle}>Insignias visibles</Text>
-              <Text style={styles.infoSub}>Solo mostramos lo que aceptaste publicar.</Text>
-            </View>
-          </View>
-          <View style={styles.testResults}>
-            {mostrarResultadoApego ? <Text style={styles.testResultText}>Apego: {usuario.tipoApego}</Text> : null}
-            {mostrarResultadoArquetipo ? <Text style={styles.testResultText}>Arquetipo: {usuario.arquetipoCahuinero}</Text> : null}
           </View>
         </SoftCard>
       ) : null}

@@ -36,10 +36,12 @@ const DATOS = {
   beber: ['Cero alcohol', 'Su chelita piola', 'Solo en carretes', 'Me tomo el agua del florero'],
   fumar: ['No le hago', 'Solo cuando tomo', 'Fumo harto', 'Puro Vaper', 'Fumo weed'],
   mascotas: ['Dog Lover', 'Cat Lover', 'Amo a todos los bichos', 'No tengo, pero me encantan', 'Cero mascotas'],
+  zodiaco: ['Aries', 'Tauro', 'Géminis', 'Cáncer', 'Leo', 'Virgo', 'Libra', 'Escorpio', 'Sagitario', 'Capricornio', 'Acuario', 'Piscis'],
+  mbti: ['INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP', 'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP'],
   interesesLista: ['Videojuegos', 'Anime / Manga', 'Música en vivo', 'Bares y Chelas', 'Naturaleza', 'Gym / Deporte', 'Cocinar', 'Astrología', 'Arte / Museos', 'Mascotas', 'Viajar', 'Fotografía', 'Cine y Series'],
 };
 
-const TOTAL_PASOS = 12;
+const TOTAL_PASOS = 14;
 
 const calcularEdadOnboarding = (dia, mes, anio) => {
   const fecha = new Date(Number(anio), Number(mes) - 1, Number(dia));
@@ -90,6 +92,11 @@ export default function OnboardingScreen() {
   const [beber, setBeber] = useState('');
   const [fumar, setFumar] = useState('');
   const [mascotas, setMascotas] = useState('');
+  
+  const [zodiaco, setZodiaco] = useState('');
+  const [altura, setAltura] = useState('');
+  const [personalidad, setPersonalidad] = useState('');
+  
   const [intereses, setIntereses] = useState([]);
   const [modal, setModal] = useState(null);
 
@@ -156,6 +163,8 @@ export default function OnboardingScreen() {
     if (paso === 9 && !queBuscas) return avisar('Oops', 'Dinos qué buscas.');
     if (paso === 10 && !distanciaMax) return avisar('Oops', 'Fija la distancia.');
     if (paso === 11 && (!beber || !fumar || !mascotas)) return avisar('Oops', 'Faltan tus hábitos.');
+    if (paso === 12 && (!zodiaco || !altura)) return avisar('Oops', 'Faltan tus detalles físicos/astrales.');
+    // Paso 13 (profesion, personalidad) es opcional.
     setPaso(paso + 1);
   };
 
@@ -179,6 +188,10 @@ export default function OnboardingScreen() {
         queBuscas,
         distanciaMax,
         habitos: { beber, fumar, mascotas, ejercicio: 'Por definir' },
+        zodiaco,
+        altura: Number(altura),
+        personalidad,
+        profesion: trabajo,
         intereses,
       });
 
@@ -396,6 +409,40 @@ export default function OnboardingScreen() {
               {paso === 10 && <View>{titleWithAccent('A qué distancia ', 'apañas?')}<Text style={styles.subtitle}>¿A cuántos kilómetros te moverías?</Text>{renderChips(DATOS.distancias.map((km) => `${km} km`), `${distanciaMax} km`, (op) => setDistanciaMax(Number(op.replace(' km', ''))))}</View>}
               {paso === 11 && <View>{titleWithAccent('Hablemos de ', 'hábitos')}<Text style={styles.label}>¿Tomas alcohol?</Text>{renderOptionList(DATOS.beber, beber, setBeber)}<Text style={styles.label}>¿Fumas?</Text>{renderOptionList(DATOS.fumar, fumar, setFumar)}<Text style={styles.label}>¿Mascotas?</Text>{renderOptionList(DATOS.mascotas, mascotas, setMascotas)}</View>}
               {paso === 12 && (
+                <View>
+                  {titleWithAccent('Detalles ', 'extra')}
+                  <Text style={styles.label}>Tu Altura (cm)</Text>
+                  <CahuinTextField 
+                    icon="resize" 
+                    placeholder="Ej: 175" 
+                    keyboardType="number-pad" 
+                    maxLength={3}
+                    value={altura} 
+                    onChangeText={setAltura} 
+                    style={styles.bigInputModern}
+                  />
+                  <Text style={styles.label}>Tu Signo Zodiacal</Text>
+                  {renderOptionList(DATOS.zodiaco, zodiaco, setZodiaco)}
+                </View>
+              )}
+
+              {paso === 13 && (
+                <View>
+                  {titleWithAccent('Perfil ', 'Pro (Opcional)')}
+                  <Text style={styles.label}>¿A qué te dedicas?</Text>
+                  <CahuinTextField 
+                    icon="briefcase" 
+                    placeholder="Ej: Estudiante de Derecho" 
+                    value={trabajo} 
+                    onChangeText={setTrabajo} 
+                    style={styles.bigInputModern}
+                  />
+                  <Text style={styles.label}>Tipo de Personalidad (MBTI)</Text>
+                  {renderOptionList(DATOS.mbti, personalidad, setPersonalidad)}
+                </View>
+              )}
+
+              {paso === 14 && (
                 <View>
                   {titleWithAccent('Qué te ', 'gusta?')}
                   <Text style={styles.subtitle}>Elige hasta 5 intereses para que tu perfil brille.</Text>

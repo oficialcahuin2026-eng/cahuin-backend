@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -138,17 +139,32 @@ export default function PanoramasScreen({ navigation }) {
 
   const cargarTodo = async () => {
     try {
-      setCargando(true);
-      const regionLocal = usuario?.viaje?.ciudadDestino || usuario?.ciudad || usuario?.region || 'Metropolitana';
-      const resComunidad = await panoramaService.listar({ region: regionLocal });
-      const resOficiales = await panoramaService.listar({ region: regionOficial });
-      const resMatches = await matchService.getMisMatches();
+      const cacheKey = '@cahuin_panoramas_cache';
+      const cached = await AsyncStorage.getItem(cacheKey);
+      if (cached) {
+        setPanoramas(JSON.parse(cached));
+        setCargando(false);
+      } else {
+        setCargando(true);
+      }
 
-      setPanoramas([
+      const regionLocal = usuario?.viaje?.ciudadDestino || usuario?.ciudad || usuario?.region || 'Metropolitana';
+      
+      const [resComunidad, resOficiales, resMatches] = await Promise.all([
+        panoramaService.listar({ region: regionLocal }).catch(() => ({ panoramas: [] })),
+        panoramaService.listar({ region: regionOficial }).catch(() => ({ panoramas: [] })),
+        matchService.getMisMatches().catch(() => ({ matches: [] }))
+      ]);
+
+      const nuevosPanoramas = [
         ...soloVigentes(resComunidad.panoramas || []).filter((p) => !p.esOficial),
         ...soloVigentes(resOficiales.panoramas || []).filter((p) => p.esOficial),
-      ]);
+      ];
+
+      setPanoramas(nuevosPanoramas);
       setMisMatchesReales(resMatches.matches || []);
+      
+      await AsyncStorage.setItem(cacheKey, JSON.stringify(nuevosPanoramas));
     } catch (error) {
       console.log(error);
     } finally {
@@ -303,23 +319,25 @@ export default function PanoramasScreen({ navigation }) {
         ]}
       />
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll} contentContainerStyle={styles.categoriesContainer}>
-        {CATEGORY_TABS.map((tab) => {
-          const active = categoriaOficial === tab.id;
-          return (
-            <TouchableOpacity
-              key={tab.id}
-              style={[styles.categoryPill, active && styles.categoryPillActive, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}
-              onPress={() => setCategoriaOficial(tab.id)}
-            >
-              {tab.icon && (
-                <Ionicons name={tab.icon} size={16} color={active ? COLORS.textPrimary : COLORS.textMuted} />
-              )}
-              <Text style={[styles.categoryPillText, active && styles.categoryPillTextActive]}>{tab.label}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+      {tabActiva === 'eventos' && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll} contentContainerStyle={styles.categoriesContainer}>
+          {CATEGORY_TABS.map((tab) => {
+            const active = categoriaOficial === tab.id;
+            return (
+              <TouchableOpacity
+                key={tab.id}
+                style={[styles.categoryPill, active && styles.categoryPillActive, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}
+                onPress={() => setCategoriaOficial(tab.id)}
+              >
+                {tab.icon && (
+                  <Ionicons name={tab.icon} size={16} color={active ? COLORS.textPrimary : COLORS.textMuted} />
+                )}
+                <Text style={[styles.categoryPillText, active && styles.categoryPillTextActive]}>{tab.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
 
       {tabActiva === 'eventos' ? (
         <View style={{ paddingTop: 16 }}>
@@ -610,12 +628,11 @@ const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
   joinButton: { borderRadius: 16, borderWidth: 1, borderColor: '#FF6B45', paddingHorizontal: 14, paddingVertical: 10, backgroundColor: 'rgba(255,107,69,0.1)' },
   joinButtonText: { color: '#FF6B45', fontWeight: '900', fontSize: 13 },
   
-  // Modals
   modalFondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: COLORS.tarjeta, borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, maxHeight: '88%' },
+  modalCard: { backgroundColor: COLORS.tarjeta, borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, paddingBottom: 40, maxHeight: '88%' },
   modalTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   modalTitleLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  modalTituloGrande: { color: COLORS.textPrimary, fontSize: 26, fontWeight: '900', fontFamily: FONTS.display, flex: 1 },
+  modalTituloGrande: { color: COLORS.textPrimary, fontSize: 26, fontWeight: '900', fontFamily: FONTS.display, lineHeight: 32 },
   closeButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: isDarkMode ? 'rgba(255,255,255,0.08)' : COLORS.fondo },
   modalSub: { color: COLORS.textMuted, fontSize: 15, lineHeight: 22, marginBottom: 24 },
   modalSubSmall: { color: COLORS.textMuted, fontSize: 14, lineHeight: 20, marginTop: 4 },

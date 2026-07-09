@@ -10,8 +10,11 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Dimensions,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { Audio } from 'expo-av';
 import { useTheme } from '../context/ThemeContext';
 import { userService } from '../services/api';
 import CahuinModal from '../components/CahuinModal';
@@ -43,6 +46,37 @@ export default function OtroPerfilScreen({ route, navigation }) {
   const { COLORS } = useTheme();
   const styles = getStyles(COLORS);
   const avisar = (title, message, emoji = '🌶️', actions = []) => setModalInfo({ title, message, emoji, actions });
+
+  const [fotoIndex, setFotoIndex] = useState(0);
+
+  // Audio Playback
+  const [soundToPlay, setSoundToPlay] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const toggleAudio = async () => {
+    if (!perfil.audioRompehielos) return;
+    try {
+      if (isPlaying && soundToPlay) {
+        await soundToPlay.pauseAsync();
+        setIsPlaying(false);
+        return;
+      }
+      if (soundToPlay) {
+        await soundToPlay.playAsync();
+        setIsPlaying(true);
+        return;
+      }
+      const { sound } = await Audio.Sound.createAsync({ uri: perfil.audioRompehielos });
+      setSoundToPlay(sound);
+      setIsPlaying(true);
+      await sound.playAsync();
+      sound.setOnPlaybackStatusUpdate(status => {
+        if (status.didJustFinish) setIsPlaying(false);
+      });
+    } catch (e) {
+      console.log('Error playing audio', e);
+    }
+  };
 
   useEffect(() => {
     const cargarPerfilCompleto = async () => {
@@ -105,6 +139,37 @@ export default function OtroPerfilScreen({ route, navigation }) {
     }
   };
 
+  const renderLifestylePills = (p) => {
+    const pills = [];
+    const pushPill = (icon, text) => {
+      if (text) {
+        pills.push(
+          <View key={text+icon} style={styles.lsChip}>
+            <Text style={styles.lsChipIcon}>{icon}</Text>
+            <Text style={styles.lsChipText}>{text}</Text>
+          </View>
+        );
+      }
+    };
+    pushPill('📏', p.altura ? `${p.altura} cm` : null);
+    pushPill('♈', p.zodiaco);
+    pushPill('🧠', p.personalidad);
+    pushPill('🐕', p.mascotas);
+    pushPill('🍷', p.habitos?.beber);
+    pushPill('🚬', p.habitos?.fumar);
+    pushPill('💪', p.habitos?.ejercicio);
+    pushPill('✈️', p.habitos?.vacaciones);
+    pushPill('🎉', p.habitos?.carrete);
+    pushPill('💬', p.estiloComunicacion);
+    pushPill('❤️', p.estiloAmor);
+    
+    if (pills.length === 0) return null;
+    return <View style={styles.lsWrap}>{pills}</View>;
+  };
+
+  const fotosGaleria = perfil.fotos?.length > 0 ? perfil.fotos : [perfil.foto || 'https://via.placeholder.com/400'];
+  const interesesPerfil = perfil.intereses || [];
+
   return (
     <SafeAreaView style={styles.safe}>
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.btnVolver}>
@@ -115,45 +180,91 @@ export default function OtroPerfilScreen({ route, navigation }) {
       </TouchableOpacity>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} bounces={false}>
+        
         <View style={styles.contenedorFoto}>
-          <Image source={{ uri: perfil.foto || 'https://via.placeholder.com/400' }} style={styles.fotoPrincipal} />
+          <Image source={{ uri: fotosGaleria[fotoIndex] }} style={styles.fotoPrincipal} />
+          {fotosGaleria.length > 1 && (
+            <View style={styles.barrasContainer}>
+              {fotosGaleria.map((_, i) => (
+                <View key={i} style={[styles.barraFoto, { backgroundColor: i === fotoIndex ? '#FFF' : 'rgba(255,255,255,0.35)' }]} />
+              ))}
+            </View>
+          )}
+          <TouchableOpacity style={styles.zonaTactilIzq} onPress={() => { Haptics.selectionAsync(); if (fotoIndex > 0) setFotoIndex(fotoIndex - 1); }} />
+          <TouchableOpacity style={styles.zonaTactilDer} onPress={() => { Haptics.selectionAsync(); if (fotoIndex < fotosGaleria.length - 1) setFotoIndex(fotoIndex + 1); }} />
           {cargando ? <View style={styles.overlayCarga}><ActivityIndicator size="large" color={COLORS.primario} /></View> : null}
         </View>
 
         <View style={styles.infoContainer}>
           <View style={styles.perfilHeader}>
-            <Text style={styles.nombre}>{perfil.nombre}, {perfil.edad}</Text>
-            {perfil.verificado ? <MaterialCommunityIcons name="check-decagram" size={24} color="#2196F3" style={{ marginLeft: 6 }} /> : null}
+            <Text style={styles.nombre}>{perfil.nombre}<Text style={{fontSize: 22, color: COLORS.textMuted}}>, {perfil.edad}</Text></Text>
+            {perfil.verificado ? <MaterialCommunityIcons name="check-decagram" size={24} color="#3B82F6" style={{ marginLeft: 6 }} /> : null}
+          </View>
+
+          <View style={styles.metaRow}>
+            {(perfil.arquetipoCahuinero || perfil.arquetipo?.nombre) && (
+              <View style={[styles.metaChip, { backgroundColor: perfil.arquetipo?.color || COLORS.primario }]}>
+                <Text style={styles.metaChipTextLight}>{perfil.arquetipoCahuinero || perfil.arquetipo?.nombre}</Text>
+              </View>
+            )}
+            {perfil.profesion && (
+              <View style={styles.metaChipNeutral}>
+                <Ionicons name="briefcase-outline" size={14} color={COLORS.textMuted} />
+                <Text style={styles.metaChipText}>{perfil.profesion}</Text>
+              </View>
+            )}
+            {perfil.universidad && (
+              <View style={styles.metaChipNeutral}>
+                <Ionicons name="school-outline" size={14} color={COLORS.textMuted} />
+                <Text style={styles.metaChipText}>{perfil.universidad}</Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.ubicacionRow}>
             <Ionicons name="location-sharp" size={16} color={COLORS.gris} />
             <Text style={styles.ciudad}>{perfil.ciudad || 'Chile'}, {perfil.region}</Text>
           </View>
-
-          <View style={styles.calendarioBox}>
-            <View style={styles.calendarioHeader}>
-              <Ionicons name="calendar" size={20} color="#E91E63" />
-              <Text style={styles.calendarioTitle}>Días libres esta semana</Text>
-            </View>
-            <View style={styles.diasRow}>
-              {perfil.fechasDisponibles?.length > 0 ? perfil.fechasDisponibles.slice(0, 4).map((fecha, idx) => (
-                <View key={`${fecha}-${idx}`} style={styles.diaBadge}>
-                  <Text style={styles.diaTexto}>{new Date(fecha).toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })}</Text>
-                </View>
-              )) : (
-                <Text style={styles.emptySmall}>Aun no ha marcado su disponibilidad.</Text>
-              )}
-            </View>
-          </View>
-
+          
           <View style={styles.seccion}>
-            <View style={styles.seccionHeader}>
-              <Ionicons name="person-outline" size={20} color={COLORS.primario} />
-              <Text style={styles.seccionTitulo}>Su bio</Text>
-            </View>
-            <Text style={styles.bioTexto}>{perfil.descripcion || 'Persona misteriosa sin bio.'}</Text>
+            <Text style={styles.bioTexto}>{perfil.descripcion || perfil.biografia || 'En busca de buenas vibras y algo piola.'}</Text>
           </View>
+
+          {renderLifestylePills(perfil)}
+          
+          {perfil.audioRompehielos && (
+            <View style={styles.seccion}>
+              <View style={styles.seccionHeader}>
+                <Ionicons name="mic-circle" size={24} color="#A855F7" />
+                <Text style={[styles.seccionTitulo, { color: '#A855F7' }]}>Mi Voz</Text>
+              </View>
+              <View style={{ backgroundColor: 'rgba(168, 85, 247, 0.1)', padding: 15, borderRadius: 15, flexDirection: 'row', alignItems: 'center' }}>
+                <TouchableOpacity onPress={toggleAudio} style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#A855F7', alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name={isPlaying ? "pause" : "play"} size={24} color="#FFF" />
+                </TouchableOpacity>
+                <View style={{ marginLeft: 15, flex: 1 }}>
+                  <Text style={{ color: '#A855F7', fontWeight: 'bold', fontSize: 16 }}>Audio Rompehielos</Text>
+                  <Text style={{ color: COLORS.textMuted, fontSize: 13, marginTop: 2 }}>{isPlaying ? "Reproduciendo..." : "Escucha su saludo"}</Text>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {interesesPerfil.length > 0 && (
+            <View style={styles.seccion}>
+              <View style={styles.seccionHeader}>
+                <Ionicons name="heart-circle-outline" size={20} color={COLORS.primario} />
+                <Text style={styles.seccionTitulo}>Intereses</Text>
+              </View>
+              <View style={styles.lsWrap}>
+                {interesesPerfil.map((interes, idx) => (
+                  <View key={idx} style={styles.interesChip}>
+                    <Text style={styles.interesText}>{interes}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
 
           <View style={styles.nglBox}>
             <View style={styles.nglHeader}>
@@ -259,22 +370,24 @@ const getStyles = (COLORS) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
   btnVolver: { position: 'absolute', top: 50, left: 20, zIndex: 100, backgroundColor: 'rgba(0,0,0,0.5)', padding: 8, borderRadius: 20 },
   btnReportar: { position: 'absolute', top: 50, right: 20, zIndex: 100, backgroundColor: 'rgba(240,68,79,0.88)', padding: 10, borderRadius: 20 },
-  scrollContent: { flexGrow: 1 },
-  contenedorFoto: { width: '100%', height: 450, position: 'relative' },
+  scrollContent: { flexGrow: 1, backgroundColor: COLORS.bg },
+  contenedorFoto: { width: '100%', height: Dimensions.get('window').height * 0.55, position: 'relative', backgroundColor: '#111' },
   fotoPrincipal: { width: '100%', height: '100%', resizeMode: 'cover' },
+  barrasContainer: { flexDirection: 'row', gap: 6, position: 'absolute', top: 50, left: 60, right: 60, zIndex: 10 },
+  barraFoto: { flex: 1, height: 4, borderRadius: 2 },
+  zonaTactilIzq: { position: 'absolute', top: 80, bottom: 0, left: 0, width: '50%', zIndex: 5 },
+  zonaTactilDer: { position: 'absolute', top: 80, bottom: 0, right: 0, width: '50%', zIndex: 5 },
   overlayCarga: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' },
-  infoContainer: { padding: 20, backgroundColor: COLORS.tarjeta, marginTop: -20, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
-  perfilHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 5 },
-  nombre: { fontSize: 32, fontWeight: '900', color: COLORS.textPrimary, fontFamily: FONTS.display },
+  infoContainer: { padding: 24, backgroundColor: COLORS.bg, marginTop: -24, borderTopLeftRadius: 28, borderTopRightRadius: 28 },
+  perfilHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  nombre: { fontSize: 34, fontWeight: '900', color: COLORS.textPrimary, fontFamily: FONTS.display },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16, alignItems: 'center' },
+  metaChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
+  metaChipTextLight: { color: '#FFF', fontSize: 12, fontWeight: '900', textTransform: 'uppercase' },
+  metaChipNeutral: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.surface, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
+  metaChipText: { color: COLORS.textPrimary, fontSize: 12, fontWeight: '700' },
   ubicacionRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  ciudad: { fontSize: 15, color: COLORS.textMuted, marginLeft: 4 },
-  calendarioBox: { backgroundColor: 'rgba(233, 30, 99, 0.05)', padding: 15, borderRadius: RADIUS.lg, marginBottom: 25 },
-  calendarioHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  calendarioTitle: { fontWeight: '900', color: '#E91E63', marginLeft: 8 },
-  diasRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  diaBadge: { backgroundColor: '#E91E63', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 15 },
-  diaTexto: { color: '#FFF', fontWeight: '900', fontSize: 12 },
-  emptySmall: { color: COLORS.textMuted, fontSize: 13 },
+  ciudad: { fontSize: 15, color: COLORS.textMuted, marginLeft: 4, fontWeight: '600' },
   nglBox: { backgroundColor: 'rgba(0,0,0,0.03)', padding: 20, borderRadius: RADIUS.xl, marginBottom: 25 },
   nglHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 14, gap: 12 },
   nglEmoji: { width: 38, height: 38, borderRadius: 19, textAlign: 'center', textAlignVertical: 'center', backgroundColor: COLORS.softPurple, color: COLORS.primario, fontSize: 22, fontWeight: '900' },
@@ -284,9 +397,18 @@ const getStyles = (COLORS) => StyleSheet.create({
   nglInput: { flex: 1, backgroundColor: 'rgba(150,150,150,0.1)', borderRadius: RADIUS.lg, padding: 12, color: COLORS.textPrimary },
   btnEnviarNGL: { backgroundColor: COLORS.primario, paddingHorizontal: 20, borderRadius: RADIUS.lg, justifyContent: 'center', alignItems: 'center' },
   seccion: { marginBottom: 25 },
-  seccionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  seccionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   seccionTitulo: { fontSize: 18, fontWeight: '900', color: COLORS.textPrimary, marginLeft: 8 },
-  bioTexto: { fontSize: 15, color: COLORS.textPrimary, lineHeight: 22 },
+  bioTexto: { fontSize: 16, color: COLORS.textPrimary, lineHeight: 24 },
+  
+  // ── Lifestyle Pills ──
+  lsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
+  lsChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.surface, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border },
+  lsChipIcon: { fontSize: 14 },
+  lsChipText: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '600' },
+  interesChip: { backgroundColor: 'rgba(139,92,246,0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+  interesText: { color: '#8B5CF6', fontSize: 13, fontWeight: '700' },
+
   qaCard: { backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 18, padding: SPACING[4], marginBottom: SPACING[3] },
   qaQuestion: { color: COLORS.textMuted, fontSize: 14, lineHeight: 20, fontWeight: '700' },
   qaAnswer: { color: COLORS.textPrimary, fontSize: 16, lineHeight: 23, marginTop: 8, fontWeight: '800' },

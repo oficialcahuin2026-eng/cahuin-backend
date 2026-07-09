@@ -19,6 +19,13 @@ export default function PreferenciasModal({ visible, onClose, onSave }) {
   const [edadMin, setEdadMin] = useState(usuario?.edadMin || 18);
   const [edadMax, setEdadMax] = useState(usuario?.edadMax || 60);
   const [edadFlexible, setEdadFlexible] = useState(usuario?.edadFlexible !== false);
+  
+  // Premium Filters
+  const [alturaMin, setAlturaMin] = useState(usuario?.filtrosAvanzados?.alturaMin || 140);
+  const [alturaMax, setAlturaMax] = useState(usuario?.filtrosAvanzados?.alturaMax || 220);
+  const [fumarPreferido, setFumarPreferido] = useState(usuario?.filtrosAvanzados?.fumar || '');
+  const [zodiacoPreferido, setZodiacoPreferido] = useState(usuario?.filtrosAvanzados?.zodiaco || '');
+
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
@@ -28,6 +35,10 @@ export default function PreferenciasModal({ visible, onClose, onSave }) {
       setEdadMin(usuario.edadMin || 18);
       setEdadMax(usuario.edadMax || 60);
       setEdadFlexible(usuario.edadFlexible !== false);
+      setAlturaMin(usuario.filtrosAvanzados?.alturaMin || 140);
+      setAlturaMax(usuario.filtrosAvanzados?.alturaMax || 220);
+      setFumarPreferido(usuario.filtrosAvanzados?.fumar || '');
+      setZodiacoPreferido(usuario.filtrosAvanzados?.zodiaco || '');
     }
   }, [visible, usuario]);
 
@@ -39,7 +50,13 @@ export default function PreferenciasModal({ visible, onClose, onSave }) {
         distanciaFlexible,
         edadMin,
         edadMax,
-        edadFlexible
+        edadFlexible,
+        filtrosAvanzados: usuario?.isPremium ? {
+          alturaMin,
+          alturaMax,
+          fumar: fumarPreferido,
+          zodiaco: zodiacoPreferido
+        } : undefined
       };
       const res = await userService.actualizar(data);
       if (res?.usuario) {
@@ -134,14 +151,73 @@ export default function PreferenciasModal({ visible, onClose, onSave }) {
             </View>
           </View>
 
-          {/* Banner Unlock (Premium) */}
-          <View style={styles.premiumCard}>
-            <Text style={styles.premiumTitle}>Desbloquea más preferencias...</Text>
-            <Text style={styles.premiumSub}>Elige tus Preferencias Premium para ver perfiles con los mismos intereses, signos y más.</Text>
-            <TouchableOpacity style={styles.premiumBtn} onPress={() => { onClose(); navigation.navigate('Premium'); }}>
-              <Text style={styles.premiumBtnText}>Desbloquear</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Advanced Filters (Premium) */}
+          <Text style={styles.sectionHeader}>Filtros Avanzados</Text>
+          {!usuario?.isPremium ? (
+            <View style={styles.premiumCard}>
+              <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 8}}>
+                <Ionicons name="sparkles" size={20} color="#FFD700" style={{marginRight: 8}}/>
+                <Text style={styles.premiumTitle}>Exclusivo Premium</Text>
+              </View>
+              <Text style={styles.premiumSub}>Activa Cahuín Pro para buscar personas por su Signo Zodiacal, Altura, Hábitos (fumar/beber) y más.</Text>
+              <TouchableOpacity style={styles.premiumBtn} onPress={() => { onClose(); navigation.navigate('Premium'); }}>
+                <Text style={styles.premiumBtnText}>Desbloquear Filtros</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.card}>
+              <View style={styles.rowBetween}>
+                <Text style={styles.label}>Rango de Altura (cm)</Text>
+                <Text style={styles.value}>{alturaMin} - {alturaMax}</Text>
+              </View>
+              <Text style={styles.subLabel}>Mínima: {alturaMin} cm</Text>
+              <Slider
+                style={{ width: '100%', height: 30 }}
+                minimumValue={140}
+                maximumValue={Math.max(140, alturaMax - 1)}
+                step={1}
+                value={alturaMin}
+                onValueChange={setAlturaMin}
+                minimumTrackTintColor="#F59E0B"
+                maximumTrackTintColor={COLORS.border}
+                thumbTintColor="#F59E0B"
+              />
+              <Text style={styles.subLabel}>Máxima: {alturaMax} cm</Text>
+              <Slider
+                style={{ width: '100%', height: 30 }}
+                minimumValue={Math.min(220, alturaMin + 1)}
+                maximumValue={220}
+                step={1}
+                value={alturaMax}
+                onValueChange={setAlturaMax}
+                minimumTrackTintColor="#F59E0B"
+                maximumTrackTintColor={COLORS.border}
+                thumbTintColor="#F59E0B"
+              />
+              
+              <View style={{height: 20}} />
+              <Text style={styles.label}>Fumar</Text>
+              <View style={styles.chipsWrap}>
+                {['Cualquiera', 'No le hago', 'Solo cuando tomo', 'Fumo harto'].map(op => (
+                  <TouchableOpacity key={op} onPress={() => setFumarPreferido(op === 'Cualquiera' ? '' : op)} style={[styles.filterChip, (fumarPreferido === op || (op === 'Cualquiera' && !fumarPreferido)) && styles.filterChipActive]}>
+                    <Text style={[styles.filterChipText, (fumarPreferido === op || (op === 'Cualquiera' && !fumarPreferido)) && styles.filterChipTextActive]}>{op}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <View style={{height: 20}} />
+              <Text style={styles.label}>Zodiaco</Text>
+              <View style={styles.chipsWrap}>
+                {['Cualquiera', 'Aries', 'Tauro', 'Géminis', 'Cáncer', 'Leo', 'Virgo', 'Libra', 'Escorpio', 'Sagitario', 'Capricornio', 'Acuario', 'Piscis'].map(op => (
+                  <TouchableOpacity key={op} onPress={() => setZodiacoPreferido(op === 'Cualquiera' ? '' : op)} style={[styles.filterChip, (zodiacoPreferido === op || (op === 'Cualquiera' && !zodiacoPreferido)) && styles.filterChipActive]}>
+                    <Text style={[styles.filterChipText, (zodiacoPreferido === op || (op === 'Cualquiera' && !zodiacoPreferido)) && styles.filterChipTextActive]}>{op}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+
+          <View style={{height: 40}} />
         </ScrollView>
       </View>
     </Modal>
@@ -156,14 +232,20 @@ const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
   scroll: { flex: 1, padding: SPACING[4] },
   card: { backgroundColor: COLORS.bg, padding: SPACING[4], borderRadius: RADIUS.lg, marginBottom: SPACING[4] },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  sectionHeader: { fontSize: 18, fontWeight: '900', color: COLORS.textPrimary, marginBottom: 12, marginTop: 10 },
   label: { fontSize: 16, fontWeight: 'bold', color: COLORS.textPrimary },
   value: { fontSize: 16, fontWeight: 'bold', color: COLORS.textPrimary },
   subLabel: { fontSize: 13, color: COLORS.textMuted, marginTop: 10 },
   toggleRow: { marginTop: 15, paddingTop: 15 },
   toggleText: { flex: 1, fontSize: 14, color: COLORS.textMuted, marginRight: 15, lineHeight: 20 },
-  premiumCard: { backgroundColor: '#111', padding: SPACING[4], borderRadius: RADIUS.lg, marginBottom: SPACING[6] },
-  premiumTitle: { color: '#FFD700', fontSize: 18, fontWeight: 'bold', marginBottom: 8 },
-  premiumSub: { color: '#ccc', fontSize: 14, lineHeight: 20, marginBottom: 15 },
-  premiumBtn: { alignSelf: 'flex-start', backgroundColor: '#FFD700', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 20 },
-  premiumBtnText: { color: '#000', fontWeight: 'bold' }
+  premiumCard: { backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: SPACING[4], borderRadius: RADIUS.lg, marginBottom: SPACING[6], borderWidth: 1, borderColor: '#F59E0B' },
+  premiumTitle: { color: '#F59E0B', fontSize: 18, fontWeight: '900' },
+  premiumSub: { color: COLORS.textPrimary, fontSize: 14, lineHeight: 22, marginBottom: 15, fontWeight: '600' },
+  premiumBtn: { alignSelf: 'flex-start', backgroundColor: '#F59E0B', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 20 },
+  premiumBtnText: { color: '#FFF', fontWeight: '900' },
+  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  filterChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.surface },
+  filterChipActive: { backgroundColor: '#F59E0B', borderColor: '#F59E0B' },
+  filterChipText: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '600' },
+  filterChipTextActive: { color: '#FFF' },
 });

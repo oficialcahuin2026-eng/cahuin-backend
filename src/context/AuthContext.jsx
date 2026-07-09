@@ -15,6 +15,24 @@ export const AuthProvider = ({ children }) => {
   const { user: clerkUser } = useUser();
   const { expoPushToken } = usePushNotifications();
 
+  // Cargar caché inicial ultra rápido (Offline-first)
+  useEffect(() => {
+    const loadCache = async () => {
+      try {
+        const cachedUser = await AsyncStorage.getItem('usuario');
+        const cachedToken = await AsyncStorage.getItem('@cahuin_token');
+        if (cachedUser && cachedToken) {
+          setUsuario(JSON.parse(cachedUser));
+          setToken(cachedToken);
+          setCargando(false); // Quitar pantalla de carga inmediatamente si hay datos locales
+        }
+      } catch (e) {
+        console.log('Error leyendo cache auth', e);
+      }
+    };
+    loadCache();
+  }, []);
+
   const sincronizarConBackend = async () => {
     try {
       if (isSignedIn && clerkUser) {
@@ -27,7 +45,7 @@ export const AuthProvider = ({ children }) => {
         });
 
         const userData = response.usuario;
-        const localToken = response.token; // 🌟 Capturamos el token del servidor
+        const localToken = response.token; 
 
         if (!userData || !localToken) {
           throw new Error('El backend no devolvio usuario/token al sincronizar Clerk.');
@@ -36,15 +54,12 @@ export const AuthProvider = ({ children }) => {
         setUsuario(userData);
         setToken(localToken);
         
-        // 🌟 Lo guardamos con el nombre EXACTO que busca api.js (@cahuin_token)
         await AsyncStorage.setItem('@cahuin_token', localToken);
         await AsyncStorage.setItem('usuario', JSON.stringify(userData));
 
-        // 🌟 Si tenemos el push token de Expo, lo enviamos al backend para vincularlo a este usuario
         if (expoPushToken) {
           try {
             await api.put('/users/me', { pushToken: expoPushToken }, { headers: { Authorization: `Bearer ${localToken}` } });
-            console.log('Push Token sincronizado con el backend.');
           } catch (e) {
             console.warn('Error enviando push token al backend:', e);
           }
@@ -65,6 +80,7 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (isLoaded) {
+      // Sincronizar en el fondo, los datos cacheados ya se mostraron
       sincronizarConBackend();
     }
   }, [isLoaded, isSignedIn, clerkUser]);

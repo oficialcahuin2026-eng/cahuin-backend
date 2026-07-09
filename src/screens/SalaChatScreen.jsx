@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, Image, Vibration, Modal, ActivityIndicator } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import io from 'socket.io-client';
+import { Audio } from 'expo-av';
 
 import CitaSeguraModal from '../components/CitaSeguraModal'; 
 import CahuinModal from '../components/CahuinModal';
@@ -63,6 +65,7 @@ export default function SalaChatScreen({ route, navigation }) {
   const [notasDiario, setNotasDiario] = useState([]);
   const [textoNota, setTextoNota] = useState('');
   const [guardandoNota, setGuardandoNota] = useState(false);
+  
 
   // 🌟 NUEVO ESTADO PARA EL CALENDARIO
   const [modalFechasVisible, setModalFechasVisible] = useState(false);
@@ -70,6 +73,14 @@ export default function SalaChatScreen({ route, navigation }) {
   const [motivoReporte, setMotivoReporte] = useState('');
   const [detalleReporte, setDetalleReporte] = useState('');
   const [enviandoReporte, setEnviandoReporte] = useState(false);
+
+  // 🌟 ESTADOS PARA NOTAS DE VOZ
+  const [recording, setRecording] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [grabacionUri, setGrabacionUri] = useState(null);
+  const [soundToPlay, setSoundToPlay] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentPlayingId, setCurrentPlayingId] = useState(null);
 
   const flatListRef = useRef();
   const socketRef = useRef(null);
@@ -121,9 +132,20 @@ export default function SalaChatScreen({ route, navigation }) {
   
   const cargarMensajesHistorial = async () => {
     try {
+      const cacheKey = `@cahuin_chat_${matchId}`;
+      const cachedData = await AsyncStorage.getItem(cacheKey);
+      
+      if (cachedData) {
+        setMensajes(JSON.parse(cachedData));
+      }
+
       const data = await mensajeService.listar(matchId);
       const mensajesNuevos = data.mensajes || [];
-      setMensajes(mensajesNuevos);
+      
+      if (JSON.stringify(mensajesNuevos) !== cachedData) {
+        setMensajes(mensajesNuevos);
+        await AsyncStorage.setItem(cacheKey, JSON.stringify(mensajesNuevos));
+      }
 
       if (mensajesNuevos.length > 0) {
         const energiaData = await iaService.getEnergia(mensajesNuevos.slice(-10)); 
@@ -133,13 +155,24 @@ export default function SalaChatScreen({ route, navigation }) {
   };
 
   const handleEnviar = async () => {
-    if (!texto.trim()) return;
+    if (!texto.trim() && !grabacionUri) return;
     
     const textoMensaje = texto;
     setTexto(''); // Limpiamos la cajita al instante
+    
+    // Si hay audio, simularemos que lo enviamos como base64 o le damos una url temporal
+    const uriAudio = grabacionUri;
+    setGrabacionUri(null);
 
     try { 
-      const data = await mensajeService.enviar(matchId, textoMensaje); 
+      // En un entorno real, subirías el audio a S3 o Firebase y enviarías la URL.
+      // Aquí simulamos enviarlo en el mismo endpoint de mensajes.
+      const data = await mensajeService.enviar(matchId, textoMensaje || '🎤 Nota de voz', uriAudio); 
+      
+      // Ajustamos el objeto de mensaje para simular la nota de voz si se envió
+      if (uriAudio) {
+        data.mensaje.audioUrl = uriAudio;
+      }
       
       setMensajes(prev => [...prev, data.mensaje]);
 
@@ -150,6 +183,71 @@ export default function SalaChatScreen({ route, navigation }) {
         });
       }
     } catch (error) { console.log(error); }
+  };
+
+  const startRecording = async () => {
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+      if (permission.status === 'granted') {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+        });
+        const { recording } = await Audio.Recording.createAsync(
+          Audio.RecordingOptionsPresets.HIGH_QUALITY
+        );
+        setRecording(recording);
+        setIsRecording(true);
+        Vibration.vibrate(50);
+      } else {
+        avisar('Permisos', 'Necesitamos acceso al micrófono para grabar.');
+      }
+    } catch (err) {
+      console.error('Failed to start recording', err);
+    }
+  };
+
+  const stopRecording = async () => {
+    try {
+      if (!recording) return;
+      setRecording(null);
+      setIsRecording(false);
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      setGrabacionUri(uri);
+      Vibration.vibrate(50);
+    } catch (err) {
+      console.error('Failed to stop recording', err);
+    }
+  };
+
+  const playAudio = async (uri, id) => {
+    try {
+      if (soundToPlay) {
+        await soundToPlay.unloadAsync();
+      }
+      const { sound } = await Audio.Sound.createAsync({ uri });
+      setSoundToPlay(sound);
+      setCurrentPlayingId(id);
+      setIsPlaying(true);
+      await sound.playAsync();
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.didJustFinish) {
+          setIsPlaying(false);
+          setCurrentPlayingId(null);
+        }
+      });
+    } catch (err) {
+      console.log('Error reproduciendo', err);
+    }
+  };
+
+  const stopAudio = async () => {
+    if (soundToPlay) {
+      await soundToPlay.stopAsync();
+      setIsPlaying(false);
+      setCurrentPlayingId(null);
+    }
   };
 
   const ejecutarAccionSeguridad = async (accion, mensajeExito) => {
@@ -370,6 +468,22 @@ export default function SalaChatScreen({ route, navigation }) {
       );
     }
 
+    if (item.audioUrl) {
+      const isThisPlaying = isPlaying && currentPlayingId === item._id;
+      return (
+        <View style={[styles.burbuja, esMio ? styles.burbujaPropia : styles.burbujaAjena]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', minWidth: 120 }}>
+            <TouchableOpacity onPress={() => isThisPlaying ? stopAudio() : playAudio(item.audioUrl, item._id)} style={styles.btnPlay}>
+              <Ionicons name={isThisPlaying ? "pause" : "play"} size={20} color={esMio ? '#FFF' : COLORS.textPrimary} />
+            </TouchableOpacity>
+            <View style={{ marginLeft: 10, flex: 1, height: 4, backgroundColor: esMio ? 'rgba(255,255,255,0.3)' : COLORS.border, borderRadius: 2 }}>
+              {isThisPlaying && <View style={{ width: '50%', height: '100%', backgroundColor: esMio ? '#FFF' : COLORS.primario, borderRadius: 2 }} />}
+            </View>
+          </View>
+        </View>
+      );
+    }
+
     return (
       <View style={[styles.burbuja, esMio ? styles.burbujaPropia : styles.burbujaAjena]}>
         <Text style={[styles.textoMensaje, esMio ? styles.textoPropio : styles.textoAjeno]}>{item.texto}</Text>
@@ -422,20 +536,39 @@ export default function SalaChatScreen({ route, navigation }) {
         />
 
         <View style={styles.inputRow}>
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.inputText}
-              value={texto}
-              onChangeText={setTexto}
-              placeholder="Mensaje..."
-              placeholderTextColor={COLORS.textMuted}
-              multiline
-            />
-          </View>
+          {grabacionUri ? (
+            <View style={[styles.inputContainer, { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderColor: '#3B82F6', borderWidth: 1 }]}>
+              <Ionicons name="mic" size={24} color="#3B82F6" style={{ marginRight: 10 }} />
+              <Text style={{ flex: 1, color: '#3B82F6', fontWeight: 'bold' }}>Nota de voz grabada</Text>
+              <TouchableOpacity onPress={() => setGrabacionUri(null)}>
+                <Ionicons name="trash" size={24} color="#EF4444" />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.inputText}
+                value={texto}
+                onChangeText={setTexto}
+                placeholder={isRecording ? "Grabando... Suelta para finalizar" : "Mensaje..."}
+                placeholderTextColor={isRecording ? "#EF4444" : COLORS.textMuted}
+                multiline
+                editable={!isRecording}
+              />
+            </View>
+          )}
           
-          {texto.trim().length > 0 && (
+          {(texto.trim().length > 0 || grabacionUri) ? (
             <TouchableOpacity style={styles.btnEnviar} onPress={handleEnviar}>
               <Ionicons name="send" size={20} color="#FFF" style={{ marginLeft: 3 }} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity 
+              style={[styles.btnEnviar, isRecording && { backgroundColor: '#EF4444', transform: [{ scale: 1.2 }] }]} 
+              onPressIn={startRecording}
+              onPressOut={stopRecording}
+            >
+              <Ionicons name="mic" size={24} color="#FFF" />
             </TouchableOpacity>
           )}
         </View>
@@ -593,15 +726,27 @@ const getStyles = (COLORS) => StyleSheet.create({
   destinoTitulo: { fontSize: 16, fontWeight: 'bold', color: '#E91E63' },
   destinoTexto: { fontSize: 13, color: COLORS.textPrimary, marginTop: 2, lineHeight: 18 },
 
+  header: { flexDirection: 'row', alignItems: 'center', padding: SPACING[4], backgroundColor: COLORS.tarjeta, borderBottomWidth: 1, borderBottomColor: COLORS.border, ...SHADOWS.sm },
+  headerInfo: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, marginLeft: 15 },
+  avatar: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border },
+  headerNombre: { fontSize: 18, fontWeight: 'bold', color: COLORS.textPrimary, fontFamily: FONTS.display },
+  btnIcono: { marginLeft: 10, padding: 5 },
+  
+  bannerDestino: { flexDirection: 'row', backgroundColor: 'rgba(233, 30, 99, 0.1)', padding: 15, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: 'rgba(233, 30, 99, 0.3)', marginBottom: 15, alignItems: 'center' },
+  destinoTitulo: { fontSize: 16, fontWeight: 'bold', color: '#E91E63' },
+  destinoTexto: { fontSize: 13, color: COLORS.textPrimary, marginTop: 2, lineHeight: 18 },
+
   listContent: { padding: SPACING[4], gap: 10, paddingBottom: 96 }, 
   puzzleCard: { backgroundColor: COLORS.tarjeta, borderRadius: 22, padding: SPACING[4], marginBottom: 12, ...SHADOWS.light },
   puzzleTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   puzzleTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '900', fontFamily: FONTS.display },
   puzzleCount: { color: COLORS.primario, fontWeight: '900' },
-  puzzleGrid: { flexDirection: 'row', gap: 6 },
-  puzzlePiece: { flex: 1, height: 18, borderRadius: 6, backgroundColor: COLORS.fondo, borderWidth: 1, borderColor: COLORS.border },
-  puzzlePieceActive: { backgroundColor: COLORS.primario, borderColor: COLORS.primario },
-  puzzleHint: { color: COLORS.textMuted, fontSize: 12, lineHeight: 17, marginTop: 10 },
+  puzzlePieceActive: { backgroundColor: '#A855F7', borderColor: '#C084FC' },
+  puzzleHint: { color: COLORS.textMuted, fontSize: 12, textAlign: 'center', marginTop: 15, paddingHorizontal: 20 },
+
+  // ── Audio ──
+  btnPlay: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  
   midnightCard: { backgroundColor: '#10172A', borderRadius: 22, padding: SPACING[4], borderWidth: 1, borderColor: 'rgba(168,85,247,0.45)', marginBottom: 12 },
   midnightTitle: { color: '#C4B5FD', fontSize: 17, fontWeight: '900', fontFamily: FONTS.display },
   midnightText: { color: '#E5E7EB', fontSize: 13, lineHeight: 19, marginTop: 6 },

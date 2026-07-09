@@ -12,487 +12,739 @@ import {
   TouchableOpacity,
   View,
   TextInput,
-  Dimensions,
+  Switch,
+  Linking,
+  Vibration
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { userService } from '../services/api';
-import { EXPLORAR_CATEGORIAS } from '../data/explorarCategorias';
-import { inferirRegionPorCiudad } from '../utils/chileLocations';
 import { FONTS, RADIUS, SHADOWS, SPACING } from '../utils/theme';
-import { GradientButton, SoftIcon } from '../components/CahuinUI';
-import CahuinTextField from '../components/CahuinTextField';
 import CahuinModal from '../components/CahuinModal';
-
-const { width } = Dimensions.get('window');
-
-const INTENCIONES = [
-  'Relación seria',
-  'Algo espontáneo',
-  'Conversar',
-  'Amistad',
-  'Cita tranquila',
-  'Sin presión',
-  'Café rápido',
-  'Lo sigo pensando',
-];
-
-const INTERESES_BASE = [
-  'Música en vivo',
-  'Café',
-  'Panoramas',
-  'Humor',
-  'Lectura',
-  'Universidad',
-  'Naturaleza',
-  'Fotografía',
-  'Cine y series',
-  'Cocina',
-  'Deporte',
-  'Juntas',
-  'Bienestar',
-  'Conversaciones reales',
-  'Citas tranquilas',
-];
-
-const DISTANCIAS = [10, 25, 50, 100];
+import ProfilePrompts from '../components/ProfilePrompts';
+import MovieSelectorModal from '../components/MovieSelectorModal';
+import TvSeriesSelectorModal from '../components/TvSeriesSelectorModal';
+import SpotifySelectorModal from '../components/SpotifySelectorModal';
+import AppleMusicSelectorModal from '../components/AppleMusicSelectorModal';
+import GenericSelectorModal from '../components/GenericSelectorModal';
+import HobbiesSelectorModal from '../components/HobbiesSelectorModal';
+import JuegosSelectorModal from '../components/JuegosSelectorModal';
 
 export default function EditarPerfilScreen({ navigation }) {
   const { usuario, actualizarUsuario } = useAuth();
   const { COLORS, isDarkMode } = useTheme();
   const styles = getStyles(COLORS, isDarkMode);
 
+  const [activeTab, setActiveTab] = useState('editar');
+
   const [fotosGaleria, setFotosGaleria] = useState(usuario?.fotos?.length > 0 ? usuario.fotos : (usuario?.foto ? [usuario.foto] : []));
   const [guardando, setGuardando] = useState(false);
-  const [previewVisible, setPreviewVisible] = useState(false);
-  const [previewIndex, setPreviewIndex] = useState(0);
   const [modalInfo, setModalInfo] = useState(null);
 
   const [nombre, setNombre] = useState(usuario?.nombre || '');
   const [descripcion, setDescripcion] = useState(usuario?.descripcion || '');
-  const [altura, setAltura] = useState(usuario?.altura || '');
   const [ciudad, setCiudad] = useState(usuario?.ciudad || '');
-  const [region, setRegion] = useState(usuario?.region || '');
-  const [queBuscas, setQueBuscas] = useState(usuario?.queBuscas || 'Lo sigo pensando');
-  const [distanciaMax, setDistanciaMax] = useState(Number(usuario?.distanciaMax || 50));
-  const [intereses, setIntereses] = useState(usuario?.intereses || []);
-  const [categoriasExplorar, setCategoriasExplorar] = useState(usuario?.categoriasExplorar || []);
-
-  const [fechasDisponibles, setFechasDisponibles] = useState(usuario?.fechasDisponibles || []);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-
-  const [modalMusicaVisible, setModalMusicaVisible] = useState(false);
+  
+  const [prompts, setPrompts] = useState(usuario?.prompts || []);
+  const [peliculasFavoritas, setPeliculasFavoritas] = useState(usuario?.peliculasFavoritas || []);
+  const [seriesFavoritas, setSeriesFavoritas] = useState(usuario?.seriesFavoritas || []);
+  const [juegosFavoritos, setJuegosFavoritos] = useState(usuario?.juegosFavoritos || []);
+  const [hobbies, setHobbies] = useState(usuario?.hobbies || []);
+  const [artistasSpotify, setArtistasSpotify] = useState(usuario?.artistasSpotify || []);
   const [cancion, setCancion] = useState(usuario?.cancion || null);
-  const [queryMusica, setQueryMusica] = useState('');
-  const [resultadosMusica, setResultadosMusica] = useState([]);
-  const [buscandoMusica, setBuscandoMusica] = useState(false);
+  
+  // Audio Rompehielos
+  const [audioRompehielos, setAudioRompehielos] = useState(usuario?.audioRompehielos || null);
+  const [recording, setRecording] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [soundToPlay, setSoundToPlay] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  
+  // Basic info
+  const [metaRelacion, setMetaRelacion] = useState(usuario?.metaRelacion || '');
+  const [pronombres, setPronombres] = useState(usuario?.pronombres || '');
+  
+  // Identidad
+  const [genero, setGenero] = useState(usuario?.genero !== 'Por definir' ? usuario?.genero : '');
+  const [orientacionSexual, setOrientacionSexual] = useState(usuario?.orientacionSexual !== 'Por definir' ? usuario?.orientacionSexual : '');
+  const [mostrarGenero, setMostrarGenero] = useState(usuario?.mostrarGenero !== false);
+  const [mostrarOrientacion, setMostrarOrientacion] = useState(usuario?.mostrarOrientacion !== false);
 
-  const fotoPrincipal = fotosGaleria[0] || (usuario?.fotos && usuario.fotos.length > 0 ? usuario.fotos[0] : usuario?.foto) || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=800';
-  const categoriasElegidas = useMemo(
-    () => EXPLORAR_CATEGORIAS.filter((categoria) => categoriasExplorar.includes(categoria.id)),
-    [categoriasExplorar]
-  );
+  const [altura, setAltura] = useState(usuario?.altura || '');
+  const [idiomas, setIdiomas] = useState(usuario?.idiomas ? usuario.idiomas.join(', ') : ''); // Text edit para idiomas
+  const [centroEstudios, setCentroEstudios] = useState(usuario?.centroEstudios || '');
+  const [trabajo, setTrabajo] = useState(usuario?.trabajo || '');
+  const [zodiaco, setZodiaco] = useState(usuario?.zodiaco || '');
+  const [nivelEscolaridad, setNivelEscolaridad] = useState(usuario?.nivelEscolaridad || '');
+  const [planesHijos, setPlanesHijos] = useState(usuario?.mapaValores?.planesHijos || '');
+  const [personalidad, setPersonalidad] = useState(usuario?.personalidad || '');
+  const [estiloComunicacion, setEstiloComunicacion] = useState(usuario?.estiloComunicacion || '');
+  const [recibirAmor, setRecibirAmor] = useState(usuario?.recibirAmor || '');
+  
+  // Lifestyle (Habitos)
+  const [mascotas, setMascotas] = useState(usuario?.habitos?.mascotas || '');
+  const [beber, setBeber] = useState(usuario?.habitos?.beber || '');
+  const [fumar, setFumar] = useState(usuario?.habitos?.fumar || '');
+  const [ejercicio, setEjercicio] = useState(usuario?.habitos?.ejercicio || '');
+  const [alimentacion, setAlimentacion] = useState(usuario?.habitos?.alimentacion || '');
+  const [redesSociales, setRedesSociales] = useState(usuario?.habitos?.redesSociales || '');
+  const [habitosSueno, setHabitosSueno] = useState(usuario?.habitos?.habitosSueno || '');
+  const [carrete, setCarrete] = useState(usuario?.habitos?.carrete || '');
+  const [vacaciones, setVacaciones] = useState(usuario?.habitos?.vacaciones || '');
+  const [transporte, setTransporte] = useState(usuario?.habitos?.transporte || '');
+
+  const [mostrarEdad, setMostrarEdad] = useState(usuario?.mostrarEdad !== false);
+  const [mostrarDistancia, setMostrarDistancia] = useState(usuario?.mostrarDistancia !== false);
+
+  const [modalMovies, setModalMovies] = useState(false);
+  const [modalSeries, setModalSeries] = useState(false);
+  const [modalJuegos, setModalJuegos] = useState(false);
+  const [modalHobbies, setModalHobbies] = useState(false);
+  const [modalSpotify, setModalSpotify] = useState(false);
+  const [modalAppleMusic, setModalAppleMusic] = useState(false);
+
+  const [selectorConfig, setSelectorConfig] = useState(null); 
+  const [editingField, setEditingField] = useState(null);
+  const [tempValue, setTempValue] = useState('');
+
+  const openTextEdit = (field, value) => {
+    setEditingField(field);
+    setTempValue(value);
+  };
+
+  const saveTextEdit = () => {
+    if (editingField === 'centroEstudios') setCentroEstudios(tempValue);
+    if (editingField === 'trabajo') setTrabajo(tempValue);
+    if (editingField === 'ciudad') setCiudad(tempValue);
+    if (editingField === 'altura') setAltura(tempValue);
+    if (editingField === 'idiomas') setIdiomas(tempValue);
+    setEditingField(null);
+  };
+
+  const openSelector = (title, options, selectedValue, onSave) => {
+    setSelectorConfig({ visible: true, title, options, selectedValue, onSave });
+  };
+
+  const OPTIONS = {
+    genero: ['Mujer', 'Hombre', 'Más allá del binario', 'Mujer trans', 'Hombre trans', 'Prefiero no decirlo'],
+    orientacionSexual: ['Heterosexual', 'Gay', 'Lesbiana', 'Bisexual', 'Asexual', 'Demisexual', 'Pansexual', 'Queer', 'Me lo estoy cuestionando'],
+    metaRelacion: ['Algo serio, pa pololear', 'Pasarlo bien y ver qué onda', 'Un rato nomás, sin atados', 'Conocer gente y apañar', 'Ni idea, fluyendo'],
+    pronombres: ['Él', 'Ella', 'Elle'],
+    zodiaco: [
+      { label: 'Aries', icon: '♈' }, { label: 'Tauro', icon: '♉' }, { label: 'Géminis', icon: '♊' }, { label: 'Cáncer', icon: '♋' }, 
+      { label: 'Leo', icon: '♌' }, { label: 'Virgo', icon: '♍' }, { label: 'Libra', icon: '♎' }, { label: 'Escorpio', icon: '♏' }, 
+      { label: 'Sagitario', icon: '♐' }, { label: 'Capricornio', icon: '♑' }, { label: 'Acuario', icon: '♒' }, { label: 'Piscis', icon: '♓' }
+    ],
+    educacion: ['Licenciatura', 'En la U', 'Titulado/a', 'Posgrado', 'Instituto / CFT', 'Todavía en el colegio'],
+    hijos: ['Quiero crías a futuro', 'Cero ganas de ser papá/mamá', 'Ya tengo y quiero más', 'Ya tengo y no más', 'No estoy seguro/a'],
+    personalidad: [
+      { label: 'INTJ', icon: '🧠' }, { label: 'INTP', icon: '🔬' }, { label: 'ENTJ', icon: '🎯' }, { label: 'ENTP', icon: '💡' },
+      { label: 'INFJ', icon: '🔮' }, { label: 'INFP', icon: '✨' }, { label: 'ENFJ', icon: '🌟' }, { label: 'ENFP', icon: '🌈' },
+      { label: 'ISTJ', icon: '📋' }, { label: 'ISFJ', icon: '🛡️' }, { label: 'ESTJ', icon: '⚖️' }, { label: 'ESFJ', icon: '🤝' },
+      { label: 'ISTP', icon: '🛠️' }, { label: 'ISFP', icon: '🎨' }, { label: 'ESTP', icon: '⚡' }, { label: 'ESFP', icon: '🎉' }
+    ],
+    comunicacion: ['Por WhatsApp', 'Llamada (si hay confianza)', 'Videollamada', 'Frente a frente, obvio', 'Cero mensajes, me aburro'],
+    amor: ['Apapachos (Tiempo de calidad)', 'Palabras bonitas', 'Mucho contacto físico', 'Que me ayuden (Actos de servicio)', 'Regalitos'],
+    mascotas: ['Team Perro', 'Team Gato', 'Reptiles locos', 'Aves', 'Peces', 'No tengo pero apañan', 'Alergia a los bichos', 'Paso de mascotas'],
+    beber: ['No tomo, soy sanito/a', 'Su copete social nomás', 'Bueno/a pal copete'],
+    fumar: ['Fumo en los carretes', 'Fumo harto', 'Cero humo', 'Tratando de dejarlo'],
+    ejercicio: ['Modo bestia (Todos los días)', 'Su trote piola (Frecuente)', 'Cuando me acuerdo', 'El control de la tele cuenta?'],
+    alimentacion: ['Vegano', 'Vegetariano', 'Pescetariano', 'Carnívoro a morir', 'Como de todo (Omnívoro)', 'Mañoso/a pa comer'],
+    redes: ['Modo Influencer', 'Subo historias de vez en cuando', 'Modo fantasma', 'Cero redes'],
+    sueno: ['Arriba con los gallos', 'Búho nocturno', 'Duermo cuando puedo'],
+    carrete: ['Modo bestia, hasta que salga el sol', 'Su previa piola y pa la casa', 'Prefiero carrete en casa (Junta)', 'No carreteo, cero onda'],
+    vacaciones: ['Mochileando a la vida', 'All inclusive, puro relax', 'Cabañita en el sur con lluvia', 'Playa, sol y arena'],
+    transporte: ['Team Metro/Micro apañando', 'En mi autito pa todos lados', 'Bicicleta, cuidando el planeta', 'A puro Uber/DiDi'],
+  };
+
+  const fotoPrincipal = fotosGaleria[0] || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=800';
 
   const agregarFotoGaleria = async (index) => {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [3, 4], quality: 0.6 });
-    if (!result.canceled) {
-      const nuevasFotos = [...fotosGaleria];
-      nuevasFotos[index] = result.assets[0].uri;
-      // Filtrar undefined o vacíos si se saltó un índice
-      setFotosGaleria(nuevasFotos.filter(Boolean).slice(0, 6));
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') return setModalInfo({ title: 'Permiso', message: 'Falta permiso para fotos.', emoji: '📷' });
+
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 5],
+      quality: 0.8,
+      base64: true
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const b64 = result.assets[0].base64;
+      setModalInfo({ title: 'Subiendo...', message: 'Subiendo tu foto...', emoji: '⏳' });
+      try {
+        const respuesta = await userService.subirFotoBase64(b64);
+        if (respuesta.fotoUrl) {
+          const nuevasFotos = [...fotosGaleria];
+          nuevasFotos[index] = respuesta.fotoUrl;
+          setFotosGaleria(nuevasFotos.filter(Boolean));
+          setModalInfo(null);
+        }
+      } catch (err) {
+        setModalInfo({ title: 'Error', message: 'No se pudo subir la foto.', emoji: '😥' });
+      }
     }
   };
 
-  const eliminarFotoGaleria = (index) => setFotosGaleria(fotosGaleria.filter((_, i) => i !== index));
+  const startRecordingAudio = async () => {
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+      if (permission.status === 'granted') {
+        await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+        const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+        setRecording(recording);
+        setIsRecording(true);
+        Vibration.vibrate(50);
+      }
+    } catch (err) { console.log(err); }
+  };
 
-  const agregarFecha = (event, selectedDate) => {
-    setShowDatePicker(Platform.OS === 'ios');
-    if (selectedDate) {
-      const existe = fechasDisponibles.find((d) => new Date(d).toDateString() === selectedDate.toDateString());
-      if (!existe) setFechasDisponibles([...fechasDisponibles, selectedDate.toISOString()]);
+  const stopRecordingAudio = async () => {
+    if (!recording) return;
+    setRecording(null);
+    setIsRecording(false);
+    await recording.stopAndUnloadAsync();
+    const uri = recording.getURI();
+    setAudioRompehielos(uri);
+    Vibration.vibrate(50);
+  };
+
+  const playProfileAudio = async () => {
+    if (!audioRompehielos) return;
+    try {
+      if (soundToPlay) await soundToPlay.unloadAsync();
+      const { sound } = await Audio.Sound.createAsync({ uri: audioRompehielos });
+      setSoundToPlay(sound);
+      setIsPlaying(true);
+      await sound.playAsync();
+      sound.setOnPlaybackStatusUpdate(status => {
+        if (status.didJustFinish) setIsPlaying(false);
+      });
+    } catch (e) { console.log(e); }
+  };
+
+  const stopProfileAudio = async () => {
+    if (soundToPlay) {
+      await soundToPlay.stopAsync();
+      setIsPlaying(false);
     }
   };
 
-  const removerFecha = (index) => setFechasDisponibles(fechasDisponibles.filter((_, i) => i !== index));
-
-  const toggleInteres = (item) => {
-    setIntereses((actuales) => (
-      actuales.includes(item)
-        ? actuales.filter((i) => i !== item)
-        : [...actuales, item].slice(0, 12)
-    ));
-  };
-
-  const toggleCategoria = (id) => {
-    setCategoriasExplorar((actuales) => (
-      actuales.includes(id)
-        ? actuales.filter((categoriaId) => categoriaId !== id)
-        : [...actuales, id]
-    ));
-  };
-
-  const actualizarCiudad = (texto) => {
-    setCiudad(texto);
-    const regionInferida = inferirRegionPorCiudad(texto);
-    if (regionInferida) setRegion(regionInferida);
+  const eliminarFotoGaleria = (index) => {
+    const nuevasFotos = [...fotosGaleria];
+    nuevasFotos.splice(index, 1);
+    setFotosGaleria(nuevasFotos);
   };
 
   const guardarDetalles = async () => {
     setGuardando(true);
     try {
-      const formData = new FormData();
-      formData.append('fotosExistentes', JSON.stringify(fotosGaleria.filter((f) => typeof f === 'string' && f.startsWith('http'))));
-      formData.append('fotoSocialBloqueada', 'true');
-      const fotosNuevas = fotosGaleria.filter((f) => typeof f === 'string' && !f.startsWith('http'));
-      fotosNuevas.forEach((uri, idx) => {
-        formData.append('nuevasFotos', { uri: Platform.OS === 'android' ? uri : uri.replace('file://', ''), name: `f_${idx}.jpg`, type: 'image/jpeg' });
-      });
-      const fotoRes = await userService.actualizarFotos(formData);
-
-      const res = await userService.actualizar({
-        nombre,
+      const payloadIdiomas = idiomas ? idiomas.split(',').map(s => s.trim()) : [];
+      
+      const response = await userService.actualizarPerfil({
+        fotos: fotosGaleria,
+        foto: fotosGaleria[0] || '',
         descripcion,
-        altura,
         ciudad,
-        region,
-        queBuscas,
-        distanciaMax,
-        intereses,
-        categoriasExplorar,
-        cancion,
-        fechasDisponibles,
-      });
-      const usuarioFotos = fotoRes?.usuario || fotoRes || {};
-      const fotosGuardadas = Array.isArray(usuarioFotos.fotos) ? usuarioFotos.fotos : fotosGaleria;
-      actualizarUsuario({
-        ...(res.usuario || {}),
-        ...usuarioFotos,
-        nombre,
-        descripcion,
+        prompts,
+        peliculasFavoritas,
+        seriesFavoritas,
+        juegosFavoritos,
+        hobbies,
+        artistasSpotify,
+        centroEstudios,
+        trabajo,
+        zodiaco,
+        nivelEscolaridad,
+        personalidad,
+        estiloComunicacion,
+        recibirAmor,
+        metaRelacion,
+        pronombres,
+        genero,
+        orientacionSexual,
+        mostrarGenero,
+        mostrarOrientacion,
         altura,
-        ciudad,
-        region,
-        queBuscas,
-        distanciaMax,
-        intereses,
-        categoriasExplorar,
+        idiomas: payloadIdiomas,
+        habitos: {
+          mascotas, beber, fumar, ejercicio, alimentacion, redesSociales, habitosSueno, carrete, vacaciones, transporte
+        },
+        mostrarEdad,
+        mostrarDistancia,
         cancion,
-        fechasDisponibles,
-        fotos: fotosGuardadas,
-        foto: usuarioFotos.foto || fotosGuardadas[0] || '',
-        fotoSocialBloqueada: true,
+        audioRompehielos,
       });
-      setModalInfo({
-        title: '¡Perfil Actualizado!',
-        message: 'Tus cambios han sido guardados con éxito.',
-        emoji: '✅',
-        accent: COLORS.primario,
-        actions: [{ label: 'Listo', onPress: () => { setModalInfo(null); navigation.goBack(); } }],
-      });
+      if (response.usuario) {
+        actualizarUsuario(response.usuario);
+        setModalInfo({ title: '¡Guardado!', message: 'Tu perfil fue actualizado con éxito', emoji: '✅', tone: 'success' });
+      }
     } catch (error) {
-      setModalInfo({ title: 'Error', message: error.message || 'No pudimos guardar.', emoji: '🌶️', tone: 'danger' });
+      setModalInfo({ title: 'Error', message: 'No se pudieron guardar los cambios', emoji: '😞' });
     } finally {
       setGuardando(false);
     }
   };
 
-  const buscarMusica = async (texto) => {
-    setQueryMusica(texto);
-    if (texto.length < 3) return setResultadosMusica([]);
-    setBuscandoMusica(true);
-    try {
-      const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(texto)}&entity=song&limit=5`);
-      const data = await res.json();
-      setResultadosMusica(data.results);
-    } catch (e) {
-      setResultadosMusica([]);
-    } finally {
-      setBuscandoMusica(false);
-    }
+  const renderGridRow = (startIndex) => {
+    return (
+      <View style={styles.gridRow}>
+        {[0, 1, 2].map((offset) => {
+          const idx = startIndex + offset;
+          const url = fotosGaleria[idx];
+          return (
+            <View key={idx} style={styles.gridItem}>
+              {url ? (
+                <View style={{ flex: 1 }}>
+                  <Image source={{ uri: url }} style={styles.gridImage} />
+                  <TouchableOpacity style={styles.removePhotoBtn} onPress={() => eliminarFotoGaleria(idx)}>
+                    <Ionicons name="close" size={16} color="#FFF" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity style={styles.addPhotoBtn} onPress={() => agregarFotoGaleria(idx)}>
+                  <Ionicons name="add" size={30} color={COLORS.textMuted} />
+                </TouchableOpacity>
+              )}
+            </View>
+          );
+        })}
+      </View>
+    );
   };
 
-  const renderFotoSlot = (index, styleExtra = {}) => {
-    const uri = fotosGaleria[index];
+  const renderPill = (icon, text) => {
+    if (!text) return null;
+    
+    // Si el texto es un objeto (de las selecciones de personalidad o zodiaco)
+    let display = typeof text === 'object' ? `${text.icon} ${text.label}` : text;
+    
     return (
-      <View style={[styles.cajaFotoSlot, styleExtra]}>
-        {uri ? (
-          <>
-            <Image source={{ uri }} style={styles.fotoEnGrid} />
-            <TouchableOpacity style={styles.btnEliminarFoto} onPress={() => eliminarFotoGaleria(index)}>
-              <Ionicons name="close" size={16} color="#FFF" />
-            </TouchableOpacity>
-          </>
-        ) : (
-          <TouchableOpacity style={styles.btnAgregarFoto} onPress={() => agregarFotoGaleria(index)}>
-            <View style={styles.addIconCircle}>
-              <Ionicons name="add" size={24} color="#FFF" />
-            </View>
-          </TouchableOpacity>
-        )}
+      <View style={styles.pill}>
+        <Ionicons name={icon} size={14} color={COLORS.textPrimary} style={{ marginRight: 6 }} />
+        <Text style={styles.pillText}>{display}</Text>
       </View>
+    );
+  };
+
+  const renderInteresCard = (title, iconName, count, onPress) => {
+    return (
+      <TouchableOpacity style={styles.interesCard} onPress={onPress} activeOpacity={0.8}>
+        <View style={styles.interesCardHeader}>
+          <View style={[styles.interesIconWrap, { backgroundColor: COLORS.bg }]}>
+            <Ionicons name={iconName} size={24} color={COLORS.primario} />
+          </View>
+          <View style={styles.interesAddIcon}>
+            <Ionicons name="add" size={16} color={COLORS.bg} />
+          </View>
+        </View>
+        <Text style={styles.interesCardTitle}>{title}</Text>
+        {count > 0 && <Text style={styles.interesCardCount}>{count} seleccionados</Text>}
+      </TouchableOpacity>
+    );
+  };
+
+  const renderListGroupRow = (iconName, label, value, onPress, isLast = false) => {
+    let displayValue = value;
+    if (typeof value === 'object') {
+      displayValue = `${value.icon} ${value.label}`;
+    }
+
+    return (
+      <TouchableOpacity style={[styles.listGroupRow, !isLast && { borderBottomWidth: 1, borderBottomColor: COLORS.border }]} onPress={onPress}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Ionicons name={iconName} size={20} color={COLORS.textMuted} style={{ marginRight: 12 }} />
+          <Text style={styles.listGroupLabel}>{label}</Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Text style={[styles.listGroupValue, !displayValue && { color: COLORS.textMuted }]}>{displayValue || 'Vacío'}</Text>
+          <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} style={{ marginLeft: 8 }} />
+        </View>
+      </TouchableOpacity>
     );
   };
 
   return (
     <SafeAreaView style={styles.safe}>
+      {/* ── HEADER TABS ── */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerIcon}>
-          <Ionicons name="arrow-back" size={25} color={COLORS.textPrimary} />
+        <TouchableOpacity style={styles.headerBackBtn} onPress={() => navigation.goBack()}>
+          <Ionicons name="chevron-back" size={28} color={COLORS.primario} />
         </TouchableOpacity>
-        <Text style={styles.tituloHeader}>Editar Perfil</Text>
-        <View style={{ width: 42 }} />
+        <Text style={styles.headerTitle}>Editar perfil</Text>
+        <View style={{ width: 28 }} />
+      </View>
+      <View style={styles.tabContainer}>
+        <TouchableOpacity style={[styles.tabButton, activeTab === 'editar' && styles.tabButtonActive]} onPress={() => setActiveTab('editar')}>
+          <Text style={[styles.tabText, activeTab === 'editar' && styles.tabTextActive]}>Editar</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.tabButton, activeTab === 'vistaprevia' && styles.tabButtonActive]} onPress={() => setActiveTab('vistaprevia')}>
+          <Text style={[styles.tabText, activeTab === 'vistaprevia' && styles.tabTextActive]}>Vista previa</Text>
+        </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        
-        {/* GRID ASIMÉTRICO (Tinder-style) */}
-        <View style={styles.gridContainer}>
-          <View style={styles.gridTopRow}>
-            {renderFotoSlot(0, styles.gridLargeSlot)}
-            <View style={styles.gridRightCol}>
-              {renderFotoSlot(1, styles.gridSmallSlot)}
-              {renderFotoSlot(2, styles.gridSmallSlot)}
-            </View>
-          </View>
-          <View style={styles.gridBottomRow}>
-            {renderFotoSlot(3, styles.gridSmallSlot)}
-            {renderFotoSlot(4, styles.gridSmallSlot)}
-            {renderFotoSlot(5, styles.gridSmallSlot)}
-          </View>
-        </View>
-        <Text style={styles.gridHint}>Mantén presionado para ordenar (próximamente). La foto más grande es tu portada.</Text>
-
-        <SectionTitle styles={styles} title="Lo básico" subtitle="Cuentale al mundo quién eres." />
-        <View style={styles.floatingInputWrap}>
-          <Ionicons name="person" size={20} color={COLORS.textMuted} style={styles.inputIcon} />
-          <TextInput 
-            style={styles.floatingInput} 
-            placeholder="Tu Nombre" 
-            placeholderTextColor={COLORS.textMuted}
-            value={nombre} 
-            onChangeText={setNombre} 
-          />
-        </View>
-
-        <View style={styles.rowInputs}>
-          <View style={[styles.floatingInputWrap, styles.halfInput]}>
-            <Ionicons name="business" size={20} color={COLORS.textMuted} style={styles.inputIcon} />
-            <TextInput 
-              style={styles.floatingInput} 
-              placeholder="Ciudad" 
-              placeholderTextColor={COLORS.textMuted}
-              value={ciudad} 
-              onChangeText={actualizarCiudad} 
-            />
-          </View>
-          <View style={[styles.floatingInputWrap, styles.halfInput]}>
-            <Ionicons name="map" size={20} color={COLORS.textMuted} style={styles.inputIcon} />
-            <TextInput 
-              style={styles.floatingInput} 
-              placeholder="Región" 
-              placeholderTextColor={COLORS.textMuted}
-              value={region} 
-              onChangeText={setRegion} 
-            />
-          </View>
-        </View>
-
-        <View style={[styles.floatingInputWrap, styles.bioInputWrap]}>
-          <TextInput 
-            style={[styles.floatingInput, styles.bioInput]} 
-            placeholder="Preséntate de forma original..." 
-            placeholderTextColor={COLORS.textMuted}
-            value={descripcion} 
-            onChangeText={setDescripcion} 
-            multiline 
-            textAlignVertical="top"
-          />
-        </View>
-
-        <SectionTitle styles={styles} title="Qué buscas" subtitle="Esto conecta Explorar, Radar y las comunidades." />
-        <View style={styles.chipWrap}>
-          {INTENCIONES.map((item) => (
-            <SelectableChip key={item} label={item} selected={queBuscas === item} onPress={() => setQueBuscas(item)} styles={styles} COLORS={COLORS} />
-          ))}
-        </View>
-
-        <SectionTitle styles={styles} title="Distancia del radar" subtitle="¿Qué tan lejos estás dispuesto a ir?" />
-        <View style={styles.distanceRow}>
-          {DISTANCIAS.map((km) => (
-            <TouchableOpacity key={km} onPress={() => setDistanciaMax(km)} style={[styles.distanceChip, distanciaMax === km && { backgroundColor: COLORS.primario, borderColor: COLORS.primario }]}>
-              <Text style={[styles.distanceText, distanciaMax === km && styles.distanceTextActive]}>{km} km</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <SectionTitle styles={styles} title="Intereses" subtitle="Elige hasta 12. Mientras más claro, mejor cahuín." />
-        <View style={styles.chipWrap}>
-          {INTERESES_BASE.map((item) => (
-            <SelectableChip key={item} label={item} selected={intereses.includes(item)} onPress={() => toggleInteres(item)} styles={styles} COLORS={COLORS} />
-          ))}
-        </View>
-
-        <SectionTitle styles={styles} title="Comunidades de Explorar" subtitle="Únete a las comunidades vibrantes." />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-          {EXPLORAR_CATEGORIAS.map((categoria) => {
-            const selected = categoriasExplorar.includes(categoria.id);
-            return (
-              <TouchableOpacity key={categoria.id} onPress={() => toggleCategoria(categoria.id)} style={[styles.categoryCard, selected && { borderColor: categoria.color, backgroundColor: 'rgba(255,255,255,0.1)' }]}>
-                <SoftIcon name={categoria.icon} bg={selected ? categoria.color : COLORS.fondo} color={selected ? '#FFF' : categoria.color} size={46} rounded={23} iconSize={22} />
-                <Text style={[styles.categoryCardName, selected && { color: '#FFF' }]} numberOfLines={1}>{categoria.title}</Text>
-                {selected && <View style={[styles.categoryCardCheck, { backgroundColor: categoria.color }]}><Ionicons name="checkmark" size={12} color="#FFF" /></View>}
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        <SectionTitle styles={styles} title="Detalles que suman" subtitle="Pequeñas pistas para que te inviten con algo más que hola." />
-        
-        <View style={styles.calendarHeader}>
-          <Text style={styles.subLabel}>Mi calendario de citas</Text>
-          <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.smallPrimary}>
-            <Ionicons name="add" size={16} color="#FFF" />
-            <Text style={styles.smallPrimaryText}>Fecha</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.fechasContainer}>
-          {fechasDisponibles.map((fechaIso, idx) => {
-            const f = new Date(fechaIso);
-            return (
-              <View key={`${fechaIso}-${idx}`} style={styles.chipFecha}>
-                <Text style={styles.textoFecha}>{f.getDate()} de {f.toLocaleString('es-ES', { month: 'short' })}</Text>
-                <TouchableOpacity onPress={() => removerFecha(idx)} style={{ marginLeft: 8 }}>
-                  <Ionicons name="close-circle" size={18} color="#FF5252" />
-                </TouchableOpacity>
+      {/* ── VISTA PREVIA ── */}
+      {activeTab === 'vistaprevia' ? (
+        <ScrollView style={styles.previewScroll} showsVerticalScrollIndicator={false}>
+          <View style={styles.publicCard}>
+            <Image source={{ uri: fotoPrincipal }} style={styles.publicImage} />
+            <View style={styles.publicOverlay}>
+              <Text style={styles.publicName}>{usuario?.nombre}, {mostrarEdad ? (usuario?.edad || 18) : ''}</Text>
+              <View style={styles.publicLocationRow}>
+                <Ionicons name="location" size={15} color="#FFF" />
+                <Text style={styles.publicLocation}>{ciudad || 'Tu ciudad'} {mostrarDistancia ? '· a 2 km' : ''}</Text>
               </View>
-            );
-          })}
-        </View>
-        {showDatePicker && <DateTimePicker value={new Date()} mode="date" display="default" minimumDate={new Date()} onChange={agregarFecha} />}
-
-        <Text style={styles.subLabel}>Mi himno musical</Text>
-        {cancion?.nombre ? (
-          <View style={styles.cancionSeleccionada}>
-            <Image source={{ uri: cancion.foto }} style={styles.album} />
-            <Text style={styles.songName} numberOfLines={1}>{cancion.nombre}</Text>
-            <TouchableOpacity onPress={() => setCancion(null)}>
-              <Ionicons name="close-circle" size={24} color="#FF5252" />
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity style={styles.btnBuscarMusica} onPress={() => setModalMusicaVisible(true)}>
-            <Ionicons name="search" size={20} color="#FFF" />
-            <Text style={styles.musicButtonText}>Buscar canción en Apple Music</Text>
-          </TouchableOpacity>
-        )}
-
-        <Text style={styles.subLabel}>Altura (m)</Text>
-        <View style={styles.floatingInputWrap}>
-          <Ionicons name="resize" size={20} color={COLORS.textMuted} style={styles.inputIcon} />
-          <TextInput 
-            style={styles.floatingInput} 
-            placeholder="Ej: 1.75" 
-            placeholderTextColor={COLORS.textMuted}
-            value={altura} 
-            onChangeText={setAltura} 
-            keyboardType="numeric"
-          />
-        </View>
-        
-        <View style={{ height: 120 }} /> 
-      </ScrollView>
-
-      {/* ── STICKY BOTTOM BAR ── */}
-      <LinearGradient colors={['transparent', COLORS.bg, COLORS.bg]} style={styles.bottomBar}>
-        <TouchableOpacity style={styles.btnPreviewCircle} onPress={() => setPreviewVisible(true)}>
-          <Ionicons name="eye" size={26} color={COLORS.primario} />
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.btnSaveFloating, guardando && { opacity: 0.7 }]} onPress={guardarDetalles} disabled={guardando}>
-          {guardando ? <ActivityIndicator color="#FFF" /> : <Text style={styles.btnSaveFloatingText}>Guardar Perfil</Text>}
-        </TouchableOpacity>
-      </LinearGradient>
-
-      {/* ── MODALS ── */}
-      <Modal visible={modalMusicaVisible} animationType="slide" transparent>
-        <View style={styles.modalFondo}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Buscar canción</Text>
-              <TouchableOpacity onPress={() => setModalMusicaVisible(false)}><Ionicons name="close" size={28} color={COLORS.textPrimary} /></TouchableOpacity>
             </View>
-            <CahuinTextField icon="musical-notes-outline" placeholder="Artista o canción..." value={queryMusica} onChangeText={buscarMusica} autoFocus />
-            {buscandoMusica ? <ActivityIndicator color={COLORS.primario} style={{ marginTop: 20 }} /> : (
-              <FlatList
-                data={resultadosMusica}
-                keyExtractor={(item) => item.trackId.toString()}
-                renderItem={({ item }) => (
-                  <TouchableOpacity style={styles.trackItem} onPress={() => { setCancion({ nombre: `${item.artistName} - ${item.trackName}`, foto: item.artworkUrl100 }); setModalMusicaVisible(false); }}>
-                    <Image source={{ uri: item.artworkUrl100 }} style={styles.album} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.trackTitle}>{item.trackName}</Text>
-                      <Text style={styles.trackArtist}>{item.artistName}</Text>
-                    </View>
-                  </TouchableOpacity>
-                )}
-              />
+          </View>
+          <View style={styles.previewContent}>
+            
+            <View style={styles.pillsContainer}>
+              {hobbies.map(h => renderPill(h.icon, h.nombre))}
+              {mostrarGenero && renderPill("person", genero)}
+              {mostrarOrientacion && renderPill("heart", orientacionSexual)}
+              {renderPill("school", centroEstudios)}
+              {renderPill("briefcase", trabajo)}
+              {renderPill("book", nivelEscolaridad)}
+              {renderPill("moon", zodiaco)}
+              {renderPill("people", planesHijos)}
+              {renderPill("finger-print", personalidad)}
+              {renderPill("chatbubbles", estiloComunicacion)}
+              {renderPill("heart", recibirAmor)}
+              {renderPill("paw", mascotas)}
+              {renderPill("wine", beber)}
+              {renderPill("flame", fumar)}
+              {renderPill("barbell", ejercicio)}
+              {renderPill("restaurant", alimentacion)}
+              {renderPill("phone-portrait", redesSociales)}
+              {renderPill("bed", habitosSueno)}
+              {renderPill("musical-notes", carrete)}
+              {renderPill("airplane", vacaciones)}
+              {renderPill("bus", transporte)}
+              {renderPill("eye", metaRelacion)}
+              {renderPill("person", pronombres)}
+              {renderPill("resize", altura ? `${altura} cm` : '')}
+              {renderPill("language", idiomas)}
+            </View>
+
+            {descripcion ? <Text style={styles.publicBio}>{descripcion}</Text> : null}
+            
+            {cancion && cancion.nombre && (
+              <View style={styles.previewSection}>
+                <Text style={styles.previewSectionTitle}>Mi himno musical</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Image source={{ uri: cancion.foto }} style={{ width: 50, height: 50, borderRadius: 8, marginRight: 12 }} />
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: COLORS.textPrimary }}>{cancion.nombre}</Text>
+                </View>
+              </View>
             )}
-          </View>
-        </View>
-      </Modal>
 
-      <Modal visible={previewVisible} animationType="slide" transparent onRequestClose={() => setPreviewVisible(false)}>
-        <View style={styles.modalFondo}>
-          <View style={styles.previewModal}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Así te verían</Text>
-              <TouchableOpacity onPress={() => setPreviewVisible(false)}><Ionicons name="close" size={28} color={COLORS.textPrimary} /></TouchableOpacity>
-            </View>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.previewScroll}>
-              
-              <View style={styles.publicCard}>
-                <Image source={{ uri: (fotosGaleria.length > 0 ? fotosGaleria[previewIndex] : fotoPrincipal) }} style={styles.publicImage} />
-                
-                {/* Carrusel functionality */}
-                {fotosGaleria.length > 1 && (
-                  <View style={styles.barrasContainer}>
-                    {fotosGaleria.map((_, i) => (
-                      <View key={i} style={[styles.barraFoto, { backgroundColor: i === previewIndex ? '#FFF' : 'rgba(255,255,255,0.4)' }]} />
-                    ))}
-                  </View>
-                )}
-                <TouchableOpacity style={styles.zonaTactilIzq} onPress={() => { if (previewIndex > 0) setPreviewIndex(previewIndex - 1); }} />
-                <TouchableOpacity style={styles.zonaTactilDer} onPress={() => { if (previewIndex < fotosGaleria.length - 1) setPreviewIndex(previewIndex + 1); }} />
-
-                <LinearGradient colors={['transparent', 'rgba(10,14,24,0.95)']} style={styles.publicOverlay}>
-                  <Text style={styles.publicName}>{nombre || 'Tu nombre'}, {usuario?.edad || 18}</Text>
-                  <View style={styles.publicLocationRow}>
-                    <Ionicons name="location" size={15} color="rgba(255,255,255,0.88)" />
-                    <Text style={styles.publicLocation}>{ciudad || 'Tu ciudad'} · hasta {distanciaMax} km</Text>
-                  </View>
-                </LinearGradient>
+            {prompts.map((p, idx) => (
+              <View key={idx} style={styles.previewPrompt}>
+                <Text style={styles.previewPromptQ}>{p.pregunta}</Text>
+                <Text style={styles.previewPromptA}>{p.respuesta}</Text>
               </View>
+            ))}
 
-              <Text style={styles.publicBio}>{descripcion || 'Escribe una bio con personalidad Cahuín para que te inviten con tema.'}</Text>
-              <View style={styles.publicChips}>
-                {[queBuscas, ...intereses].filter(Boolean).slice(0, 8).map((chip) => (
-                  <View key={chip} style={styles.publicChip}><Text style={styles.publicChipText}>{chip}</Text></View>
-                ))}
+            {peliculasFavoritas.length > 0 && (
+              <View style={styles.previewSection}>
+                <Text style={styles.previewSectionTitle}>Películas que me gustan</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+                  {peliculasFavoritas.map(m => (
+                    <Image key={m.id} source={{ uri: m.poster }} style={styles.previewMoviePoster} />
+                  ))}
+                </ScrollView>
               </View>
-              {categoriasElegidas.length > 0 ? (
-                <View style={styles.previewCategories}>
-                  {categoriasElegidas.slice(0, 4).map((categoria) => (
-                    <View key={categoria.id} style={[styles.previewCategory, { backgroundColor: categoria.bg }]}>
-                      <Ionicons name={categoria.icon} size={18} color={categoria.color} />
-                      <Text style={[styles.previewCategoryText, { color: categoria.color }]}>{categoria.title}</Text>
+            )}
+
+            {seriesFavoritas.length > 0 && (
+              <View style={styles.previewSection}>
+                <Text style={styles.previewSectionTitle}>Series que me gustan</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+                  {seriesFavoritas.map(m => (
+                    <Image key={m.id} source={{ uri: m.poster }} style={styles.previewMoviePoster} />
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {juegosFavoritos.length > 0 && (
+              <View style={styles.previewSection}>
+                <Text style={styles.previewSectionTitle}>Juegos que me gustan</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+                  {juegosFavoritos.map(m => (
+                    <Image key={m.id} source={{ uri: m.poster }} style={styles.previewMoviePoster} />
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {artistasSpotify.length > 0 && (
+              <View style={styles.previewSection}>
+                <Text style={styles.previewSectionTitle}>Artistas favoritos</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+                  {artistasSpotify.map(a => (
+                    <View key={a.id} style={{ alignItems: 'center' }}>
+                      <Image source={{ uri: a.foto }} style={styles.previewArtistImage} />
+                      <Text style={styles.previewArtistName}>{a.nombre}</Text>
                     </View>
                   ))}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      ) : (
+        /* ── EDITAR ── */
+        <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 100 }}>
+          
+          <View style={styles.photoGrid}>
+            {renderGridRow(0)}
+            {renderGridRow(3)}
+            <Text style={styles.photoHint}>Mantén presionado para ordenar tus fotos.</Text>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Acerca de mí</Text>
+            <View style={styles.bioContainer}>
+              <TextInput
+                style={styles.bioInput}
+                placeholder="No dejes esto en blanco..."
+                placeholderTextColor={COLORS.textMuted}
+                multiline
+                maxLength={500}
+                value={descripcion}
+                onChangeText={setDescripcion}
+              />
+              <Text style={styles.bioCount}>{500 - descripcion.length}</Text>
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Metas de tu relación</Text>
+            <View style={styles.listGroup}>
+              {renderListGroupRow('eye', 'Busco', metaRelacion, () => openSelector('Busco', OPTIONS.metaRelacion, metaRelacion, setMetaRelacion), true)}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Pronombres</Text>
+            <View style={styles.listGroup}>
+              {renderListGroupRow('chatbubble-ellipses', 'Agregar pronombres', pronombres, () => openSelector('Pronombres', OPTIONS.pronombres, pronombres, setPronombres), true)}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Identidad</Text>
+            <View style={styles.listGroup}>
+              {renderListGroupRow('person', 'Mi género', genero, () => openSelector('Mi género', OPTIONS.genero, genero, setGenero))}
+              {renderListGroupRow('heart', 'Mi orientación sexual', orientacionSexual, () => openSelector('Mi orientación sexual', OPTIONS.orientacionSexual, orientacionSexual, setOrientacionSexual), true)}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Altura</Text>
+            <View style={styles.listGroup}>
+              {renderListGroupRow('resize', 'Altura en cm', altura ? `${altura} cm` : '', () => openTextEdit('altura', altura), true)}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Idiomas que hablo</Text>
+            <View style={styles.listGroup}>
+              {renderListGroupRow('language', 'Agregar idiomas', idiomas, () => openTextEdit('idiomas', idiomas), true)}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Más sobre mí</Text>
+            <View style={styles.listGroup}>
+              {renderListGroupRow('moon', 'Zodiaco', zodiaco, () => openSelector('Zodiaco', OPTIONS.zodiaco, zodiaco, setZodiaco))}
+              {renderListGroupRow('school', 'Educación', nivelEscolaridad, () => openSelector('Educación', OPTIONS.educacion, nivelEscolaridad, setNivelEscolaridad))}
+              {renderListGroupRow('people', 'Planes familiares', planesHijos, () => openSelector('Planes familiares', OPTIONS.hijos, planesHijos, setPlanesHijos))}
+              {renderListGroupRow('finger-print', 'Tipo de personalidad', personalidad, () => openSelector('Tipo de personalidad', OPTIONS.personalidad, personalidad, setPersonalidad))}
+              
+              <TouchableOpacity onPress={() => Linking.openURL('https://www.16personalities.com/es')} style={styles.linkRow}>
+                <Ionicons name="link-outline" size={14} color={COLORS.primario} />
+                <Text style={[styles.linkText, { color: COLORS.primario }]}>¿No sabes cuál eres? Haz el test oficial aquí.</Text>
+              </TouchableOpacity>
+
+              {renderListGroupRow('chatbubbles', 'Estilo de comunicación', estiloComunicacion, () => openSelector('Estilo de comunicación', OPTIONS.comunicacion, estiloComunicacion, setEstiloComunicacion))}
+              {renderListGroupRow('heart', 'Estilo de amor', recibirAmor, () => openSelector('Estilo de amor', OPTIONS.amor, recibirAmor, setRecibirAmor), true)}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Estilo de vida</Text>
+            <View style={styles.listGroup}>
+              {renderListGroupRow('paw', 'Mascotas', mascotas, () => openSelector('Mascotas', OPTIONS.mascotas, mascotas, setMascotas))}
+              {renderListGroupRow('wine', 'Beber', beber, () => openSelector('Beber', OPTIONS.beber, beber, setBeber))}
+              {renderListGroupRow('flame', 'Fumar', fumar, () => openSelector('Fumar', OPTIONS.fumar, fumar, setFumar))}
+              {renderListGroupRow('barbell', 'Ejercicio', ejercicio, () => openSelector('Ejercicio', OPTIONS.ejercicio, ejercicio, setEjercicio))}
+              {renderListGroupRow('restaurant', 'Alimentación', alimentacion, () => openSelector('Alimentación', OPTIONS.alimentacion, alimentacion, setAlimentacion))}
+              {renderListGroupRow('phone-portrait', 'Redes sociales', redesSociales, () => openSelector('Redes sociales', OPTIONS.redes, redesSociales, setRedesSociales))}
+              {renderListGroupRow('bed', 'Hábitos de sueño', habitosSueno, () => openSelector('Hábitos de sueño', OPTIONS.sueno, habitosSueno, setHabitosSueno))}
+              {renderListGroupRow('musical-notes', 'El Carrete', carrete, () => openSelector('El Carrete', OPTIONS.carrete, carrete, setCarrete))}
+              {renderListGroupRow('airplane', 'Vacaciones', vacaciones, () => openSelector('Vacaciones ideales', OPTIONS.vacaciones, vacaciones, setVacaciones))}
+              {renderListGroupRow('bus', 'Transporte', transporte, () => openSelector('Para moverse', OPTIONS.transporte, transporte, setTransporte), true)}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Detalles Laborales y Ubicación</Text>
+            <View style={styles.listGroup}>
+              {renderListGroupRow('business', 'Centro de estudios', centroEstudios, () => openTextEdit('centroEstudios', centroEstudios))}
+              {renderListGroupRow('briefcase', 'Puesto de trabajo', trabajo, () => openTextEdit('trabajo', trabajo))}
+              {renderListGroupRow('location', 'Vivo en', ciudad, () => openTextEdit('ciudad', ciudad), true)}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Mis Preguntas</Text>
+            <ProfilePrompts prompts={prompts} onChange={setPrompts} COLORS={COLORS} />
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Mi Audio Rompehielos 🎤</Text>
+            <View style={{ backgroundColor: COLORS.tarjeta, padding: 15, borderRadius: 15, ...SHADOWS.sm }}>
+              <Text style={{ color: COLORS.textMuted, fontSize: 13, marginBottom: 15 }}>Graba un saludo de 10 segundos para que te escuchen antes de dar like.</Text>
+              
+              {audioRompehielos ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(59, 130, 246, 0.1)', padding: 10, borderRadius: 10 }}>
+                  <TouchableOpacity onPress={isPlaying ? stopProfileAudio : playProfileAudio} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#3B82F6', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name={isPlaying ? "pause" : "play"} size={20} color="#FFF" />
+                  </TouchableOpacity>
+                  <Text style={{ color: '#3B82F6', fontWeight: 'bold', marginLeft: 10, flex: 1 }}>Audio guardado</Text>
+                  <TouchableOpacity onPress={() => setAudioRompehielos(null)}>
+                    <Ionicons name="trash" size={24} color="#EF4444" />
+                  </TouchableOpacity>
                 </View>
-              ) : null}
-            </ScrollView>
+              ) : (
+                <TouchableOpacity 
+                  onPressIn={startRecordingAudio}
+                  onPressOut={stopRecordingAudio}
+                  style={{ backgroundColor: isRecording ? '#EF4444' : COLORS.primario, padding: 15, borderRadius: 25, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }}
+                >
+                  <Ionicons name="mic" size={20} color="#FFF" />
+                  <Text style={{ color: '#FFF', fontWeight: 'bold', marginLeft: 8 }}>{isRecording ? 'Grabando... Suelta para terminar' : 'Mantén presionado para grabar'}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {/* ── INTERESES GRID ── */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Intereses</Text>
+            <View style={styles.interesesGrid}>
+              {renderInteresCard('Hobbies', 'grid', hobbies.length, () => setModalHobbies(true))}
+              {renderInteresCard('Películas', 'film', peliculasFavoritas.length, () => setModalMovies(true))}
+              {renderInteresCard('Series', 'tv', seriesFavoritas.length, () => setModalSeries(true))}
+              {renderInteresCard('Juegos', 'game-controller', juegosFavoritos.length, () => setModalJuegos(true))}
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Mi canción</Text>
+            <TouchableOpacity style={styles.rowItem} onPress={() => setModalAppleMusic(true)}>
+              {cancion && cancion.nombre ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                  <Image source={{ uri: cancion.foto }} style={{ width: 32, height: 32, borderRadius: 8, marginRight: 10 }} />
+                  <Text style={[styles.rowLabel, { flex: 1 }]} numberOfLines={1}>{cancion.nombre}</Text>
+                </View>
+              ) : (
+                <Text style={styles.rowLabel}>Elegir mi canción</Text>
+              )}
+              <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Mis artistas favoritos</Text>
+            <TouchableOpacity style={styles.rowItem} onPress={() => setModalSpotify(true)}>
+              <Text style={[styles.rowLabel, artistasSpotify.length > 0 && { color: COLORS.primario }]}>
+                {artistasSpotify.length > 0 ? `${artistasSpotify.length} seleccionados` : 'Agregar artistas a mi perfil'}
+              </Text>
+              <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Controla tu perfil</Text>
+            <View style={styles.rowItemSwitch}>
+              <Text style={styles.rowLabel}>No mostrar mi edad</Text>
+              <Switch value={!mostrarEdad} onValueChange={(val) => setMostrarEdad(!val)} trackColor={{ true: COLORS.primario }} />
+            </View>
+            <View style={styles.rowItemSwitch}>
+              <Text style={styles.rowLabel}>No mostrar mi distancia</Text>
+              <Switch value={!mostrarDistancia} onValueChange={(val) => setMostrarDistancia(!val)} trackColor={{ true: COLORS.primario }} />
+            </View>
+            <View style={styles.rowItemSwitch}>
+              <Text style={styles.rowLabel}>Mostrar mi género</Text>
+              <Switch value={mostrarGenero} onValueChange={setMostrarGenero} trackColor={{ true: COLORS.primario }} />
+            </View>
+            <View style={styles.rowItemSwitch}>
+              <Text style={styles.rowLabel}>Mostrar mi orientación sexual</Text>
+              <Switch value={mostrarOrientacion} onValueChange={setMostrarOrientacion} trackColor={{ true: COLORS.primario }} />
+            </View>
+          </View>
+        </ScrollView>
+      )}
+
+      {/* ── BOTON GUARDAR ── */}
+      {activeTab === 'editar' && (
+        <View style={styles.bottomBar}>
+          <TouchableOpacity style={[styles.btnSave, guardando && { opacity: 0.7 }]} onPress={guardarDetalles} disabled={guardando}>
+            {guardando ? <ActivityIndicator color="#FFF" /> : <Text style={styles.btnSaveText}>Guardar Perfil</Text>}
+          </TouchableOpacity>
+        </View>
+      )}
+
+      <MovieSelectorModal visible={modalMovies} onClose={() => setModalMovies(false)} selectedMovies={peliculasFavoritas} onSave={setPeliculasFavoritas} COLORS={COLORS} />
+      <TvSeriesSelectorModal visible={modalSeries} onClose={() => setModalSeries(false)} selectedSeries={seriesFavoritas} onSave={setSeriesFavoritas} COLORS={COLORS} />
+      <JuegosSelectorModal visible={modalJuegos} onClose={() => setModalJuegos(false)} selectedJuegos={juegosFavoritos} onSave={setJuegosFavoritos} COLORS={COLORS} />
+      <HobbiesSelectorModal visible={modalHobbies} onClose={() => setModalHobbies(false)} selectedHobbies={hobbies} onSave={setHobbies} COLORS={COLORS} />
+      <SpotifySelectorModal visible={modalSpotify} onClose={() => setModalSpotify(false)} selectedArtists={artistasSpotify} onSave={setArtistasSpotify} COLORS={COLORS} />
+      <AppleMusicSelectorModal visible={modalAppleMusic} onClose={() => setModalAppleMusic(false)} onSave={setCancion} COLORS={COLORS} />
+      
+      {selectorConfig && (
+        <GenericSelectorModal
+          visible={selectorConfig.visible}
+          title={selectorConfig.title}
+          options={selectorConfig.options}
+          selectedValue={selectorConfig.selectedValue}
+          onSave={selectorConfig.onSave}
+          onClose={() => setSelectorConfig(null)}
+          COLORS={COLORS}
+        />
+      )}
+
+      {/* Modal genérico para edición de texto simple */}
+      <Modal visible={!!editingField} transparent animationType="fade">
+        <View style={styles.modalFondo}>
+          <View style={styles.textEditCard}>
+            <Text style={styles.textEditTitle}>
+              {editingField === 'centroEstudios' ? 'Centro de estudios' : 
+               editingField === 'trabajo' ? 'Puesto de trabajo' : 
+               editingField === 'altura' ? 'Tu altura (cm)' :
+               editingField === 'idiomas' ? 'Idiomas (ej. Español, Inglés)' : 'Ciudad'}
+            </Text>
+            <TextInput
+              style={styles.textEditInput}
+              value={tempValue}
+              onChangeText={setTempValue}
+              autoFocus
+              keyboardType={editingField === 'altura' ? 'numeric' : 'default'}
+              placeholder="Escribe aquí..."
+              placeholderTextColor={COLORS.textMuted}
+            />
+            <View style={styles.textEditActions}>
+              <TouchableOpacity onPress={() => setEditingField(null)} style={{ padding: 12 }}><Text style={{ color: COLORS.textMuted, fontSize: 16 }}>Cancelar</Text></TouchableOpacity>
+              <TouchableOpacity onPress={saveTextEdit} style={{ padding: 12 }}><Text style={{ color: COLORS.primario, fontSize: 16, fontWeight: '800' }}>Aceptar</Text></TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -511,169 +763,409 @@ export default function EditarPerfilScreen({ navigation }) {
   );
 }
 
-function SectionTitle({ styles, title, subtitle }) {
-  return (
-    <View style={styles.sectionTitleWrap}>
-      <Text style={styles.label}>{title}</Text>
-      <Text style={styles.sectionSubtitle}>{subtitle}</Text>
-    </View>
-  );
-}
-
-function SelectableChip({ label, selected, onPress, styles, COLORS }) {
-  return (
-    <TouchableOpacity onPress={onPress} style={[styles.selectChip, selected && { backgroundColor: COLORS.primario, borderColor: COLORS.primario }]}>
-      <Text style={[styles.selectChipText, selected && { color: '#FFF' }]}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
 const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, backgroundColor: COLORS.bg },
-  headerIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.tarjeta },
-  tituloHeader: { fontSize: 20, fontWeight: '900', color: COLORS.textPrimary, fontFamily: FONTS.display },
-  
-  content: { padding: SPACING[4], paddingBottom: 120 },
-
-  // ── Grid Asimétrico ──
-  gridContainer: { gap: 10 },
-  gridTopRow: { flexDirection: 'row', gap: 10, height: 260 },
-  gridLargeSlot: { flex: 2, height: '100%' },
-  gridRightCol: { flex: 1, gap: 10, height: '100%' },
-  gridSmallSlot: { flex: 1, height: '100%' },
-  gridBottomRow: { flexDirection: 'row', gap: 10, height: 125 },
-
-  cajaFotoSlot: { 
-    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', 
-    borderRadius: RADIUS.lg, 
-    overflow: 'hidden', 
-    borderWidth: 1.5, 
-    borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)', 
-    justifyContent: 'center', 
-    alignItems: 'center' 
-  },
-  fotoEnGrid: { width: '100%', height: '100%', resizeMode: 'cover' },
-  btnAgregarFoto: { flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' },
-  addIconCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(240,68,79,0.8)', justifyContent: 'center', alignItems: 'center' },
-  btnEliminarFoto: { position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.6)', width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-  gridHint: { color: COLORS.textMuted, fontSize: 12, marginTop: 10, textAlign: 'center' },
-
-  // ── Typography ──
-  label: { fontSize: 22, fontWeight: '900', color: COLORS.textPrimary, fontFamily: FONTS.display },
-  sectionTitleWrap: { marginTop: SPACING[6], marginBottom: SPACING[3] },
-  sectionSubtitle: { color: COLORS.textMuted, fontSize: 13, lineHeight: 19, marginTop: 2 },
-
-  // ── Minimalist Inputs ──
-  floatingInputWrap: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : '#F9FAFB',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    marginBottom: 10,
+    paddingVertical: 12,
   },
-  inputIcon: { marginRight: 10 },
-  floatingInput: {
+  headerBackBtn: {
+    padding: 4,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  tabButton: {
     flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabButtonActive: {
+    borderBottomColor: COLORS.primario,
+  },
+  tabText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.textMuted,
+  },
+  tabTextActive: {
+    color: COLORS.textPrimary,
+  },
+  content: {
+    flex: 1,
+  },
+  photoGrid: {
+    paddingHorizontal: 16,
+    gap: 12,
+    marginBottom: 24,
+  },
+  gridRow: {
+    flexDirection: 'row',
+    gap: 12,
+    height: 140,
+  },
+  gridItem: {
+    flex: 1,
+    backgroundColor: COLORS.tarjeta,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    overflow: 'hidden',
+  },
+  gridImage: {
+    width: '100%',
+    height: '100%',
+  },
+  addPhotoBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removePhotoBtn: {
+    position: 'absolute',
+    bottom: -6,
+    right: -6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: COLORS.primario,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.bg,
+  },
+  photoHint: {
+    textAlign: 'center',
+    color: COLORS.textMuted,
+    fontSize: 12,
+    marginTop: 8,
+  },
+  section: {
+    marginBottom: 24,
+    paddingHorizontal: 16,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+    marginBottom: 12,
+    marginLeft: 4,
+  },
+  listGroup: {
+    backgroundColor: COLORS.tarjeta,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    overflow: 'hidden',
+  },
+  listGroupRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  listGroupLabel: {
+    fontSize: 15,
+    color: COLORS.textPrimary,
+    fontWeight: '600',
+  },
+  listGroupValue: {
+    fontSize: 15,
+    color: COLORS.textPrimary,
+  },
+  bioContainer: {
+    backgroundColor: COLORS.tarjeta,
+    borderRadius: RADIUS.lg,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  bioInput: {
     color: COLORS.textPrimary,
     fontSize: 16,
-    fontWeight: '600',
-    paddingVertical: 18,
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
-  rowInputs: { flexDirection: 'row', gap: 10 },
-  halfInput: { flex: 1 },
-  bioInputWrap: { alignItems: 'flex-start', paddingVertical: 12 },
-  bioInput: { height: 120, paddingTop: 0, paddingBottom: 0 },
-
-  // ── Chips ──
-  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  selectChip: { borderRadius: 20, paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)', backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' },
-  selectChipText: { color: COLORS.textPrimary, fontWeight: '800', fontSize: 13 },
-  
-  distanceRow: { flexDirection: 'row', gap: 10 },
-  distanceChip: { flex: 1, minHeight: 46, borderRadius: 16, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)', backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', alignItems: 'center', justifyContent: 'center' },
-  distanceText: { color: COLORS.textMuted, fontWeight: '900' },
-  distanceTextActive: { color: '#FFF' },
-
-  // ── Category Scroll ──
-  categoryScroll: { gap: 12, paddingRight: 20 },
-  categoryCard: { width: 110, padding: 16, borderRadius: 20, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', backgroundColor: isDarkMode ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)', alignItems: 'center' },
-  categoryCardName: { color: COLORS.textMuted, fontSize: 12, fontWeight: '800', marginTop: 10, textAlign: 'center' },
-  categoryCardCheck: { position: 'absolute', top: 10, right: 10, width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
-
-  // ── Bottom Bar (Sticky) ──
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0, left: 0, right: 0,
+  bioCount: {
+    textAlign: 'right',
+    color: COLORS.textMuted,
+    fontSize: 12,
+    marginTop: 8,
+  },
+  rowItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 40,
-    paddingBottom: Platform.OS === 'ios' ? 30 : 20,
-    gap: 15,
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.tarjeta,
+    padding: 16,
+    borderRadius: RADIUS.md,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  btnPreviewCircle: {
-    width: 56, height: 56, borderRadius: 28,
-    backgroundColor: 'rgba(240,68,79,0.15)',
-    borderWidth: 1, borderColor: 'rgba(240,68,79,0.3)',
-    alignItems: 'center', justifyContent: 'center',
+  rowItemSwitch: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.tarjeta,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: RADIUS.md,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  btnSaveFloating: {
-    flex: 1, height: 56, borderRadius: 28,
+  rowLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  linkText: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  interesesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  interesCard: {
+    width: '48%',
+    backgroundColor: COLORS.fondo,
+    borderRadius: RADIUS.lg,
+    padding: 16,
+    height: 110,
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  interesCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  interesIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.tarjeta,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  interesAddIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: COLORS.textPrimary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  interesCardTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+  },
+  interesCardCount: {
+    fontSize: 12,
+    color: COLORS.primario,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: COLORS.bg,
+    padding: 16,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  btnSave: {
     backgroundColor: COLORS.primario,
-    alignItems: 'center', justifyContent: 'center',
+    padding: 16,
+    borderRadius: 28,
+    alignItems: 'center',
     ...SHADOWS.dark,
-    shadowColor: COLORS.primario, shadowOpacity: 0.5, shadowRadius: 15,
   },
-  btnSaveFloatingText: { color: '#FFF', fontSize: 16, fontWeight: '900', fontFamily: FONTS.display },
-
-  // ── Other components ──
-  calendarHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  subLabel: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '900', marginBottom: 12, marginTop: SPACING[5] },
-  smallPrimary: { height: 36, borderRadius: 18, paddingHorizontal: 14, backgroundColor: COLORS.primario, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  smallPrimaryText: { color: '#FFF', fontWeight: '900', fontSize: 12 },
-  fechasContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  chipFecha: { flexDirection: 'row', backgroundColor: 'rgba(240, 68, 79, 0.1)', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(240, 68, 79, 0.3)', alignItems: 'center' },
-  textoFecha: { color: COLORS.primario, fontWeight: '900', fontSize: 14 },
-  
-  btnBuscarMusica: { flexDirection: 'row', backgroundColor: '#1DB954', padding: 18, borderRadius: 16, alignItems: 'center', justifyContent: 'center', gap: 10 },
-  musicButtonText: { color: '#111827', fontWeight: '900', fontSize: 15 },
-  cancionSeleccionada: { flexDirection: 'row', alignItems: 'center', backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', padding: 12, borderRadius: 16, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' },
-  album: { width: 52, height: 52, borderRadius: 10, marginRight: 14 },
-  songName: { flex: 1, color: COLORS.textPrimary, fontWeight: '900', fontSize: 16 },
-
-  // ── Modals ──
-  modalFondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: COLORS.tarjeta, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 25, height: '80%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  modalTitle: { fontSize: 24, fontWeight: '900', color: COLORS.textPrimary, fontFamily: FONTS.display },
-  trackItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
-  trackTitle: { color: COLORS.textPrimary, fontWeight: '900' },
-  trackArtist: { color: COLORS.textMuted, marginTop: 2 },
-  
-  // ── Preview Modal ──
-  previewModal: { backgroundColor: COLORS.tarjeta, borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 25, maxHeight: '90%' },
-  previewScroll: { paddingBottom: SPACING[5] },
-  publicCard: { height: 480, borderRadius: 28, overflow: 'hidden', backgroundColor: COLORS.fondo, position: 'relative' },
-  publicImage: { width: '100%', height: '100%' },
-  publicOverlay: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: SPACING[5], paddingTop: 100 },
-  publicName: { color: '#FFF', fontSize: 36, lineHeight: 42, fontWeight: '900', fontFamily: FONTS.display },
-  publicLocationRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
-  publicLocation: { color: 'rgba(255,255,255,0.9)', fontSize: 16, flex: 1, fontWeight: '600' },
-  publicBio: { color: COLORS.textPrimary, fontSize: 16, lineHeight: 24, marginTop: SPACING[4] },
-  publicChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: SPACING[3] },
-  publicChip: { backgroundColor: 'rgba(240,68,79,0.15)', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(240,68,79,0.3)' },
-  publicChipText: { color: COLORS.primario, fontWeight: '900', fontSize: 13 },
-  previewCategories: { marginTop: SPACING[4], gap: 10 },
-  previewCategory: { borderRadius: 18, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  previewCategoryText: { fontWeight: '900', fontSize: 15 },
-
-  // ── Carrusel Controls ──
-  barrasContainer: { position: 'absolute', top: 15, left: 12, right: 12, flexDirection: 'row', gap: 5, zIndex: 10 },
-  barraFoto: { flex: 1, height: 4, borderRadius: 2 },
-  zonaTactilIzq: { position: 'absolute', top: 0, bottom: 0, left: 0, width: '50%', zIndex: 5 },
-  zonaTactilDer: { position: 'absolute', top: 0, bottom: 0, right: 0, width: '50%', zIndex: 5 },
+  btnSaveText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  modalFondo: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  textEditCard: {
+    backgroundColor: COLORS.tarjeta,
+    borderRadius: RADIUS.lg,
+    padding: 20,
+    ...SHADOWS.medium,
+  },
+  textEditTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.textPrimary,
+    marginBottom: 16,
+  },
+  textEditInput: {
+    borderBottomWidth: 2,
+    borderBottomColor: COLORS.primario,
+    fontSize: 18,
+    color: COLORS.textPrimary,
+    paddingVertical: 8,
+    marginBottom: 20,
+  },
+  textEditActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+  },
+  // Preview Styles
+  previewScroll: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+  },
+  publicCard: {
+    height: 500,
+    backgroundColor: COLORS.fondo,
+    position: 'relative',
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    overflow: 'hidden',
+  },
+  publicImage: {
+    width: '100%',
+    height: '100%',
+  },
+  publicOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: 20,
+    paddingTop: 100,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  publicName: {
+    color: '#FFF',
+    fontSize: 32,
+    fontWeight: '900',
+  },
+  publicLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+  },
+  publicLocation: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  previewContent: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  pillsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 24,
+  },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.tarjeta,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  pillText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+  },
+  publicBio: {
+    fontSize: 16,
+    color: COLORS.textPrimary,
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  previewPrompt: {
+    backgroundColor: COLORS.tarjeta,
+    padding: 16,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: 16,
+  },
+  previewPromptQ: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+    opacity: 0.7,
+    marginBottom: 4,
+  },
+  previewPromptA: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: COLORS.textPrimary,
+    fontFamily: FONTS.display,
+  },
+  previewSection: {
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  previewSectionTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: COLORS.textPrimary,
+    marginBottom: 12,
+  },
+  previewMoviePoster: {
+    width: 100,
+    height: 150,
+    borderRadius: 8,
+  },
+  previewArtistImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 8,
+  },
+  previewArtistName: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textPrimary,
+  }
 });

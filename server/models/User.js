@@ -79,6 +79,7 @@ const userSchema = new mongoose.Schema({
 
   arquetipoCahuinero: { type: String, default: null },
   mostrarArquetipo: { type: Boolean, default: true },
+  audioRompehielos: { type: String, default: null },
 
   likesRecibidos: { type: Number, default: 0 },
   viaje: { ciudadDestino: { type: String, default: '' }, fechaInicio: { type: Date, default: null }, fechaFin: { type: Date, default: null } },

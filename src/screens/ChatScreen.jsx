@@ -108,59 +108,41 @@ export default function ChatScreen({ navigation }) {
   ];
 
   const renderLikesCarousel = () => {
-    if (!likesData.likes.length && !likesData.topPicks.length) return null;
-
     return (
       <View style={styles.carouselContainer}>
         <Text style={styles.carouselTitle}>Nuevos Cahuines</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carouselContent}>
           
-          {/* Burbuja de Likes */}
-          {likesData.likes.length > 0 && (
-            <TouchableOpacity activeOpacity={0.8} style={styles.carouselItem} onPress={() => navigation.navigate('LikesCahuin', { tab: 'likes' })}>
-              <View style={[styles.carouselBubble, styles.likesBubble]}>
-                <Image 
-                  source={{ uri: likesData.likes[0]?.foto || 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?q=80&w=200' }} 
-                  style={styles.carouselPhoto} 
-                  blurRadius={likesData.puedeRevelar ? 0 : 15}
-                />
-                <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={styles.carouselOverlay} />
-                <View style={styles.likesCountWrap}>
-                  <Ionicons name="heart" size={14} color="#FFF" />
-                  <Text style={styles.likesCountText}>{likesData.likes.length}</Text>
-                </View>
-                {!likesData.puedeRevelar && (
-                  <View style={styles.lockOverlay}>
-                    <Ionicons name="lock-closed" size={18} color="#FFF" />
-                  </View>
-                )}
+          {/* Burbuja de Likes SIEMPRE visible */}
+          <TouchableOpacity activeOpacity={0.8} style={styles.carouselItem} onPress={() => navigation.navigate('LikesCahuin', { tab: 'likes' })}>
+            <View style={[styles.carouselBubble, styles.likesBubble]}>
+              <Image 
+                source={{ uri: likesData.likes[0]?.foto || 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200' }} 
+                style={styles.carouselPhoto} 
+                blurRadius={likesData.puedeRevelar ? 0 : 15}
+              />
+              <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={styles.carouselOverlay} />
+              <View style={styles.likesCountWrap}>
+                <Ionicons name="heart" size={14} color="#FFF" />
+                <Text style={styles.likesCountText}>{likesData.likes.length}</Text>
               </View>
-              <Text style={styles.carouselLabel} numberOfLines={1}>Me tincaron</Text>
-            </TouchableOpacity>
-          )}
+              {!likesData.puedeRevelar && (
+                <View style={styles.lockOverlay}>
+                  <Ionicons name="lock-closed" size={18} color="#FFF" />
+                </View>
+              )}
+            </View>
+            <Text style={styles.carouselLabel} numberOfLines={1}>Te Tincan</Text>
+          </TouchableOpacity>
 
-          {/* Burbujas de La Pica (Top Picks) */}
-          {likesData.topPicks.map((pick, idx) => (
-            <TouchableOpacity key={`pick-${pick._id || idx}`} activeOpacity={0.8} style={styles.carouselItem} onPress={() => navigation.navigate('LikesCahuin', { tab: 'pica' })}>
-              <View style={[styles.carouselBubble, styles.picaBubble]}>
-                <Image 
-                  source={{ uri: pick.foto || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200' }} 
-                  style={styles.carouselPhoto} 
-                  blurRadius={likesData.puedeRevelar ? 0 : 15}
-                />
-                <LinearGradient colors={['transparent', 'rgba(0,0,0,0.6)']} style={styles.carouselOverlay} />
-                <View style={styles.picaIconWrap}>
-                  <Ionicons name="sparkles" size={14} color="#FFD166" />
-                </View>
-                {!likesData.puedeRevelar && (
-                  <View style={styles.lockOverlay}>
-                    <Ionicons name="lock-closed" size={18} color="#FFF" />
-                  </View>
-                )}
-              </View>
-              <Text style={styles.carouselLabel} numberOfLines={1}>{likesData.puedeRevelar ? pick.nombre : 'La Pica'}</Text>
-            </TouchableOpacity>
-          ))}
+          {/* Burbuja de La Pica SIEMPRE visible */}
+          <TouchableOpacity activeOpacity={0.8} style={styles.carouselItem} onPress={() => navigation.navigate('LikesCahuin', { tab: 'pica' })}>
+            <LinearGradient colors={['#3B82F6', '#8B5CF6']} style={[styles.carouselBubble, styles.picaBubble, { alignItems: 'center', justifyContent: 'center' }]}>
+              <Ionicons name="diamond" size={32} color="#FFF" />
+            </LinearGradient>
+            <Text style={styles.carouselLabel} numberOfLines={1}>La Pica</Text>
+          </TouchableOpacity>
+
         </ScrollView>
       </View>
     );

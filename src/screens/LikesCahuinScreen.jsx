@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -32,15 +33,27 @@ export default function LikesCahuinScreen({ navigation, route }) {
 
   const cargar = async (modoRefresh = false) => {
     try {
-      if (modoRefresh) setRefreshing(true);
-      else setLoading(true);
+      const cacheKey = '@cahuin_likes_cache';
+      const cached = await AsyncStorage.getItem(cacheKey);
+      if (cached && !modoRefresh) {
+        setData(JSON.parse(cached));
+        setLoading(false);
+      } else if (!modoRefresh) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
+
       const res = await userService.getLikesRecibidos();
-      setData({
+      const newData = {
         likes: res.likes || [],
         topPicks: res.topPicks || [],
         puedeRevelar: Boolean(res.puedeRevelar),
         plan: res.plan || 'free',
-      });
+      };
+      
+      setData(newData);
+      await AsyncStorage.setItem(cacheKey, JSON.stringify(newData));
     } catch (error) {
       console.log('Likes Cahuin:', error);
     } finally {
@@ -122,8 +135,8 @@ export default function LikesCahuinScreen({ navigation, route }) {
                       <MaterialCommunityIcons name="check-decagram" size={16} color="#93C5FD" />
                     ) : null}
                   </View>
-                  <Text style={styles.meta} numberOfLines={1}>
-                    {item.activoReciente ? 'Activo hace poco' : tab === 'pica' ? `Quedan ${item.horasRestantes || 6} h` : 'Te tiro like'}
+                  <Text style={[styles.meta, item.tipo === 'superlike' && { color: '#60A5FA', fontWeight: '800' }]} numberOfLines={1}>
+                    {item.activoReciente ? 'Activo hace poco' : tab === 'pica' ? `Quedan ${item.horasRestantes || 6} h` : (item.tipo === 'superlike' ? 'Súper Like ⭐' : 'Te tiro like')}
                   </Text>
                 </View>
                 {!puedeRevelar ? (
@@ -134,6 +147,10 @@ export default function LikesCahuinScreen({ navigation, route }) {
                 {tab === 'pica' ? (
                   <View style={styles.starBubble}>
                     <Ionicons name="star" size={17} color="#BFD7FF" />
+                  </View>
+                ) : item.tipo === 'superlike' ? (
+                  <View style={[styles.starBubble, { backgroundColor: '#3B82F6', borderColor: '#FFF' }]}>
+                    <Ionicons name="star" size={17} color="#FFF" />
                   </View>
                 ) : null}
               </TouchableOpacity>
@@ -210,7 +227,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   tabTextActive: { color: '#FFF' },
   tabCount: { color: COLORS.textMuted, fontSize: 12, fontWeight: '900' },
   tabCountActive: { color: '#FFF' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING[3] },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING[3], width: '100%', paddingHorizontal: SPACING[2] },
   tile: {
     width: '47.8%',
     aspectRatio: 0.73,
