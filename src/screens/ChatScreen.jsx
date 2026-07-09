@@ -1,8 +1,9 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { matchService } from '../services/api';
+import { matchService, userService } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -18,6 +19,8 @@ const emptyChats = require('../assets/illustrations/empty-cahuines.png');
 export default function ChatScreen({ navigation }) {
   const [matches, setMatches] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [likesData, setLikesData] = useState({ likes: [], topPicks: [], puedeRevelar: false, plan: 'free' });
+  const [cargandoLikes, setCargandoLikes] = useState(false);
   const [filtro, setFiltro] = useState('todos');
   const { COLORS } = useTheme();
   const { usuario } = useAuth();
@@ -26,8 +29,26 @@ export default function ChatScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       cargarMatches();
+      cargarLikes();
     }, [])
   );
+
+  const cargarLikes = async () => {
+    try {
+      setCargandoLikes(true);
+      const data = await userService.getLikesRecibidos();
+      setLikesData({
+        likes: data.likes || [],
+        topPicks: data.topPicks || [],
+        puedeRevelar: Boolean(data.puedeRevelar),
+        plan: data.plan || 'free',
+      });
+    } catch (error) {
+      console.log('Error cargando likes:', error);
+    } finally {
+      setCargandoLikes(false);
+    }
+  };
 
   const cargarMatches = async () => {
     try {
@@ -85,6 +106,65 @@ export default function ChatScreen({ navigation }) {
     { value: 'nuevos', label: 'Nuevos', dot: '#EF4444' },
     { value: 'activos', label: 'Activos', dot: '#22C55E' },
   ];
+
+  const renderLikesCarousel = () => {
+    if (!likesData.likes.length && !likesData.topPicks.length) return null;
+
+    return (
+      <View style={styles.carouselContainer}>
+        <Text style={styles.carouselTitle}>Nuevos Cahuines</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carouselContent}>
+          
+          {/* Burbuja de Likes */}
+          {likesData.likes.length > 0 && (
+            <TouchableOpacity activeOpacity={0.8} style={styles.carouselItem} onPress={() => navigation.navigate('LikesCahuin', { tab: 'likes' })}>
+              <View style={[styles.carouselBubble, styles.likesBubble]}>
+                <Image 
+                  source={{ uri: likesData.likes[0]?.foto || 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?q=80&w=200' }} 
+                  style={styles.carouselPhoto} 
+                  blurRadius={likesData.puedeRevelar ? 0 : 15}
+                />
+                <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={styles.carouselOverlay} />
+                <View style={styles.likesCountWrap}>
+                  <Ionicons name="heart" size={14} color="#FFF" />
+                  <Text style={styles.likesCountText}>{likesData.likes.length}</Text>
+                </View>
+                {!likesData.puedeRevelar && (
+                  <View style={styles.lockOverlay}>
+                    <Ionicons name="lock-closed" size={18} color="#FFF" />
+                  </View>
+                )}
+              </View>
+              <Text style={styles.carouselLabel} numberOfLines={1}>Me tincaron</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Burbujas de La Pica (Top Picks) */}
+          {likesData.topPicks.map((pick, idx) => (
+            <TouchableOpacity key={`pick-${pick._id || idx}`} activeOpacity={0.8} style={styles.carouselItem} onPress={() => navigation.navigate('LikesCahuin', { tab: 'pica' })}>
+              <View style={[styles.carouselBubble, styles.picaBubble]}>
+                <Image 
+                  source={{ uri: pick.foto || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200' }} 
+                  style={styles.carouselPhoto} 
+                  blurRadius={likesData.puedeRevelar ? 0 : 15}
+                />
+                <LinearGradient colors={['transparent', 'rgba(0,0,0,0.6)']} style={styles.carouselOverlay} />
+                <View style={styles.picaIconWrap}>
+                  <Ionicons name="sparkles" size={14} color="#FFD166" />
+                </View>
+                {!likesData.puedeRevelar && (
+                  <View style={styles.lockOverlay}>
+                    <Ionicons name="lock-closed" size={18} color="#FFF" />
+                  </View>
+                )}
+              </View>
+              <Text style={styles.carouselLabel} numberOfLines={1}>{likesData.puedeRevelar ? pick.nombre : 'La Pica'}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+    );
+  };
 
   const renderMatch = ({ item }) => {
     const listo = item.yaRespondi && item.elYaRespondio;
@@ -169,7 +249,10 @@ export default function ChatScreen({ navigation }) {
     <ScreenScaffold COLORS={COLORS} scroll={matches.length === 0}>
       <View style={{ height: 20 }} />
 
+      {renderLikesCarousel()}
+
       <View style={{ paddingHorizontal: SPACING[5] }}>
+        <Text style={styles.mensajesTitle}>Mensajes</Text>
         {/* ── Filtros ── */}
         <FilterPills options={filtroOptions} value={filtro} onChange={setFiltro} COLORS={COLORS} />
       </View>
@@ -203,6 +286,95 @@ export default function ChatScreen({ navigation }) {
 const getStyles = (COLORS) => StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyImage: { width: '94%', marginTop: 12, marginBottom: 0 },
+
+  // ── Mensajes ──
+  mensajesTitle: {
+    color: COLORS.textPrimary,
+    fontSize: 20,
+    fontWeight: '900',
+    fontFamily: FONTS.display,
+    marginBottom: SPACING[3],
+    marginTop: SPACING[2],
+  },
+
+  // ── Carousel (Likes / Top Picks) ──
+  carouselContainer: {
+    marginBottom: SPACING[3],
+  },
+  carouselTitle: {
+    color: COLORS.textPrimary,
+    fontSize: 20,
+    fontWeight: '900',
+    fontFamily: FONTS.display,
+    marginBottom: SPACING[3],
+    paddingHorizontal: SPACING[5],
+  },
+  carouselContent: {
+    paddingHorizontal: SPACING[5],
+    gap: 16,
+  },
+  carouselItem: {
+    alignItems: 'center',
+    width: 80,
+  },
+  carouselBubble: {
+    width: 80,
+    height: 100,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: COLORS.tarjeta,
+    marginBottom: 8,
+    position: 'relative',
+    borderWidth: 2,
+  },
+  likesBubble: {
+    borderColor: '#A855F7',
+  },
+  picaBubble: {
+    borderColor: '#FFD166',
+  },
+  carouselPhoto: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+  },
+  carouselOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '60%',
+  },
+  likesCountWrap: {
+    position: 'absolute',
+    bottom: 8,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  likesCountText: {
+    color: '#FFF',
+    fontWeight: '900',
+    fontSize: 15,
+  },
+  picaIconWrap: {
+    position: 'absolute',
+    bottom: 8,
+    alignSelf: 'center',
+  },
+  lockOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(17,24,39,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  carouselLabel: {
+    color: COLORS.textPrimary,
+    fontSize: 13,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
 
   // ── Header ──
   headerRow: {

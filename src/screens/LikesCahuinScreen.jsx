@@ -22,10 +22,10 @@ const TABS = [
   { key: 'pica', label: 'La Pica', icon: 'sparkles' },
 ];
 
-export default function LikesCahuinScreen({ navigation }) {
+export default function LikesCahuinScreen({ navigation, route }) {
   const { COLORS } = useTheme();
   const styles = getStyles(COLORS);
-  const [tab, setTab] = useState('likes');
+  const [tab, setTab] = useState(route.params?.tab || 'likes');
   const [data, setData] = useState({ likes: [], topPicks: [], puedeRevelar: false, plan: 'free' });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

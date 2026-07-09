@@ -81,8 +81,7 @@ export default function PerfilScreen({ navigation }) {
   const [preguntaActiva, setPreguntaActiva] = useState(null);
   const [respuesta, setRespuesta] = useState('');
   const [guardandoRespuesta, setGuardandoRespuesta] = useState(false);
-  const [likesData, setLikesData] = useState({ likes: [], topPicks: [], puedeRevelar: false, plan: 'free' });
-  const [cargandoLikes, setCargandoLikes] = useState(false);
+  const [guardandoRespuesta, setGuardandoRespuesta] = useState(false);
 
   const cargarPreguntas = async () => {
     try {
@@ -96,27 +95,10 @@ export default function PerfilScreen({ navigation }) {
     }
   };
 
-  const cargarLikes = async () => {
-    try {
-      setCargandoLikes(true);
-      const data = await userService.getLikesRecibidos();
-      setLikesData({
-        likes: data.likes || [],
-        topPicks: data.topPicks || [],
-        puedeRevelar: Boolean(data.puedeRevelar),
-        plan: data.plan || 'free',
-      });
-    } catch (error) {
-      console.log('Likes recibidos:', error);
-    } finally {
-      setCargandoLikes(false);
-    }
-  };
 
   useFocusEffect(
     useCallback(() => {
       cargarPreguntas();
-      cargarLikes();
     }, [])
   );
 
@@ -206,9 +188,6 @@ export default function PerfilScreen({ navigation }) {
   ].filter(Boolean);
   const mostrarResultadoApego = usuario?.mostrarApego && usuario?.tipoApego;
   const mostrarResultadoArquetipo = usuario?.mostrarArquetipo !== false && usuario?.arquetipoCahuinero;
-  const likesPreview = likesData.likes;
-  const hayLikesReales = likesData.likes.length > 0;
-
   // 🌟 FIX DEL AVATAR: Prioridad a usuario.fotos[0] sobre usuario.foto de Clerk
   const fotoMostrar = (usuario?.fotos && usuario.fotos.length > 0) 
     ? usuario.fotos[0] 
@@ -352,47 +331,6 @@ export default function PerfilScreen({ navigation }) {
       </View>
       <Divider COLORS={COLORS} />
 
-      {/* ── Likes recibidos ── */}
-      {(cargandoLikes || hayLikesReales) ? (
-        <>
-          <View style={styles.cardTitleRow}>
-            <Ionicons name="heart" size={24} color="#A855F7" />
-            <Text style={styles.infoTitle}>Me tincaron</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('LikesCahuin')}>
-              <Text style={{ color: COLORS.primario, fontWeight: '700', fontSize: 13 }}>Ver todos</Text>
-            </TouchableOpacity>
-          </View>
-          <SoftCard COLORS={COLORS} style={styles.likesCard}>
-            {likesPreview.length ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.likesStrip}>
-                {likesPreview.map((item, index) => (
-                  <View key={`${item._id || index}`} style={styles.likeTile}>
-                    <Image
-                      source={{ uri: item.foto || 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?q=80&w=500' }}
-                      style={styles.likePhoto}
-                      blurRadius={likesData.puedeRevelar ? 0 : 18}
-                    />
-                    <LinearGradient colors={['transparent', 'rgba(0,0,0,0.78)']} style={styles.likeOverlay} />
-                    <View style={styles.likeInfo}>
-                      <Text style={styles.likeName}>{likesData.puedeRevelar ? `${item.nombre || 'Cahuin'}, ${item.edad || ''}` : `Alguien, ${item.edad || '??'}`}</Text>
-                    </View>
-                    {!likesData.puedeRevelar && hayLikesReales ? (
-                      <View style={styles.lockBubble}>
-                        <Ionicons name="lock-closed" size={13} color="#FFF" />
-                      </View>
-                    ) : null}
-                  </View>
-                ))}
-              </ScrollView>
-            ) : null}
-            {!likesData.puedeRevelar && hayLikesReales ? (
-              <TouchableOpacity style={styles.unlockLikesButton} onPress={() => navigation.navigate('LikesCahuin')}>
-                <Text style={styles.unlockLikesText}>Sapear quien te tinca</Text>
-              </TouchableOpacity>
-            ) : null}
-          </SoftCard>
-        </>
-      ) : null}
 
       <Divider COLORS={COLORS} />
 
@@ -607,17 +545,6 @@ const getStyles = (COLORS) => StyleSheet.create({
   chip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, borderWidth: 1, backgroundColor: 'transparent' },
   chipText: { fontSize: 14, fontWeight: '700' },
 
-  // ── Likes ──
-  likesCard: { marginBottom: SPACING[4] },
-  likesStrip: { gap: SPACING[2], paddingRight: SPACING[2] },
-  likeTile: { width: 130, height: 180, borderRadius: 18, overflow: 'hidden', backgroundColor: COLORS.fondo },
-  likePhoto: { width: '100%', height: '100%', position: 'absolute' },
-  likeOverlay: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 80 },
-  likeInfo: { position: 'absolute', left: 10, right: 10, bottom: 10 },
-  likeName: { color: '#FFF', fontSize: 14, fontWeight: '900', fontFamily: FONTS.display },
-  lockBubble: { position: 'absolute', right: 8, top: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(17,24,39,0.8)', alignItems: 'center', justifyContent: 'center' },
-  unlockLikesButton: { minHeight: 44, borderRadius: 14, backgroundColor: COLORS.textPrimary, alignItems: 'center', justifyContent: 'center', marginTop: SPACING[2] },
-  unlockLikesText: { color: COLORS.bg, fontWeight: '900', fontSize: 14 },
 
   // ── Questions ──
   questionsCard: { marginBottom: SPACING[4] },
