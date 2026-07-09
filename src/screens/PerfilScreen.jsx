@@ -81,7 +81,6 @@ export default function PerfilScreen({ navigation }) {
   const [preguntaActiva, setPreguntaActiva] = useState(null);
   const [respuesta, setRespuesta] = useState('');
   const [guardandoRespuesta, setGuardandoRespuesta] = useState(false);
-  const [guardandoRespuesta, setGuardandoRespuesta] = useState(false);
 
   const cargarPreguntas = async () => {
     try {

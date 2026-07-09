@@ -413,7 +413,7 @@ exports.getVistas = async (req, res) => {
 
 exports.getLikesRecibidos = async (req, res) => {
   try {
-    const usuario = await User.findById(req.user._id).select('isPremium premiumPlan');
+    const usuario = await User.findById(req.user._id).select('isPremium premiumPlan preferencia');
     const plan = usuario?.premiumPlan || (usuario?.isPremium ? 'gold' : 'free');
     const puedeRevelar = usuario?.isPremium && ['a_fondo', 'gold', 'platinum'].includes(plan);
 
@@ -425,10 +425,18 @@ exports.getLikesRecibidos = async (req, res) => {
       .limit(24)
       .populate('remitente', 'nombre foto fotos edad ciudad region verificado ultimaConexion intereses descripcion');
 
-    const topPicks = await User.find({
+    // Construir query para La Pica respetando la preferencia del usuario
+    const picaQuery = {
       _id: { $ne: req.user._id },
       cuentaPausada: { $ne: true },
-    })
+    };
+    if (usuario?.preferencia === 'Hombres') {
+      picaQuery.genero = 'Hombre';
+    } else if (usuario?.preferencia === 'Mujeres') {
+      picaQuery.genero = 'Mujer';
+    }
+
+    const topPicks = await User.find(picaQuery)
       .sort({ likesRecibidos: -1, ultimaConexion: -1 })
       .limit(12)
       .select('nombre foto fotos edad ciudad region verificado ultimaConexion intereses descripcion likesRecibidos');
