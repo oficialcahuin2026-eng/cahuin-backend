@@ -46,9 +46,9 @@ export default function TestApegoScreen({ navigation }) {
       setIndex(index + 1);
     } else {
       setCargando(true);
-      let ganador = 'Seguro';
-      if (nuevosPuntajes.Ansioso > nuevosPuntajes.Seguro && nuevosPuntajes.Ansioso > nuevosPuntajes.Evitativo) ganador = 'Ansioso';
-      if (nuevosPuntajes.Evitativo > nuevosPuntajes.Seguro && nuevosPuntajes.Evitativo > nuevosPuntajes.Ansioso) ganador = 'Evitativo';
+      const maxScore = Math.max(nuevosPuntajes.Ansioso, nuevosPuntajes.Evitativo, nuevosPuntajes.Seguro);
+      const posibles = Object.keys(nuevosPuntajes).filter(k => nuevosPuntajes[k] === maxScore);
+      const ganador = posibles[Math.floor(Math.random() * posibles.length)];
 
       try {
         const res = await userService.actualizar({ tipoApego: ganador });

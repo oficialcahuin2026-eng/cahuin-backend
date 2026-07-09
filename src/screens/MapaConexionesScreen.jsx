@@ -10,7 +10,7 @@ const CIUDADES = [
   { nombre: 'La Serena', zona: 'Costa norte', x: '55%', y: '32%' },
   { nombre: 'Santiago', zona: 'Centro', x: '47%', y: '45%' },
   { nombre: 'Concepcion', zona: 'Bio Bio', x: '58%', y: '58%' },
-  { nombre: 'Temuco', zona: 'Araucania', x: '45%', y: '69%' },
+  { nombre: 'Temuco', zona: 'Araucanía', x: '45%', y: '69%' },
   { nombre: 'Puerto Montt', zona: 'Los Lagos', x: '58%', y: '80%' },
   { nombre: 'Punta Arenas', zona: 'Magallanes', x: '43%', y: '93%' },
 ];

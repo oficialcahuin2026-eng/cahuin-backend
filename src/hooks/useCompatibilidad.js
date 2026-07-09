@@ -26,11 +26,11 @@ export function calcularCompatibilidad(yo, otro) {
 }
 
 export function emojiCompatibilidad(pct) {
-  if (pct >= 90) return '🔥 ¡Entero bacán!';
-  if (pct >= 70) return '💃 Muy compatible';
-  if (pct >= 50) return '😊 Buena onda';
-  if (pct >= 30) return '🤔 Hay diferencias';
-  return '🙃 Son bien distintos';
+  if (pct >= 90) return '¡Entero bacán!';
+  if (pct >= 70) return 'Muy compatible';
+  if (pct >= 50) return 'Buena onda';
+  if (pct >= 30) return 'Hay diferencias';
+  return 'Son bien distintos';
 }
 
 export default function useCompatibilidad(yo) {

@@ -193,7 +193,7 @@ const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
   // ── Chat List ──
   listContainer: { flex: 1, backgroundColor: COLORS.tarjeta, borderTopLeftRadius: 32, borderTopRightRadius: 32, marginTop: 10, ...SHADOWS.md },
   
-  matchCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: isDarkMode ? 'rgba(255,255,255,0.05)' : COLORS.fondo },
+  matchCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, backgroundColor: 'transparent' },
   avatarContainer: { position: 'relative', marginRight: 16 },
   avatar: { width: 64, height: 64, borderRadius: 32 },
   onlineBadge: { position: 'absolute', bottom: 2, right: 2, width: 14, height: 14, borderRadius: 7, backgroundColor: '#10B981', borderWidth: 2, borderColor: COLORS.tarjeta },

@@ -7,6 +7,7 @@ const panoramaSchema = new mongoose.Schema({
   direccion: { type: String }, // 🌟 NUEVO: Para abrir Google Maps/Waze exacto
   region: { type: String, required: true },
   fecha: { type: Date, required: true },
+  fechaFin: { type: Date }, // 🌟 NUEVO: Para eventos que duran varios días
 
   creador: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
   categoria: { type: String, default: 'Otro' },

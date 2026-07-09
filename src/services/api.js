@@ -1,5 +1,6 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { mockPanoramas } from '../data/mockPanoramas';
 
 export const BASE_URL = (process.env.EXPO_PUBLIC_API_URL || 'https://cahuin-backend-1.onrender.com/api').replace(/\/+$/, '');
 
@@ -109,7 +110,7 @@ export const userService = {
   activarBoost:      ()             => api.post('/users/me/boost', {}),
   continuarRachaSwipes: ()          => api.post('/users/me/racha-swipes/continuar', {}),
   guardarArquetipo: (arquetipo)     => api.post('/users/me/arquetipo', { arquetipo }),
-  getTrending:      ()              => api.get('/users/trending'),
+  getTrending:      (params)        => api.get('/users/trending', { params }),
   togglePausaCuenta:()              => api.post('/users/me/pausa', {}),
   enviarPreguntaAnonima: (id, texto) => api.post(`/users/${id}/preguntas`, { texto }),
   getMisPreguntasAnonimas: () => api.get('/users/me/preguntas'),
@@ -182,7 +183,19 @@ export const iaService = {
 };
 
 export const panoramaService = {
-  listar: (params) => api.get('/panoramas', { params }),
+  listar: async (params) => {
+    try {
+      const data = await api.get('/panoramas', { params });
+      if (data && data.panoramas && data.panoramas.length > 0) return data;
+    } catch (e) {}
+    // Fallback a los panoramas locales si el backend no los tiene o no responde
+    const targetRegion = params?.region;
+    let filtered = mockPanoramas;
+    if (targetRegion) {
+        filtered = mockPanoramas.filter(p => p.region === targetRegion);
+    }
+    return { panoramas: filtered };
+  },
   crear:  (data)   => api.post('/panoramas', data),
   unirse: (id)     => api.post(`/panoramas/${id}/unirse`, {})
 };
@@ -241,4 +254,5 @@ export const socialService = {
   getBotellaActual: () => api.get('/social/botellas/actual'),
   responderBotella: (id, texto) => api.post(`/social/botellas/${id}/responder`, { texto }),
   soltarBotella: (id) => api.post(`/social/botellas/${id}/soltar`, {}),
+  getAlertas: () => api.get('/social/alertas'),
 };

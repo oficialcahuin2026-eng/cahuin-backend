@@ -22,6 +22,7 @@ import {
   GradientButton,
   ScreenScaffold,
   SegmentedControl,
+  Divider,
 } from '../components/CahuinUI';
 
 const categoryImages = {
@@ -105,7 +106,11 @@ const matchesSelectedCategory = (category, selectedCategory) => (
 const soloVigentes = (items = []) => {
   const inicio = new Date();
   inicio.setHours(0, 0, 0, 0);
-  return items.filter((item) => !item.fecha || new Date(item.fecha) >= inicio);
+  return items.filter((item) => {
+    if (!item.fecha && !item.fechaFin) return true;
+    const compareDate = item.fechaFin ? new Date(item.fechaFin) : new Date(item.fecha);
+    return compareDate >= inicio;
+  });
 };
 
 export default function PanoramasScreen({ navigation }) {
@@ -125,7 +130,7 @@ export default function PanoramasScreen({ navigation }) {
   const [enviandoInvitacion, setEnviandoInvitacion] = useState(false);
   const [modalInfo, setModalInfo] = useState(null);
 
-  const avisar = (title, message, emoji = '🌶️', extra = {}) => setModalInfo({ title, message, emoji, ...extra });
+  const avisar = (title, message, emoji = '✨', extra = {}) => setModalInfo({ title, message, emoji, ...extra });
 
   useEffect(() => {
     cargarTodo();
@@ -166,7 +171,7 @@ export default function PanoramasScreen({ navigation }) {
       );
       cargarTodo();
     } catch (error) {
-      avisar('Oops', error.message || 'No se pudo.', '🌶️', { tone: 'danger' });
+      avisar('Oops', error.message || 'No se pudo.', '⚠️', { tone: 'danger' });
     }
   };
 
@@ -200,7 +205,7 @@ export default function PanoramasScreen({ navigation }) {
       avisar('Invitación enviada', `Le mandaste este panorama a ${match.usuario?.nombre || 'tu match'}.`, '💌', { accent: COLORS.primario });
       setEventoParaInvitar(null);
     } catch (error) {
-      avisar('Oops', error.message || 'No pudimos enviar la invitación.', '🌶️', { tone: 'danger' });
+      avisar('Oops', error.message || 'No pudimos enviar la invitación.', '⚠️', { tone: 'danger' });
     } finally {
       setEnviandoInvitacion(false);
     }
@@ -223,7 +228,8 @@ export default function PanoramasScreen({ navigation }) {
     const diaCorto = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][d.getDay()];
 
     return (
-      <TouchableOpacity key={item._id || index} activeOpacity={0.92} onPress={() => setEventoActivo(item)} style={styles.modernCard}>
+    <View key={item._id || index}>
+      <TouchableOpacity activeOpacity={0.92} onPress={() => setEventoActivo(item)} style={styles.modernCard}>
         <View style={styles.modernImageContainer}>
           <Image source={imageSource} style={styles.modernImage} />
           <View style={styles.dateBadgeAbsolute}>
@@ -254,12 +260,15 @@ export default function PanoramasScreen({ navigation }) {
           <Ionicons name="chevron-forward" size={16} color={COLORS.textMuted} />
         </View>
       </TouchableOpacity>
+      <Divider COLORS={COLORS} />
+    </View>
     );
   };
 
   const renderCommunityCard = (item, index) => (
-    <View key={item._id || index} style={styles.communityCard}>
-      <View style={styles.communityIconBox}>
+    <View key={item._id || index}>
+      <View style={styles.communityCard}>
+        <View style={styles.communityIconBox}>
         <Ionicons name="map" size={28} color="#FF6B45" />
       </View>
       <View style={{ flex: 1 }}>
@@ -278,6 +287,8 @@ export default function PanoramasScreen({ navigation }) {
         <Text style={styles.joinButtonText}>Me anoto</Text>
       </TouchableOpacity>
     </View>
+    <Divider COLORS={COLORS} />
+  </View>
   );
 
   return (
@@ -311,27 +322,15 @@ export default function PanoramasScreen({ navigation }) {
       </ScrollView>
 
       {tabActiva === 'eventos' ? (
-        <View style={styles.modernHeader}>
-          <Text style={styles.modernHeaderTitle}>Eventos Oficiales</Text>
-          <Text style={styles.modernHeaderSub}>Descubre panoramas verificados por Cahuín. <Text style={{color: COLORS.primario}}>💖</Text></Text>
-          
+        <View style={{ paddingTop: 16 }}>
           <TouchableOpacity style={styles.modernRegionSelector} onPress={() => setModalExplorador(true)}>
             <Ionicons name="location" size={20} color={COLORS.primario} />
-            <Text style={styles.modernRegionText} numberOfLines={1}>{regionOficial}</Text>
+            <Text style={styles.modernRegionText} numberOfLines={1}>{regionOficial === 'Araucania' ? 'Araucanía' : regionOficial}</Text>
             <Ionicons name="chevron-down" size={20} color={COLORS.textMuted} />
           </TouchableOpacity>
-
-          <View style={styles.modernUpcomingRow}>
-            <Ionicons name="calendar-outline" size={18} color={COLORS.primario} />
-            <Text style={styles.modernUpcomingTitle}>Próximos eventos</Text>
-            <TouchableOpacity style={{marginLeft: 'auto'}}>
-              <Text style={styles.modernUpcomingLink}>Ver calendario &gt;</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       ) : (
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Panoramas Locales</Text>
+        <View style={[styles.sectionHeader, { paddingTop: 16, justifyContent: 'flex-end' }]}>
           <TouchableOpacity style={styles.darkPillActive} onPress={() => navigation.navigate('CrearPanorama')}>
             <Ionicons name="add" size={20} color={isDarkMode ? '#FFF' : '#FFF'} />
             <Text style={styles.darkPillTextActive}>Crear Panorama</Text>
@@ -360,25 +359,6 @@ export default function PanoramasScreen({ navigation }) {
           {tabActiva === 'eventos' ? (
             <View style={{ paddingBottom: 20 }}>
               {listaActual.map((item, index) => renderOfficialCard(item, index))}
-              
-              <View style={styles.specialInviteBox}>
-                <View style={styles.specialInviteHeader}>
-                  <Ionicons name="sparkles" size={16} color={COLORS.primario} />
-                  <Text style={styles.specialInviteLabel}>INVITACIÓN ESPECIAL</Text>
-                </View>
-                <View style={styles.specialInviteBody}>
-                  <View style={styles.specialInviteIconRing}>
-                    <Ionicons name="heart" size={32} color={COLORS.primario} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.specialInviteTitle}>Invita a tu match <Ionicons name="heart-outline" size={18} color={COLORS.textPrimary}/></Text>
-                    <Text style={styles.specialInviteDesc}>Elige un evento y conviértanlo en su próximo recuerdo.</Text>
-                  </View>
-                </View>
-                <TouchableOpacity style={styles.specialInviteBtn} onPress={() => {}}>
-                  <Text style={styles.specialInviteBtnText}>Invitar a un evento &gt;</Text>
-                </TouchableOpacity>
-              </View>
             </View>
           ) : (
             listaActual.map(renderCommunityCard)
@@ -424,7 +404,7 @@ export default function PanoramasScreen({ navigation }) {
 
       <Modal visible={!!eventoParaInvitar} animationType="slide" transparent>
         <View style={styles.modalFondo}>
-          <View style={[styles.modalCard, { maxHeight: '76%' }]}>
+          <View style={styles.modalCard}>
             <BottomSheetHandle />
             <View style={styles.modalTitleRow}>
               <View style={{ flex: 1 }}>
@@ -442,7 +422,7 @@ export default function PanoramasScreen({ navigation }) {
                 <Text style={styles.emptyInviteText}>Cuando tengas matches, aparecerán aquí para mandarles panoramas directo al chat.</Text>
               </View>
             ) : (
-              <ScrollView showsVerticalScrollIndicator={false}>
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
                 {misMatchesReales.map((match) => (
                   <TouchableOpacity
                     key={match.roomId}
@@ -567,13 +547,13 @@ const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
   modernUpcomingTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '800' },
   modernUpcomingLink: { color: COLORS.primario, fontSize: 14, fontWeight: '700' },
   
-  modernCard: { flexDirection: 'row', backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : COLORS.tarjeta, borderRadius: 24, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.06)' : COLORS.border, marginBottom: 16, padding: 12, gap: 14, ...(isDarkMode ? {} : SHADOWS.light) },
+  modernCard: { flexDirection: 'row', backgroundColor: 'transparent', paddingVertical: 16, gap: 14 },
   modernImageContainer: { width: 110, height: 130, borderRadius: 16, overflow: 'hidden', backgroundColor: COLORS.inputBg },
   modernImage: { width: '100%', height: '100%' },
   dateBadgeAbsolute: { position: 'absolute', top: 8, left: 8, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 8, alignItems: 'center', backdropFilter: 'blur(10px)' },
   dateBadgeDay: { color: '#FFF', fontSize: 18, fontWeight: '900', lineHeight: 20 },
   dateBadgeMonth: { color: 'rgba(255,255,255,0.8)', fontSize: 10, fontWeight: '800', letterSpacing: 1 },
-  modernContent: { flex: 1, justifyContent: 'center' },
+  modernContent: { flex: 1, justifyContent: 'space-evenly', paddingVertical: 4 },
   categoryBadgeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   categoryBadgePill: { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.08)' : COLORS.inputBg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   categoryBadgeText: { color: COLORS.textPrimary, fontSize: 11, fontWeight: '800' },
@@ -596,7 +576,7 @@ const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
   specialInviteBtnText: { color: COLORS.primario, fontSize: 15, fontWeight: '900' },
 
   // Cards
-  featuredCard: { marginBottom: 16, padding: 16, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : COLORS.tarjeta, borderRadius: 24, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.06)' : COLORS.border, ...(isDarkMode ? {} : SHADOWS.light) },
+  featuredCard: { marginBottom: 16, padding: 16, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : COLORS.tarjeta, borderRadius: 24, ...(isDarkMode ? {} : SHADOWS.light) },
   featuredTop: { flexDirection: 'row', gap: 16 },
   featuredImage: { width: 120, height: 120, borderRadius: 20, backgroundColor: COLORS.softRed },
   featuredTitle: { color: COLORS.textPrimary, fontSize: 20, lineHeight: 26, fontWeight: '900', fontFamily: FONTS.display },
@@ -611,7 +591,7 @@ const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
   inviteButtonSmall: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.primario, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 14 },
   inviteButtonSmallText: { color: '#FFF', fontSize: 13, fontWeight: '800' },
   
-  eventRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 12, padding: 12, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : COLORS.tarjeta, borderRadius: 20, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.05)' : COLORS.border, ...(isDarkMode ? {} : SHADOWS.light) },
+  eventRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 12, padding: 12, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : COLORS.tarjeta, borderRadius: 20, ...(isDarkMode ? {} : SHADOWS.light) },
   eventThumb: { width: 72, height: 72, borderRadius: 16, backgroundColor: COLORS.softRed },
   eventTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '900', fontFamily: FONTS.display },
   eventDesc: { color: COLORS.textMuted, fontSize: 14, marginTop: 3 },
@@ -619,7 +599,7 @@ const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
   eventMeta: { color: COLORS.textMuted, fontSize: 12, fontWeight: '700', flex: 1 },
   chevronCircle: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: isDarkMode ? 'rgba(255,255,255,0.04)' : COLORS.inputBg },
   
-  communityCard: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 12, padding: 16, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : COLORS.tarjeta, borderRadius: 22, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.05)' : COLORS.border, ...(isDarkMode ? {} : SHADOWS.light) },
+  communityCard: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 16, backgroundColor: 'transparent' },
   communityIconBox: { width: 56, height: 56, borderRadius: 18, backgroundColor: 'rgba(255,107,69,0.1)', alignItems: 'center', justifyContent: 'center' },
   communityTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '900', fontFamily: FONTS.display },
   communityDesc: { color: COLORS.textMuted, fontSize: 14, marginTop: 3 },
@@ -634,7 +614,7 @@ const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
   modalFondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modalCard: { backgroundColor: COLORS.tarjeta, borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, maxHeight: '88%' },
   modalTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
-  modalTitleLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  modalTitleLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   modalTituloGrande: { color: COLORS.textPrimary, fontSize: 26, fontWeight: '900', fontFamily: FONTS.display, flex: 1 },
   closeButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: isDarkMode ? 'rgba(255,255,255,0.08)' : COLORS.fondo },
   modalSub: { color: COLORS.textMuted, fontSize: 15, lineHeight: 22, marginBottom: 24 },
@@ -652,7 +632,7 @@ const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
   emptyInviteTitle: { color: COLORS.textPrimary, fontSize: 17, fontWeight: '900', marginBottom: 6 },
   emptyInviteText: { color: COLORS.textMuted, fontSize: 14, lineHeight: 20 },
   
-  matchInviteRow: { minHeight: 70, borderRadius: 20, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.05)' : COLORS.border, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : COLORS.fondo },
+  matchInviteRow: { minHeight: 70, borderRadius: 20, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : COLORS.fondo },
   matchAvatar: { width: 46, height: 46, borderRadius: 18, backgroundColor: COLORS.softRed },
   matchName: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '900' },
   matchHint: { color: COLORS.textMuted, fontSize: 12, marginTop: 2 },

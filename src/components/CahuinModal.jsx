@@ -19,7 +19,8 @@ export default function CahuinModal({
 }) {
   const { COLORS, isDarkMode } = useTheme();
   const accentColor = accent || getToneColor(tone, COLORS);
-  const forceDark = tone === 'premium' || tone === 'dark';
+  // Only force dark panel if already in dark mode (premium modals won't look wrong in light mode)
+  const forceDark = isDarkMode && (tone === 'premium' || tone === 'dark');
   const styles = getStyles(COLORS, isDarkMode, accentColor, forceDark);
   const finalActions = actions.length > 0
     ? actions
@@ -37,11 +38,7 @@ export default function CahuinModal({
 
             <LinearGradient colors={[hexToRgba(accentColor, 0.16), hexToRgba(accentColor, 0.04)]} style={styles.iconHalo}>
               <View style={styles.iconWrap}>
-                {emoji ? (
-                  <Text style={styles.emoji}>{emoji}</Text>
-                ) : (
-                  <Ionicons name={icon} size={42} color={accentColor} />
-                )}
+                <Ionicons name={icon} size={42} color={accentColor} />
               </View>
             </LinearGradient>
             <Text style={styles.title}>{title}</Text>

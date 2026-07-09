@@ -56,6 +56,18 @@ const regionUsuario = (user = {}) => {
 
 const mismaRegion = (a = '', b = '') => normalizarTexto(normalizarRegionChile(a)) === normalizarTexto(normalizarRegionChile(b));
 
+// Genera un regex tolerante a tildes para buscar regiones en la BD
+const regexRegion = (region) => {
+  const r = normalizarRegionChile(region) || region;
+  return r
+    .replace(/[aá]/gi, '[aá]')
+    .replace(/[eé]/gi, '[eé]')
+    .replace(/[ií]/gi, '[ií]')
+    .replace(/[oó]/gi, '[oó]')
+    .replace(/[uú]/gi, '[uú]')
+    .replace(/[ñ]/gi, '[nñ]');
+};
+
 const fechaChile = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' });
 
 const inicioDeHoy = () => {
@@ -110,7 +122,7 @@ const eventosFallbackPorRegion = (region) => {
 const asegurarEventosOficialesRegion = async (region) => {
   const existentes = await Panorama.find({
     esOficial: true,
-    region: { $regex: normalizarRegionChile(region), $options: 'i' },
+    region: { $regex: regexRegion(region), $options: 'i' },
     fecha: { $gte: inicioDeHoy() },
   }).limit(1);
 
@@ -407,9 +419,12 @@ exports.getSwipePanoramas = async (req, res) => {
     const panoramas = await Panorama.find({
       _id: { $nin: vistos },
       esOficial: true,
-      fecha: { $gte: inicioDeHoy() },
-      region: { $regex: normalizarRegionChile(region), $options: 'i' },
-    }).sort({ fecha: 1 }).limit(12);
+      $or: [
+        { fecha: { $gte: inicioDeHoy() } },
+        { fechaFin: { $gte: inicioDeHoy() } }
+      ],
+      region: { $regex: regexRegion(region), $options: 'i' },
+    }).sort({ fecha: 1 }).limit(200);
 
     res.json({ region, panoramas });
   } catch (error) {
@@ -573,5 +588,39 @@ exports.soltarBotella = async (req, res) => {
     res.json({ message: nuevoReceptor ? 'La botella sigue flotando.' : 'No encontramos a quién mandarla por ahora.', botella });
   } catch (error) {
     res.status(500).json({ message: 'Error soltando botella' });
+  }
+};
+
+exports.getAlertas = async (req, res) => {
+  try {
+    const usuario = req.user;
+    const fecha = fechaChile();
+    
+    // 1. Cahuin Pendiente
+    const cahuinHoy = await CahuinDiario.findOne({ fecha });
+    let cahuinPendiente = false;
+    if (cahuinHoy) {
+      cahuinPendiente = !cahuinHoy.votos.some(v => v.usuario.toString() === usuario._id.toString());
+    }
+
+    // 2. Historias Pendientes
+    const ahora = new Date();
+    const region = regionUsuario(usuario);
+    const filtroHistoria = {
+      expiraEn: { $gt: ahora },
+      autor: { $ne: usuario._id },
+      $or: [
+        { region },
+        { region: { $regex: normalizarTexto(region), $options: 'i' } },
+        { ciudad: usuario.ciudad || '' },
+        { ciudad: '' },
+      ],
+    };
+    const historiasPendientes = (await Historia.countDocuments(filtroHistoria)) > 0;
+
+    res.json({ cahuin: cahuinPendiente, historias: historiasPendientes });
+  } catch (error) {
+    console.error('Error alertas:', error);
+    res.status(500).json({ message: 'Error obteniendo alertas' });
   }
 };

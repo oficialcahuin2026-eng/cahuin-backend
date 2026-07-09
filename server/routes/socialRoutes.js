@@ -6,6 +6,7 @@ const upload = require('../middleware/upload');
 
 router.use(proteger);
 
+router.get('/alertas', socialController.getAlertas);
 router.get('/historias', socialController.listarHistorias);
 router.post('/historias', upload.single('imagen'), socialController.crearHistoria);
 router.post('/historias/:id/reaccionar', socialController.reaccionarHistoria);

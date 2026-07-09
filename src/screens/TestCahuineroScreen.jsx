@@ -43,11 +43,9 @@ export default function TestCahuineroScreen({ navigation }) {
       setIndiceActual(indiceActual + 1);
     } else {
       setGuardando(true);
-      let ganador = "Roto";
-      let maxPuntos = 0;
-      for (const [key, value] of Object.entries(nuevosPuntajes)) {
-        if (value > maxPuntos) { maxPuntos = value; ganador = key; }
-      }
+      const maxPuntos = Math.max(...Object.values(nuevosPuntajes));
+      const posiblesGanadores = Object.keys(nuevosPuntajes).filter(k => nuevosPuntajes[k] === maxPuntos);
+      const ganador = posiblesGanadores[Math.floor(Math.random() * posiblesGanadores.length)];
       const arquetipoFinal = ARQUETIPOS[ganador];
       
       try {

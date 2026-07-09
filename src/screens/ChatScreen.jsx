@@ -13,14 +13,7 @@ import { FONTS, RADIUS, SPACING } from '../utils/theme';
 
 const emptyChats = require('../assets/illustrations/empty-cahuines.png');
 
-// Mapeo de intereses a emojis
-const INTERES_EMOJI = {
-  'Café': '☕', 'Fotografía': '📸', 'Montaña': '🏔️', 'Música en vivo': '🎵',
-  'Cocinar': '👨‍🍳', 'Gym / Deporte': '💪', 'Gym': '💪', 'Deporte': '💪',
-  'Playa': '🏖️', 'Memes': '😂', 'Perros': '🐶', 'Gatos': '🐱',
-  'Viajes': '✈️', 'Senderismo': '🥾', 'Cine': '🎬', 'Lectura': '📚',
-  'Arte': '🎨', 'Bailar': '💃', 'Yoga': '🧘', 'Cerveza': '🍺',
-};
+// Sin emojis de interes
 
 export default function ChatScreen({ navigation }) {
   const [matches, setMatches] = useState([]);
@@ -102,7 +95,7 @@ export default function ChatScreen({ navigation }) {
 
     return (
       <TouchableOpacity activeOpacity={0.9} onPress={() => handleAbrirChat(item)}>
-        <SoftCard COLORS={COLORS} style={styles.matchCard}>
+        <View style={styles.matchCard}>
           {/* Avatar con indicador online */}
           <View style={styles.avatarWrap}>
             <Image source={{ uri: item.usuario.foto || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200' }} style={styles.avatar} />
@@ -135,13 +128,13 @@ export default function ChatScreen({ navigation }) {
             {listo && (
               <View style={styles.chipsRow}>
                 <View style={styles.compatMini}>
-                  <Text style={{ fontSize: 10 }}>❤️</Text>
+                  <Ionicons name="heart" size={10} color={COLORS.primario} />
                   <Text style={styles.compatMiniText}>{compat}%</Text>
                 </View>
                 {interesesCompartidos.map((interes, idx) => (
                   <InterestChip
                     key={idx}
-                    emoji={INTERES_EMOJI[interes] || '✨'}
+                    icon="star-outline"
                     text={interes}
                     COLORS={COLORS}
                     small
@@ -156,10 +149,8 @@ export default function ChatScreen({ navigation }) {
             <View style={styles.unreadBadge}>
               <Text style={styles.unreadText}>{item.noLeidos > 9 ? '9+' : item.noLeidos}</Text>
             </View>
-          ) : (
-            <Ionicons name="chevron-forward" size={20} color={COLORS.gris} />
-          )}
-        </SoftCard>
+          ) : null}
+        </View>
       </TouchableOpacity>
     );
   };
@@ -176,26 +167,12 @@ export default function ChatScreen({ navigation }) {
 
   return (
     <ScreenScaffold COLORS={COLORS} scroll={matches.length === 0}>
-      {/* ── Header con logo + counter + búsqueda ── */}
-      <View style={styles.headerRow}>
-        <CahuinLogo size={26} showText COLORS={COLORS} />
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <TouchableOpacity style={styles.planPill} onPress={() => navigation.navigate('Premium')} activeOpacity={0.85}>
-            <Ionicons name="sparkles" size={16} color={COLORS.primario} />
-            <Text style={styles.planPillText}>Planes</Text>
-          </TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.7}>
-            <Ionicons name="search-outline" size={24} color={COLORS.textPrimary} />
-          </TouchableOpacity>
-        </View>
+      <View style={{ height: 20 }} />
+
+      <View style={{ paddingHorizontal: SPACING[5] }}>
+        {/* ── Filtros ── */}
+        <FilterPills options={filtroOptions} value={filtro} onChange={setFiltro} COLORS={COLORS} />
       </View>
-
-      {/* ── Título + subtítulo ── */}
-      <Text style={styles.titulo}>Tus conversaciones</Text>
-      <Text style={styles.subtitulo}>Conversa, conecta y encuentra tu vibe.</Text>
-
-      {/* ── Filtros ── */}
-      <FilterPills options={filtroOptions} value={filtro} onChange={setFiltro} COLORS={COLORS} />
 
       {matches.length === 0 ? (
         <EmptyState
@@ -205,9 +182,9 @@ export default function ChatScreen({ navigation }) {
           subtitle="Sigue deslizando para encontrar con quién cahuinear."
           imageStyle={styles.emptyImage}
           tip={{
-            emoji: '🔥',
+            icon: 'flame-outline',
             title: 'Tip Cahuín',
-            text: 'Se tu, se autentico y la conversacion correcta llegara.',
+            text: 'Sé tú mismo, sé auténtico y la conversación correcta llegará.',
           }}
         />
       ) : (
@@ -260,16 +237,18 @@ const getStyles = (COLORS) => StyleSheet.create({
     lineHeight: 20,
   },
 
-  // ── Lista ──
-  lista: { paddingBottom: 120 },
+  lista: { 
+    paddingBottom: 120,
+    paddingHorizontal: SPACING[5] 
+  },
 
   // ── Match Card ──
   matchCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: SPACING[3],
-    marginBottom: SPACING[2],
-    borderRadius: RADIUS.xl,
+    paddingVertical: SPACING[3],
+    marginBottom: SPACING[3],
+    backgroundColor: 'transparent',
   },
   avatarWrap: {
     width: 62,

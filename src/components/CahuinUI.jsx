@@ -54,20 +54,22 @@ export function ScreenHeader({ title, accent, right, centered = false }) {
 
 export function SoftCard({ children, style, COLORS }) {
   return (
-    <View style={[styles.card, { backgroundColor: COLORS.tarjeta, borderColor: COLORS.border }, premiumShadow, style]}>
+    <View style={[styles.card, style]}>
       {children}
     </View>
   );
 }
 
-export function SoftIcon({ name, emoji, color = '#F0444F', bg = '#FFF0F1', size = 54, iconSize = 24, rounded = 18 }) {
+export function Divider({ COLORS, style }) {
+  return (
+    <View style={[{ height: StyleSheet.hairlineWidth, backgroundColor: COLORS?.border || '#374151', width: '100%' }, style]} />
+  );
+}
+
+export function SoftIcon({ name, color = '#F0444F', bg = '#FFF0F1', size = 54, iconSize = 24, rounded = 18 }) {
   return (
     <View style={[styles.softIcon, { width: size, height: size, borderRadius: rounded, backgroundColor: bg }]}>
-      {emoji ? (
-        <Text style={{ fontSize: iconSize }}>{emoji}</Text>
-      ) : (
-        <Ionicons name={name} size={iconSize} color={color} />
-      )}
+      <Ionicons name={name || 'star'} size={iconSize} color={color} />
     </View>
   );
 }
@@ -115,7 +117,7 @@ export function EmptyState({ image, title, subtitle, COLORS, action, tip, imageS
       {subtitle ? <Text style={[styles.emptySubtitle, { color: COLORS.textMuted }]}>{subtitle}</Text> : null}
       {tip ? (
         <SoftCard COLORS={COLORS} style={styles.tipCard}>
-          <SoftIcon emoji={tip.emoji || '🔥'} size={58} rounded={29} bg={tip.bg || COLORS.softRed} />
+          <SoftIcon name={tip.icon || 'flame'} color={tip.iconColor || COLORS.primario} size={58} rounded={29} bg={tip.bg || COLORS.softRed} />
           <View style={{ flex: 1 }}>
             <Text style={[styles.tipTitle, { color: COLORS.textPrimary }]}>{tip.title}</Text>
             <Text style={[styles.tipText, { color: COLORS.textMuted }]}>{tip.text}</Text>
@@ -141,14 +143,14 @@ export function BottomSheetHandle() {
 export function CahuinLogo({ size = 28, showText = true, COLORS }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-      <Text style={{ fontSize: size }}>🌶️</Text>
+      <View style={{ width: size * 0.4, height: size * 0.4, borderRadius: size * 0.2, backgroundColor: COLORS?.primario || '#F0444F' }} />
       {showText && (
         <Text style={{
           fontSize: size,
           fontWeight: '900',
           fontFamily: FONTS.display,
           color: COLORS?.textPrimary || '#101828',
-          fontStyle: 'italic',
+          letterSpacing: -0.5,
         }}>
           Cahuín
         </Text>
@@ -167,7 +169,7 @@ export function CahuinesCounter({ cantidad = 0, onPress, COLORS, showPlus = true
       onPress={onPress}
       activeOpacity={0.8}
     >
-      <Text style={{ fontSize: 16 }}>🔥</Text>
+      <Ionicons name="flash" size={16} color={COLORS?.primario || '#F0444F'} />
       <Text style={[styles.cahuinesCounterText, { color: COLORS?.textPrimary }]}>
         {cantidad >= 1000 ? `${(cantidad / 1000).toFixed(1)}K` : cantidad}
       </Text>
@@ -181,15 +183,15 @@ export function CahuinesCounter({ cantidad = 0, onPress, COLORS, showPlus = true
 }
 
 /**
- * InterestChip — Tag with emoji + text
+ * InterestChip — Tag with icon + text, no borders
  */
-export function InterestChip({ emoji, text, COLORS, small = false }) {
+export function InterestChip({ icon, text, COLORS, small = false }) {
   const chipSize = small ? styles.chipSmall : styles.chip;
   const textSize = small ? styles.chipTextSmall : styles.chipTextBase;
   return (
-    <View style={[chipSize, { backgroundColor: COLORS?.chipBg, borderColor: COLORS?.chipBorder }]}>
-      {emoji && <Text style={{ fontSize: small ? 12 : 14 }}>{emoji}</Text>}
-      <Text style={[textSize, { color: COLORS?.chipText }]}>{text}</Text>
+    <View style={[chipSize, { backgroundColor: COLORS?.surfaceCard || 'rgba(150,150,150,0.1)' }]}>
+      {icon && <Ionicons name={icon} size={small ? 14 : 16} color={COLORS?.primario || COLORS?.textMuted} />}
+      <Text style={[textSize, { color: COLORS?.textPrimary }]}>{text}</Text>
     </View>
   );
 }
@@ -243,7 +245,7 @@ export function CompatCircle({ porcentaje = 0, size = 48, COLORS, showLabel = tr
 }
 
 /**
- * FilterPills — Horizontal filter pills (Todos, Nuevos, Activos)
+ * FilterPills — Horizontal filter pills (Todos, Nuevos, Activos) without borders
  */
 export function FilterPills({ options, value, onChange, COLORS }) {
   return (
@@ -256,8 +258,7 @@ export function FilterPills({ options, value, onChange, COLORS }) {
             style={[
               styles.filterPill,
               {
-                backgroundColor: active ? COLORS?.primario : COLORS?.chipBg,
-                borderColor: active ? COLORS?.primario : COLORS?.chipBorder,
+                backgroundColor: active ? COLORS?.textPrimary : 'transparent',
               },
             ]}
             onPress={() => onChange(opt.value)}
@@ -265,7 +266,7 @@ export function FilterPills({ options, value, onChange, COLORS }) {
           >
             <Text style={[
               styles.filterPillText,
-              { color: active ? '#FFF' : COLORS?.textMuted },
+              { color: active ? COLORS?.bg : COLORS?.textMuted },
             ]}>
               {opt.label}
             </Text>
@@ -323,19 +324,19 @@ export function OnlineDot({ status = 'offline', size = 14 }) {
 }
 
 /**
- * ExpandableSection — Collapsible card with chevron
+ * ExpandableSection — Collapsible card with chevron, no borders
  */
 export function ExpandableSection({ title, icon, children, COLORS, defaultOpen = false }) {
   const [open, setOpen] = React.useState(defaultOpen);
   return (
     <TouchableOpacity
-      style={[styles.expandable, { backgroundColor: COLORS?.surfaceCard || COLORS?.tarjeta, borderColor: COLORS?.border }]}
+      style={[styles.expandable, { backgroundColor: COLORS?.surfaceCard || COLORS?.tarjeta }]}
       onPress={() => setOpen(!open)}
       activeOpacity={0.85}
     >
       <View style={styles.expandableHeader}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-          {icon && <Text style={{ fontSize: 16 }}>{icon}</Text>}
+          {icon && <Ionicons name={icon} size={20} color={COLORS?.textPrimary} />}
           <Text style={[styles.expandableTitle, { color: COLORS?.textPrimary }]}>{title}</Text>
         </View>
         <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={20} color={COLORS?.textMuted} />
@@ -366,15 +367,11 @@ const styles = StyleSheet.create({
   },
   headerRight: { marginLeft: SPACING[3] },
   card: {
-    borderRadius: RADIUS.xl,
-    borderWidth: 1,
-    padding: SPACING[4],
+    paddingVertical: SPACING[4],
   },
   softIcon: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(16, 24, 40, 0.06)',
   },
   gradientButtonWrap: {
     borderRadius: 28,
@@ -499,19 +496,17 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 99,
-    borderWidth: 1,
-    gap: 5,
+    gap: 6,
   },
   chipSmall: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 99,
-    borderWidth: 1,
     gap: 4,
   },
   chipTextBase: {
@@ -531,10 +526,9 @@ const styles = StyleSheet.create({
   filterPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 99,
-    borderWidth: 1,
     gap: 6,
   },
   filterPillText: {
@@ -573,7 +567,6 @@ const styles = StyleSheet.create({
 
   expandable: {
     borderRadius: RADIUS.lg,
-    borderWidth: 1,
     padding: SPACING[4],
     marginBottom: SPACING[3],
   },

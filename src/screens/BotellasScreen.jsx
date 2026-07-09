@@ -29,7 +29,7 @@ export default function BotellasScreen({ navigation }) {
   const [enviando, setEnviando] = useState(false);
   const [modal, setModal] = useState(null);
 
-  const avisar = (title, message, emoji = '🍾') => setModal({ title, message, emoji });
+  const avisar = (title, message, emoji = 'alert-circle-outline') => setModal({ title, message, emoji });
 
   const cargar = async () => {
     try {
@@ -53,7 +53,7 @@ export default function BotellasScreen({ navigation }) {
       setEnviando(true);
       const data = await socialService.crearBotella(texto.trim());
       setTexto('');
-      avisar('Al mar digital', data.message || 'Tu mensaje ya va flotando por Chile.', '🌊');
+      avisar('Al mar digital', data.message || 'Tu mensaje ya va flotando por Chile.', 'water-outline');
       cargar();
     } catch (error) {
       avisar('No salió', error.message || 'Intenta de nuevo en un ratito.');
@@ -69,7 +69,7 @@ export default function BotellasScreen({ navigation }) {
       const data = await socialService.responderBotella(botella._id, respuesta.trim());
       setBotella(data.botella);
       setRespuesta('');
-      avisar('Respondida', data.message || 'La botella ya recibió tu cahuín.', '💌');
+      avisar('Respondida', data.message || 'La botella ya recibió tu cahuín.', 'mail-open-outline');
     } catch (error) {
       avisar('No pudimos responder', error.message || 'Intenta de nuevo.');
     } finally {
@@ -83,7 +83,7 @@ export default function BotellasScreen({ navigation }) {
       setEnviando(true);
       const data = await socialService.soltarBotella(botella._id);
       setBotella(null);
-      avisar('Sigue flotando', data.message || 'La dejamos seguir su camino.', '🌊');
+      avisar('Sigue flotando', data.message || 'La dejamos seguir su camino.', 'water-outline');
       cargar();
     } catch (error) {
       avisar('No se pudo soltar', error.message || 'Intenta de nuevo.');
@@ -106,7 +106,7 @@ export default function BotellasScreen({ navigation }) {
             </View>
 
             <View style={styles.hero}>
-              <Text style={styles.heroEmoji}>🌊</Text>
+              <View style={styles.heroIconWrap}><Ionicons name="water-outline" size={62} color={COLORS.primario} /></View>
               <Text style={styles.heroTitle}>Lanza un cahuín a cualquier chileno</Text>
               <Text style={styles.heroText}>Sin match, sin presión. Si alguien conecta con lo que escribiste, te puede responder.</Text>
             </View>
@@ -166,7 +166,7 @@ export default function BotellasScreen({ navigation }) {
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
-        <CahuinModal visible={!!modal} title={modal?.title} message={modal?.message} emoji={modal?.emoji} onClose={() => setModal(null)} />
+        <CahuinModal visible={!!modal} title={modal?.title} message={modal?.message} icon={modal?.emoji} onClose={() => setModal(null)} />
       </SafeAreaView>
     </LinearGradient>
   );
@@ -180,7 +180,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   back: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.tarjeta, borderWidth: 1, borderColor: COLORS.border },
   title: { color: COLORS.textPrimary, fontSize: 26, fontFamily: FONTS.display, fontWeight: '900' },
   hero: { alignItems: 'center', paddingVertical: SPACING[6] },
-  heroEmoji: { fontSize: 62 },
+  heroIconWrap: { width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(59, 130, 246, 0.1)', alignItems: 'center', justifyContent: 'center' },
   heroTitle: { color: COLORS.textPrimary, fontSize: 30, lineHeight: 36, fontFamily: FONTS.display, fontWeight: '900', textAlign: 'center', marginTop: 12 },
   heroText: { color: COLORS.textMuted, fontSize: 16, lineHeight: 23, textAlign: 'center', marginTop: 10 },
   card: { backgroundColor: COLORS.tarjeta, borderRadius: 26, padding: SPACING[4], borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING[4], ...SHADOWS.light },

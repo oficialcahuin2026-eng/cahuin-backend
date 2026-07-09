@@ -1,52 +1,57 @@
-﻿import React from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
 
-export default function TerminosScreen() {
-  const navigation = useNavigation();
+export default function TerminosScreen({ navigation }) {
+  const { COLORS } = useTheme();
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: COLORS.bg }]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="close" size={30} color="#FFF" />
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <MaterialCommunityIcons name="arrow-left" size={26} color={COLORS.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitulo}>Términos y Condiciones</Text>
-        <View style={{ width: 30 }} />
+        <Text style={[styles.headerTitle, { color: COLORS.textPrimary }]}>Términos y Privacidad</Text>
       </View>
 
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.titulo}>Las reglas del Cahuín ðŸŒ¶ï¸</Text>
-        <Text style={styles.ultimaActualizacion}>Última actualización: Mayo 2026</Text>
-
-        <Text style={styles.parrafo}>
-          Bienvenido a Cahuín, la app de citas hecha por y para chilenos. Al usar nuestra aplicación, aceptas portarte bien y seguir estas reglas básicas. Si no estás de acuerdo, lamentablemente tendrás que buscar el amor a la antigua.
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <Text style={[styles.title, { color: COLORS.textPrimary }]}>Nuestras Reglas Claras</Text>
+        <Text style={[styles.subtitle, { color: COLORS.textMuted }]}>
+          En Cahuín nos tomamos en serio tu seguridad. Lee con atención.
         </Text>
 
-        <Text style={styles.subtitulo}>1. Requisitos para entrar</Text>
-        <Text style={styles.parrafo}>
+        <View style={[styles.section, { backgroundColor: COLORS.surfaceCard, borderColor: COLORS.border }]}>
+          <Text style={[styles.text, { color: COLORS.textSecondary }]}>
+            Bienvenido a Cahuín, la app de citas hecha por y para chilenos. Al usar nuestra aplicación, aceptas portarte bien y seguir estas reglas básicas. Si no estás de acuerdo, lamentablemente tendrás que buscar el amor a la antigua.
+          </Text>
+        </View>
+
+        <Text style={[styles.sectionTitle, { color: COLORS.textPrimary }]}>1. Requisitos para entrar</Text>
+        <Text style={[styles.text, { color: COLORS.textSecondary, marginBottom: 15 }]}>
           Debes tener al menos 18 años cumplidos para crearte una cuenta. Si te pillamos mintiendo con la edad, tu cuenta será eliminada al instante. Cahuín es un espacio para adultos.
         </Text>
 
-        <Text style={styles.subtitulo}>2. Respeto ante todo (Cero toxicidad)</Text>
-        <Text style={styles.parrafo}>
-          Aquí vinimos a pasarlo bien. No toleramos el acoso, los insultos, el lenguaje de odio ni el envío de fotos no solicitadas (tú sabes a qué nos referimos). Si otro usuario te reporta por mala conducta, nuestro equipo revisará el caso y podrá banearte permanentemente.
+        <Text style={[styles.sectionTitle, { color: COLORS.textPrimary }]}>2. Respeto ante todo (Cero toxicidad)</Text>
+        <Text style={[styles.text, { color: COLORS.textSecondary, marginBottom: 15 }]}>
+          Aquí vinimos a pasarlo bien. No toleramos el acoso, los insultos, el lenguaje de odio ni el envío de fotos no solicitadas. Si otro usuario te reporta por mala conducta, nuestro equipo revisará el caso y podrá banearte permanentemente.
         </Text>
 
-        <Text style={styles.subtitulo}>3. Privacidad y Seguridad</Text>
-        <Text style={styles.parrafo}>
+        <Text style={[styles.sectionTitle, { color: COLORS.textPrimary }]}>3. Privacidad y Seguridad</Text>
+        <Text style={[styles.text, { color: COLORS.textSecondary, marginBottom: 15 }]}>
           Nos tomamos tus datos en serio. Tu ubicación exacta nunca será revelada a otros usuarios, solo la distancia aproximada. Los chats están encriptados y tus fotos solo serán usadas dentro de la plataforma para buscarte matches.
         </Text>
 
-        <Text style={styles.subtitulo}>4. Suscripciones</Text>
-        <Text style={styles.parrafo}>
+        <Text style={[styles.sectionTitle, { color: COLORS.textPrimary }]}>4. Suscripciones</Text>
+        <Text style={[styles.text, { color: COLORS.textSecondary, marginBottom: 25 }]}>
           Cahuin ofrece suscripciones dentro de la app para desbloquear funciones adicionales. Estas compras son definitivas y no reembolsables, salvo que la ley chilena (SERNAC) exija lo contrario por fallos del servicio.
         </Text>
 
-        <Text style={styles.parrafoDestacado}>
-          Al hacer clic en "Aceptar" durante el registro, confirmas que has leído y entendido estas reglas. Â¡Pásalo increíble y que viva el Cahuín!
-        </Text>
+        <View style={[styles.section, { backgroundColor: COLORS.surfaceCard, borderColor: COLORS.border }]}>
+          <Text style={[styles.text, { color: COLORS.textPrimary, fontWeight: '600' }]}>
+            Al hacer clic en "Aceptar" durante el registro, confirmas que has leído y entendido estas reglas. ¡Pásalo increíble y que viva el Cahuín!
+          </Text>
+        </View>
         
         <View style={{ height: 50 }} />
       </ScrollView>
@@ -55,13 +60,14 @@ export default function TerminosScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#0A0A0A' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderColor: '#2A2A2A' },
-  headerTitulo: { fontSize: 18, fontWeight: 'bold', color: '#FFF' },
-  scroll: { padding: 20 },
-  titulo: { fontSize: 26, fontWeight: 'bold', color: '#E53935', marginBottom: 5 },
-  ultimaActualizacion: { fontSize: 13, color: '#888', marginBottom: 20 },
-  subtitulo: { fontSize: 18, fontWeight: 'bold', color: '#FFF', marginTop: 20, marginBottom: 10 },
-  parrafo: { fontSize: 15, color: '#CCC', lineHeight: 24, textAlign: 'justify' },
-  parrafoDestacado: { fontSize: 15, color: '#FFF', lineHeight: 24, textAlign: 'justify', marginTop: 30, backgroundColor: '#1A1A1A', padding: 15, borderRadius: 10, borderWidth: 1, borderColor: '#333' }
+  safe: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 20 },
+  backButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(128,128,128,0.1)', justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { fontSize: 20, fontWeight: '800', marginLeft: 15 },
+  scroll: { paddingHorizontal: 20, paddingBottom: 40 },
+  title: { fontSize: 32, fontWeight: '900', marginBottom: 8 },
+  subtitle: { fontSize: 16, lineHeight: 24, marginBottom: 30 },
+  section: { padding: 20, borderRadius: 20, marginBottom: 15, borderWidth: 1 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', marginBottom: 8 },
+  text: { fontSize: 15, lineHeight: 22 },
 });

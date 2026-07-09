@@ -55,7 +55,7 @@ export default function SwipePanoramasScreen({ navigation }) {
         setModalInfo({
           title: 'Match por destino',
           message: data.message || 'Ambos quieren ir al mismo panorama.',
-          emoji: '🎟️',
+          icon: 'ticket',
           accent: COLORS.primario,
           actions: [{ label: 'Ir al chat', onPress: () => { setModalInfo(null); navigation.navigate('Chat'); } }],
         });
@@ -65,7 +65,7 @@ export default function SwipePanoramasScreen({ navigation }) {
         setModalInfo({
           title: 'Guardado en pruebas',
           message: 'El servidor no respondió, pero avanzamos al siguiente panorama.',
-          emoji: '🎟️',
+          icon: 'ticket',
           accent: COLORS.primario,
         });
       }
@@ -86,7 +86,7 @@ export default function SwipePanoramasScreen({ navigation }) {
       {cargando ? <ActivityIndicator color={COLORS.primario} style={{ marginTop: 40 }} /> : panorama ? (
         <ImageBackground source={{ uri: panorama.imagen || fallback }} style={styles.card} imageStyle={styles.cardImage}>
           <LinearGradient colors={['rgba(0,0,0,0.12)', 'rgba(0,0,0,0.85)']} style={styles.overlay}>
-            <Text style={styles.emoji}>{panorama.emoji || '🎟️'}</Text>
+            <View style={styles.emojiWrap}><Ionicons name="ticket" size={40} color="#FFF" /></View>
             <Text style={styles.cardTitle}>{panorama.titulo}</Text>
             <Text style={styles.desc}>{panorama.descripcion}</Text>
             <View style={styles.metaRow}>
@@ -105,7 +105,7 @@ export default function SwipePanoramasScreen({ navigation }) {
         </ImageBackground>
       ) : (
         <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>🎟️</Text>
+          <View style={styles.emptyIconWrap}><Ionicons name="ticket-outline" size={60} color={COLORS.primario} /></View>
           <Text style={styles.emptyTitle}>No hay más panoramas por deslizar.</Text>
           <TouchableOpacity style={styles.reload} onPress={cargar}>
             <Text style={styles.reloadText}>Recargar</Text>
@@ -116,7 +116,7 @@ export default function SwipePanoramasScreen({ navigation }) {
         visible={!!modalInfo}
         title={modalInfo?.title}
         message={modalInfo?.message}
-        emoji={modalInfo?.emoji}
+        icon={modalInfo?.icon}
         actions={modalInfo?.actions || []}
         accent={modalInfo?.accent}
         tone={modalInfo?.tone}
@@ -134,7 +134,7 @@ const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
   card: { flex: 1, minHeight: 560, borderRadius: 32, overflow: 'hidden', ...(isDarkMode ? SHADOWS.dark : SHADOWS.medium) },
   cardImage: { borderRadius: 32 },
   overlay: { flex: 1, justifyContent: 'flex-end', padding: SPACING[5] },
-  emoji: { fontSize: 54, marginBottom: 10 },
+  emojiWrap: { width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
   cardTitle: { color: '#FFF', fontSize: 36, lineHeight: 42, fontWeight: '900', fontFamily: FONTS.display },
   desc: { color: 'rgba(255,255,255,0.9)', fontSize: 17, lineHeight: 24, marginTop: 8 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: SPACING[3] },
@@ -144,7 +144,7 @@ const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
   pass: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#FFF' },
   like: { width: 86, height: 86, borderRadius: 43, backgroundColor: COLORS.primario },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyEmoji: { fontSize: 60 },
+  emptyIconWrap: { width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(59, 130, 246, 0.1)', alignItems: 'center', justifyContent: 'center' },
   emptyTitle: { color: COLORS.textPrimary, fontSize: 22, fontWeight: '900', textAlign: 'center', marginTop: 10 },
   reload: { marginTop: 20, backgroundColor: COLORS.primario, borderRadius: 24, paddingHorizontal: 24, paddingVertical: 12 },
   reloadText: { color: '#FFF', fontWeight: '900' },

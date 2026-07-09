@@ -39,7 +39,8 @@ export default function MapaValoresScreen({ navigation }) {
       try {
         const res = await userService.actualizar({ mapaValores: nuevasRespuestas });
         actualizarUsuario(res.usuario);
-        Alert.alert('¡Mapa Completado! 🗺️', 'Tu algoritmo ahora te conectará con personas que comparten tus mismos valores de vida.', [
+        const resumen = nuevasRespuestas.prioridadLealtad ? 'Valoras profundamente la lealtad incondicional.' : 'Eres una persona que prefiere la honestidad brutal.';
+        Alert.alert('¡Mapa Completado! 🗺️', `${resumen}\n\nTu algoritmo ahora te conectará con personas que comparten tus mismos valores de vida.`, [
           { text: 'Excelente', onPress: () => navigation.goBack() }
         ]);
       } catch (e) { 

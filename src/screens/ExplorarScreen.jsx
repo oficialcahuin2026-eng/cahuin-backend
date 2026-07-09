@@ -28,11 +28,11 @@ import { PLAN_PIOLA_O_SUPERIOR } from '../config/economia';
 const rouletteBanner = require('../assets/illustrations/roulette-banner.png');
 
 const features = [
-  { title: 'Historias', text: 'Fotos por 24h.', icon: 'camera', route: 'HistoriasCulturales', emoji: '📸', color: '#F472B6' },
-  { title: 'Cahuín', text: 'Vota diario.', icon: 'chatbubble-ellipses', route: 'CahuinDelDia', emoji: '💬', color: '#3B82F6' },
-  { title: 'Panoramas', text: 'Haz match.', icon: 'ticket', route: 'SwipePanoramas', emoji: '🎟️', color: '#8B5CF6' },
-  { title: 'Éxito', text: 'Parejas.', icon: 'heart', route: 'HistoriasExito', emoji: '❤️', color: '#EF4444' },
-  { title: 'Botella', text: 'Anónimo.', icon: 'mail-open', route: 'Botellas', emoji: '🍾', color: '#F59E0B' },
+  { title: 'Historias', text: 'Fotos por 24h.', icon: 'images-outline', route: 'HistoriasCulturales', color: '#F472B6' },
+  { title: 'Cahuín', text: 'Vota diario.', icon: 'chatbubbles-outline', route: 'CahuinDelDia', color: '#3B82F6' },
+  { title: 'Panoramas', text: 'Haz match.', icon: 'ticket-outline', route: 'SwipePanoramas', color: '#8B5CF6' },
+  { title: 'Éxito', text: 'Parejas.', icon: 'heart-outline', route: 'HistoriasExito', color: '#EF4444' },
+  { title: 'Botella', text: 'Anónimo.', icon: 'wine-outline', route: 'Botellas', color: '#F59E0B' },
 ];
 
 export default function ExplorarScreen({ navigation }) {
@@ -45,6 +45,7 @@ export default function ExplorarScreen({ navigation }) {
   const [metricas, setMetricas] = useState({ ruleta: 0, comunidades: {} });
   const tienePiola = Boolean(usuario?.isPremium && PLAN_PIOLA_O_SUPERIOR.includes(usuario?.premiumPlan || 'gold'));
   const [trendingPerfiles, setTrendingPerfiles] = useState([]);
+  const [alertas, setAlertas] = useState({ cahuin: false, historias: false });
 
   const categoriasUnidas = useMemo(() => usuario?.categoriasExplorar || [], [usuario?.categoriasExplorar]);
   const [modalInfo, setModalInfo] = useState(null);
@@ -73,10 +74,21 @@ export default function ExplorarScreen({ navigation }) {
 
   const cargarMetricas = useCallback(async () => {
     try {
+      // Usar getTrending en lugar de descubrir para mostrar perfiles reales
+      const trendingRes = await userService.getTrending({ scope: 'region' });
+      setTrendingPerfiles((trendingRes.trending || []).slice(0, 6));
+
+      // Fetch alertas (Puntitos rojos)
+      try {
+        const alertasRes = await require('../services/api').socialService.getAlertas();
+        setAlertas(alertasRes || { cahuin: false, historias: false });
+      } catch (e) {
+        setAlertas({ cahuin: false, historias: false });
+      }
+
       const radar = await userService.descubrir({});
       const perfilesRadar = radar.usuarios || radar.perfiles || [];
-      setTrendingPerfiles(perfilesRadar.slice(0, 6));
-
+      
       const respuestas = await Promise.all(
         EXPLORAR_CATEGORIAS.map(async (categoria) => {
           try {
@@ -173,16 +185,7 @@ export default function ExplorarScreen({ navigation }) {
 
   return (
     <ScreenScaffold COLORS={COLORS}>
-      <View style={styles.headerWrap}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Explorar <Text style={{color: COLORS.primario}}>✨</Text></Text>
-          <Text style={styles.headerSub}>Descubre personas, panoramas y conexiones que te mueven</Text>
-        </View>
-        <View style={styles.avatarWrap}>
-          <Image source={{ uri: usuario?.foto || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200' }} style={styles.avatar} />
-          <View style={styles.statusDot} />
-        </View>
-      </View>
+      <View style={{ height: 16 }} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         
@@ -204,13 +207,15 @@ export default function ExplorarScreen({ navigation }) {
                     <Text style={styles.heroSubtitle}>1 hora de chat sin fotos. Puro bla bla.</Text>
 
                     <View style={styles.liveRow}>
-                      <View style={styles.avatarStack}>
-                        {[0, 1, 2].map((item) => (
-                          <View key={item} style={[styles.liveAvatar, { marginLeft: item === 0 ? 0 : -10 }]}>
-                            <Ionicons name="person" size={12} color="#FFF" />
-                          </View>
-                        ))}
-                      </View>
+                      {metricas.ruleta + (metricas.activosRegion || 0) > 0 && (
+                        <View style={styles.avatarStack}>
+                          {[0, 1, 2].map((item) => (
+                            <View key={item} style={[styles.liveAvatar, { marginLeft: item === 0 ? 0 : -10 }]}>
+                              <Ionicons name="person" size={12} color="#FFF" />
+                            </View>
+                          ))}
+                        </View>
+                      )}
                       <Text style={styles.liveCount}>{formatearConteo(metricas.ruleta + (metricas.activosRegion || 0))} conectando</Text>
                     </View>
                   </View>
@@ -233,14 +238,21 @@ export default function ExplorarScreen({ navigation }) {
         {/* ── Funciones destacadas (grid) ── */}
         <View style={styles.featureRowScrollWrapper}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.featureRowContent}>
-            {features.map((item) => (
-              <TouchableOpacity key={item.title} style={styles.featurePill} onPress={() => navigation.navigate(item.route)} activeOpacity={0.85}>
-                <View style={[styles.featureIconWrap, { backgroundColor: item.color + '20' }]}>
-                  <Text style={{ fontSize: 16 }}>{item.emoji}</Text>
-                </View>
-                <Text style={styles.featureTitle} numberOfLines={1}>{item.title}</Text>
-              </TouchableOpacity>
-            ))}
+            {features.map((item) => {
+              let hasAlert = false;
+              if (item.title === 'Historias' && alertas.historias) hasAlert = true;
+              if (item.title === 'Cahuín' && alertas.cahuin) hasAlert = true;
+
+              return (
+                <TouchableOpacity key={item.title} style={styles.featurePill} onPress={() => navigation.navigate(item.route)} activeOpacity={0.85}>
+                  <View style={[styles.featureIconWrap, { backgroundColor: item.color + '20' }]}>
+                    <Ionicons name={item.icon} size={20} color={item.color} />
+                    {hasAlert && <View style={styles.alertBadge} />}
+                  </View>
+                  <Text style={styles.featureTitle} numberOfLines={1}>{item.title}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         </View>
 
@@ -433,6 +445,7 @@ const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
     ...(isDarkMode ? {} : SHADOWS.light)
   },
   featureIconWrap: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  alertBadge: { position: 'absolute', top: 0, right: 0, width: 10, height: 10, borderRadius: 5, backgroundColor: '#EF4444', borderWidth: 1, borderColor: '#FFF' },
   featureTitle: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '700' },
 
   // ── Secciones ──

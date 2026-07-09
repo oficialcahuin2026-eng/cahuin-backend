@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, Switch } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import { userService } from '../services/api';
@@ -8,6 +9,7 @@ import { useTheme } from '../context/ThemeContext';
 import { RADIUS, SPACING } from '../utils/theme';
 
 export default function PreferenciasModal({ visible, onClose, onSave }) {
+  const navigation = useNavigation();
   const { usuario, actualizarUsuario } = useAuth();
   const { COLORS, isDarkMode } = useTheme();
   const styles = getStyles(COLORS, isDarkMode);
@@ -136,7 +138,7 @@ export default function PreferenciasModal({ visible, onClose, onSave }) {
           <View style={styles.premiumCard}>
             <Text style={styles.premiumTitle}>Desbloquea más preferencias...</Text>
             <Text style={styles.premiumSub}>Elige tus Preferencias Premium para ver perfiles con los mismos intereses, signos y más.</Text>
-            <TouchableOpacity style={styles.premiumBtn}>
+            <TouchableOpacity style={styles.premiumBtn} onPress={() => { onClose(); navigation.navigate('Premium'); }}>
               <Text style={styles.premiumBtnText}>Desbloquear</Text>
             </TouchableOpacity>
           </View>

@@ -473,9 +473,26 @@ exports.getTrending = async (req, res) => {
     const miUsuario = await User.findById(req.user._id);
     if(!miUsuario) return res.json({ trending: [] });
     
-    const topPerfiles = await User.find({ region: miUsuario.region, _id: { $ne: miUsuario._id } })
-      .sort({ likesRecibidos: -1 }).limit(10).select('nombre foto edad ciudad likesRecibidos arquetipoCahuinero');
-    res.json({ trending: topPerfiles });
+    const scope = req.query.scope;
+    const query = { _id: { $ne: miUsuario._id } };
+    
+    if (scope !== 'nacional') {
+      query.region = miUsuario.region;
+    }
+    
+    const topPerfiles = await User.find(query)
+      .sort({ likesRecibidos: -1 }).limit(10).select('nombre foto edad ciudad likesRecibidos arquetipoCahuinero fotos');
+      
+    // Fix: if they don't have foto but have fotos[0], map it properly for the frontend
+    const results = topPerfiles.map(p => {
+      const obj = p.toObject();
+      if (!obj.foto && obj.fotos && obj.fotos.length > 0) {
+        obj.foto = obj.fotos[0];
+      }
+      return obj;
+    });
+
+    res.json({ trending: results });
   } catch (error) { res.status(500).json({ message: 'Error' }); }
 };
 

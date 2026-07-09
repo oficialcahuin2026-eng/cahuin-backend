@@ -25,6 +25,7 @@ import CahuinTextField from '../components/CahuinTextField';
 import { REGIONES_CHILE, normalizarTexto } from '../utils/chileLocations';
 import { detectarUbicacionChile, obtenerCoordenadasActuales, pedirPermisoUbicacion } from '../utils/location';
 import { FONTS, RADIUS, SHADOWS, SPACING } from '../utils/theme';
+import { useTheme } from '../context/ThemeContext';
 
 const DATOS = {
   generos: ['Hombre', 'Mujer', 'Más allá del binario'],
@@ -57,6 +58,8 @@ const calcularEdadOnboarding = (dia, mes, anio) => {
 
 export default function OnboardingScreen() {
   const { usuario, actualizarUsuario } = useAuth();
+  const { COLORS, isDarkMode } = useTheme();
+  const styles = getStyles(COLORS, isDarkMode);
 
   const [paso, setPaso] = useState(1);
   const [cargando, setCargando] = useState(false);
@@ -220,7 +223,7 @@ export default function OnboardingScreen() {
     <View style={styles.chipsGrid}>
       {lista.map((opcion) => (
         <TouchableOpacity key={opcion} style={[styles.chip, estado === opcion && styles.chipActive]} onPress={() => setEstado(opcion)}>
-          <Text style={[styles.chipText, estado === opcion && styles.optionTextActive]}>{opcion}</Text>
+          <Text style={[styles.chipText, estado === opcion && styles.chipTextActive]}>{opcion}</Text>
         </TouchableOpacity>
       ))}
     </View>
@@ -232,7 +235,7 @@ export default function OnboardingScreen() {
 
   return (
     <>
-    <LinearGradient colors={['#05070D', '#100B12', '#06070B']} style={styles.gradient}>
+    <View style={[styles.gradient, { backgroundColor: COLORS.bg }]}>
       <SafeAreaView style={styles.safe}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <View style={styles.container}>
@@ -472,7 +475,7 @@ export default function OnboardingScreen() {
         </View>
       </Modal>
 
-    </LinearGradient>
+    </View>
     <CahuinModal
       visible={!!modal}
       title={modal?.title}
@@ -484,39 +487,40 @@ export default function OnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
   gradient: { flex: 1 },
   safe: { flex: 1 },
   container: { flex: 1, paddingHorizontal: SPACING[5] },
   topBar: { flexDirection: 'row', alignItems: 'center', gap: 18, paddingTop: 10, marginBottom: 28 },
-  backButton: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.08)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
+  backButton: { width: 48, height: 48, borderRadius: 24, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)' },
   backSpacer: { width: 48 },
-  progressTrack: { flex: 1, height: 7, borderRadius: 8, backgroundColor: '#202735', overflow: 'hidden' },
+  progressTrack: { flex: 1, height: 7, borderRadius: 8, backgroundColor: isDarkMode ? '#202735' : '#E5E7EB', overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 8 },
   scrollContent: { paddingBottom: 34 },
-  title: { color: '#FFF', fontSize: 36, lineHeight: 43, fontWeight: '900', fontFamily: FONTS.display, marginTop: 22, letterSpacing: 0 },
-  titleAccent: { color: '#F0444F' },
-  subtitle: { color: '#8B95A7', fontSize: 17, lineHeight: 25, marginTop: 16, marginBottom: 22 },
-  label: { color: '#FFF', fontSize: 17, fontWeight: '900', marginTop: 24, marginBottom: 12 },
-  bigInput: { minHeight: 76, borderRadius: 24, backgroundColor: 'rgba(10,12,18,0.72)', borderWidth: 1.5, borderColor: '#F0444F', color: '#FFF', paddingHorizontal: 22, fontSize: 21, ...SHADOWS.light },
+  title: { color: COLORS.textPrimary, fontSize: 36, lineHeight: 43, fontWeight: '900', fontFamily: FONTS.display, marginTop: 22, letterSpacing: 0 },
+  titleAccent: { color: COLORS.primario },
+  subtitle: { color: COLORS.textMuted, fontSize: 17, lineHeight: 25, marginTop: 16, marginBottom: 22 },
+  label: { color: COLORS.textPrimary, fontSize: 17, fontWeight: '900', marginTop: 24, marginBottom: 12 },
+  bigInput: { minHeight: 76, borderRadius: 24, backgroundColor: COLORS.inputBg, borderWidth: 1.5, borderColor: COLORS.primario, color: COLORS.textPrimary, paddingHorizontal: 22, fontSize: 21, ...SHADOWS.light },
   bigInputModern: { borderRadius: 24 },
   phoneRow: { flexDirection: 'row', gap: 10 },
   prefixBox: { width: 92, alignItems: 'center', justifyContent: 'center' },
-  prefixText: { color: '#FFF', fontSize: 18, fontWeight: '900' },
-  photoBox: { height: 430, borderRadius: 28, backgroundColor: 'rgba(10,12,18,0.72)', borderWidth: 1.5, borderColor: '#F0444F', borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  prefixText: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '900' },
+  photoBox: { height: 430, borderRadius: 28, backgroundColor: COLORS.inputBg, borderWidth: 1.5, borderColor: COLORS.primario, borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
   photoPreview: { width: '100%', height: '100%' },
   optionsStack: { gap: 12, marginTop: 18 },
-  optionRow: { minHeight: 64, borderRadius: 18, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(255,255,255,0.055)', borderWidth: 1, borderColor: 'rgba(240,68,79,0.26)' },
-  optionRowActive: { borderColor: '#F71374', backgroundColor: 'rgba(240,68,79,0.24)' },
-  optionText: { color: '#FFF', fontSize: 17, fontWeight: '800' },
-  optionTextActive: { color: '#FFF' },
+  optionRow: { minHeight: 64, borderRadius: 18, paddingHorizontal: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.chipBg, borderWidth: 1, borderColor: isDarkMode ? 'rgba(240,68,79,0.26)' : 'rgba(0,0,0,0.1)' },
+  optionRowActive: { borderColor: COLORS.primario, backgroundColor: isDarkMode ? 'rgba(240,68,79,0.24)' : 'rgba(240,68,79,0.1)' },
+  optionText: { color: COLORS.textPrimary, fontSize: 17, fontWeight: '800' },
+  optionTextActive: { color: isDarkMode ? '#FFF' : COLORS.primario },
   chipsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  chip: { borderRadius: 22, minHeight: 48, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.055)', borderWidth: 1, borderColor: 'rgba(240,68,79,0.26)' },
-  chipActive: { backgroundColor: '#F0444F', borderColor: '#F71374' },
-  chipText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
+  chip: { borderRadius: 22, minHeight: 48, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.chipBg, borderWidth: 1, borderColor: isDarkMode ? 'rgba(240,68,79,0.26)' : 'rgba(0,0,0,0.1)' },
+  chipActive: { backgroundColor: COLORS.primario, borderColor: COLORS.primario },
+  chipText: { color: isDarkMode ? '#FFF' : COLORS.textPrimary, fontSize: 15, fontWeight: '800' },
+  chipTextActive: { color: '#FFF' },
   dateRow: { flexDirection: 'row', gap: 10, justifyContent: 'center', alignItems: 'center', marginTop: 24 },
-  dateInput: { width: 78, minHeight: 74, borderRadius: 20, backgroundColor: 'rgba(10,12,18,0.72)', borderWidth: 1.5, borderColor: '#F0444F', color: '#FFF', textAlign: 'center', fontSize: 22, fontWeight: '900' },
-  slash: { color: '#6B7280', fontSize: 30 },
+  dateInput: { width: 78, minHeight: 74, borderRadius: 20, backgroundColor: COLORS.inputBg, borderWidth: 1.5, borderColor: COLORS.primario, color: COLORS.textPrimary, textAlign: 'center', fontSize: 22, fontWeight: '900' },
+  slash: { color: COLORS.textMuted, fontSize: 30 },
   continueButton: { marginTop: 36, marginBottom: 20, borderRadius: 32, overflow: 'hidden', ...SHADOWS.medium },
   continueGradient: { height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },
   continueText: { color: '#FFF', fontSize: 19, fontWeight: '900' },

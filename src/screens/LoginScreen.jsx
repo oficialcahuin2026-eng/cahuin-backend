@@ -10,31 +10,26 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
 
-// 🌟 Importaciones nuevas de Clerk (y Linking para el retorno)
 import * as Linking from 'expo-linking';
-import { useSignIn, useOAuth } from '@clerk/clerk-expo';
+import { useOAuth } from '@clerk/clerk-expo';
 
-import CahuinTextField from '../components/CahuinTextField';
 import CahuinModal from '../components/CahuinModal';
 import CahuinLogo from '../components/CahuinLogo';
+import { useTheme } from '../context/ThemeContext';
 import { FONTS, RADIUS, SHADOWS, SPACING } from '../utils/theme';
 
 export default function LoginScreen({ navigation }) {
-  // 🌟 Hooks de Clerk para manejar la sesión
-  const { signIn, setActive, isLoaded } = useSignIn();
+  const { COLORS, isDarkMode } = useTheme();
+
+  // 🌟 Hooks de Clerk para OAuth
   const { startOAuthFlow: startGoogleOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
   const { startOAuthFlow: startAppleOAuthFlow } = useOAuth({ strategy: 'oauth_apple' });
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [cargando, setCargando] = useState(false);
   const [cargandoSocial, setCargandoSocial] = useState(null);
   const [modalInfo, setModalInfo] = useState(null);
 
-  // Calienta el navegador en segundo plano (Recomendado por Clerk para que abra más rápido en Android)
   useEffect(() => {
     void WebBrowser.warmUpAsync();
     return () => {
@@ -44,34 +39,6 @@ export default function LoginScreen({ navigation }) {
 
   const showModal = (title, message, accent = '#F0444F') => {
     setModalInfo({ title, message, emoji: '!', accent, tone: 'danger' });
-  };
-
-  const handleLogin = async () => {
-    if (!isLoaded) return;
-    
-    if (!email.trim() || !password) {
-      showModal('Faltan datos', 'Ingresa tu correo y contraseña.');
-      return;
-    }
-
-    setCargando(true);
-    try {
-      // 🌟 Iniciamos sesión con Clerk
-      const completeSignIn = await signIn.create({
-        identifier: email.trim().toLowerCase(),
-        password,
-      });
-
-      if (completeSignIn.status === 'complete') {
-        // Guardamos la sesión activa en el celular
-        await setActive({ session: completeSignIn.createdSessionId });
-      }
-    } catch (error) {
-      // Clerk devuelve los errores en un array 'errors'
-      showModal('Error', error.errors?.[0]?.message || 'Correo o contraseña incorrectos.');
-    } finally {
-      setCargando(false);
-    }
   };
 
   const loginSocial = async (red) => {
@@ -101,136 +68,127 @@ export default function LoginScreen({ navigation }) {
   };
 
   return (
-    <LinearGradient colors={['#05070D', '#120B12', '#09070B']} style={styles.gradient}>
-      <SafeAreaView style={styles.safe}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
-          <View style={styles.glow} />
-
-          <View style={styles.header}>
-            <CahuinLogo style={styles.brandRow} size={38} />
-            <Text style={styles.subtitle}>Ingresa a tu cuenta para ver qué está pasando cerca tuyo.</Text>
-          </View>
-
-          <View style={styles.form}>
-            <Field
-              icon="mail-outline"
-              placeholder="Correo electrónico"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
+    <SafeAreaView style={[styles.safe, { backgroundColor: COLORS.bg }]}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
+        <View style={styles.content}>
+          <View style={styles.heroSection}>
+            <CahuinLogo 
+              style={styles.brandRow} 
+              size={54} 
+              color={COLORS.textPrimary} 
             />
-            <Field
-              icon="lock-closed-outline"
-              placeholder="Contraseña"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
-            <TouchableOpacity onPress={handleLogin} disabled={cargando} style={styles.primaryButton}>
-              <LinearGradient colors={['#FF5A3C', '#F71374']} style={styles.primaryGradient}>
-                {cargando ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryText}>Iniciar sesión</Text>}
-              </LinearGradient>
-            </TouchableOpacity>
+            <Text style={[styles.subtitle, { color: COLORS.textMuted }]}>
+              Ingresa a tu cuenta para ver qué está pasando cerca tuyo.
+            </Text>
           </View>
 
-          <View style={styles.dividerRow}>
-            <View style={styles.line} />
-            <Text style={styles.dividerText}>o entra rápido con</Text>
-            <View style={styles.line} />
-          </View>
-
-          <View style={styles.socialRow}>
+          <View style={styles.buttonsContainer}>
             <TouchableOpacity
-              style={[styles.socialButton, { backgroundColor: '#FFF', flex: 1 }]}
+              style={[styles.socialButton, { backgroundColor: isDarkMode ? '#FFFFFF' : '#F2F2F2', borderWidth: isDarkMode ? 0 : 1, borderColor: '#E5E7EB' }]}
               onPress={() => loginSocial('Google')}
               disabled={!!cargandoSocial}
+              activeOpacity={0.8}
             >
               {cargandoSocial === 'Google' ? (
                 <ActivityIndicator color="#111827" />
               ) : (
-                <Ionicons name="logo-google" size={20} color="#DB4437" />
+                <Ionicons name="logo-google" size={24} color="#DB4437" />
               )}
-              <Text style={[styles.socialText, { color: '#111827' }]}>Google</Text>
+              <Text style={[styles.socialText, { color: '#111827' }]}>Continuar con Google</Text>
             </TouchableOpacity>
 
             {Platform.OS !== 'android' && (
               <TouchableOpacity
-                style={[styles.socialButton, { backgroundColor: '#FFF', flex: 1 }]}
+                style={[styles.socialButton, { backgroundColor: isDarkMode ? '#FFFFFF' : '#000000', marginTop: 16 }]}
                 onPress={() => loginSocial('Apple')}
                 disabled={!!cargandoSocial}
+                activeOpacity={0.8}
               >
                 {cargandoSocial === 'Apple' ? (
-                  <ActivityIndicator color="#111827" />
+                  <ActivityIndicator color={isDarkMode ? '#111827' : '#FFFFFF'} />
                 ) : (
-                  <Ionicons name="logo-apple" size={20} color="#111827" />
+                  <Ionicons name="logo-apple" size={24} color={isDarkMode ? '#111827' : '#FFFFFF'} />
                 )}
-                <Text style={[styles.socialText, { color: '#111827' }]}>Apple</Text>
+                <Text style={[styles.socialText, { color: isDarkMode ? '#111827' : '#FFFFFF' }]}>Continuar con Apple</Text>
               </TouchableOpacity>
             )}
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>¿No tienes cuenta? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={styles.footerLink}>Regístrate aquí</Text>
-            </TouchableOpacity>
+             <Text style={[styles.footerText, { color: COLORS.textMuted }]}>
+               Al continuar, aceptas nuestros{' '}
+             </Text>
+             <TouchableOpacity onPress={() => navigation.navigate('Terminos')}>
+               <Text style={[styles.footerLink, { color: COLORS.primario }]}>Términos y Condiciones</Text>
+             </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
+        </View>
+      </KeyboardAvoidingView>
 
-        <CahuinModal
-          visible={!!modalInfo}
-          title={modalInfo?.title}
-          message={modalInfo?.message}
-          emoji={modalInfo?.emoji}
-          accent={modalInfo?.accent}
-          tone={modalInfo?.tone}
-          onClose={() => setModalInfo(null)}
-        />
-      </SafeAreaView>
-    </LinearGradient>
+      <CahuinModal
+        visible={!!modalInfo}
+        title={modalInfo?.title}
+        message={modalInfo?.message}
+        emoji={modalInfo?.emoji}
+        accent={modalInfo?.accent}
+        tone={modalInfo?.tone}
+        onClose={() => setModalInfo(null)}
+      />
+    </SafeAreaView>
   );
 }
 
-function Field({ icon, ...props }) {
-  return <CahuinTextField icon={icon} {...props} />;
-}
-
 const styles = StyleSheet.create({
-  gradient: { flex: 1 },
   safe: { flex: 1 },
-  container: { flex: 1, padding: SPACING[5], justifyContent: 'center' },
-  glow: {
-    position: 'absolute',
-    top: 40,
-    left: -80,
-    width: 230,
-    height: 230,
-    borderRadius: 115,
-    backgroundColor: 'rgba(240,68,79,0.18)',
+  container: { flex: 1 },
+  content: { 
+    flex: 1, 
+    paddingHorizontal: SPACING[6], 
+    justifyContent: 'space-between',
+    paddingTop: 100,
+    paddingBottom: 40
   },
-  header: { alignItems: 'center', marginBottom: 34 },
-  brandRow: { marginBottom: 10 },
-  logo: { fontSize: 38, fontWeight: '900', color: '#FFF', fontFamily: FONTS.display },
-  subtitle: { fontSize: 15, color: '#8B95A7', textAlign: 'center', lineHeight: 22, paddingHorizontal: 18 },
-  form: { gap: 14 },
-  primaryButton: { marginTop: 8, borderRadius: 18, overflow: 'hidden', ...SHADOWS.medium },
-  primaryGradient: { height: 58, justifyContent: 'center', alignItems: 'center' },
-  primaryText: { color: '#FFF', fontSize: 17, fontWeight: '900' },
-  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 24 },
-  line: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.12)' },
-  dividerText: { color: '#8B95A7', fontSize: 13 },
-  socialRow: { flexDirection: 'row', gap: 12 },
+  heroSection: { 
+    alignItems: 'center', 
+    marginTop: 40 
+  },
+  brandRow: { 
+    marginBottom: 24 
+  },
+  subtitle: { 
+    fontSize: 17, 
+    textAlign: 'center', 
+    lineHeight: 26, 
+    paddingHorizontal: 10 
+  },
+  buttonsContainer: { 
+    width: '100%',
+    marginTop: 60,
+    marginBottom: 'auto'
+  },
   socialButton: {
-    height: 52,
-    borderRadius: RADIUS.lg,
+    height: 60,
+    borderRadius: RADIUS.xl,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: 14,
+    ...SHADOWS.medium,
   },
-  socialText: { color: '#FFF', fontSize: 15, fontWeight: '900' },
-  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 34 },
-  footerText: { color: '#8B95A7', fontSize: 14 },
-  footerLink: { color: '#F71374', fontSize: 14, fontWeight: '900' },
+  socialText: { 
+    fontSize: 18, 
+    fontWeight: '800' 
+  },
+  footer: { 
+    alignItems: 'center',
+    marginTop: 20
+  },
+  footerText: { 
+    fontSize: 13 
+  },
+  footerLink: { 
+    fontSize: 13, 
+    fontWeight: '800',
+    marginTop: 4
+  },
 });

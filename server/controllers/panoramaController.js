@@ -24,6 +24,18 @@ const inicioDeHoy = () => {
   return hoy;
 };
 
+// Genera un regex tolerante a tildes para buscar regiones en la BD
+const regexRegion = (region) => {
+  const r = normalizarRegionChile(region) || region;
+  return r
+    .replace(/[aá]/gi, '[aá]')
+    .replace(/[eé]/gi, '[eé]')
+    .replace(/[ií]/gi, '[ií]')
+    .replace(/[oó]/gi, '[oó]')
+    .replace(/[uú]/gi, '[uú]')
+    .replace(/[ñ]/gi, '[nñ]');
+};
+
 const eventosFallbackPorRegion = (region) => {
   const regionFinal = normalizarRegionChile(region || '') || inferirRegionPorCiudad(region || '') || region;
   return eventosOficiales
@@ -65,14 +77,24 @@ exports.listar = async (req, res) => {
   try {
     const { region, categoria, pagina = 1 } = req.query;
     await Panorama.updateMany(
-      { fecha: { $lt: inicioDeHoy() }, activo: { $ne: false } },
+      {
+        $or: [
+          { fechaFin: { $lt: inicioDeHoy() }, activo: { $ne: false } },
+          { fechaFin: { $exists: false }, fecha: { $lt: inicioDeHoy() }, activo: { $ne: false } }
+        ]
+      },
       { $set: { activo: false } }
     );
 
     const filtro = {
       $and: [
         { $or: [{ activo: true }, { activo: { $exists: false } }] },
-        { fecha: { $gte: inicioDeHoy() } }
+        {
+          $or: [
+            { fecha: { $gte: inicioDeHoy() } },
+            { fechaFin: { $gte: inicioDeHoy() } }
+          ]
+        }
       ]
     };
 
@@ -80,8 +102,8 @@ exports.listar = async (req, res) => {
 
     if (region) {
       // 🌟 BUSCADOR INTELIGENTE: Expande la búsqueda a TODA la región
-      let terminos = [new RegExp(region, 'i')];
-      if (regionNormalizada && regionNormalizada !== region) terminos.push(new RegExp(regionNormalizada, 'i'));
+      let terminos = [new RegExp(regexRegion(region), 'i')];
+      if (regionNormalizada && regionNormalizada !== region) terminos.push(new RegExp(regexRegion(regionNormalizada), 'i'));
       if (region === 'Santiago Centro') terminos.push(new RegExp('Santiago', 'i'));
 
       const regionBuscadaNorm = normalizarTexto(region);
@@ -117,12 +139,10 @@ exports.listar = async (req, res) => {
 
     let panoramas = await Panorama.find(filtro)
       .populate('creador', 'nombre foto region verificado')
-      .sort({ fecha: 1 }) // Cronológico: Los más próximos primero
-      .skip((pagina - 1) * 20).limit(40);
+      .sort({ fecha: 1 }); // Cronológico: Los más próximos primero
 
     if (region && panoramas.filter((p) => p.esOficial).length === 0 && (!categoria || categoria === 'Evento Oficial')) {
-      const inicio = (pagina - 1) * 20;
-      const fallback = eventosFallbackPorRegion(regionNormalizada || region).slice(inicio, inicio + 20);
+      const fallback = eventosFallbackPorRegion(regionNormalizada || region);
       panoramas = [...panoramas, ...fallback];
     }
 

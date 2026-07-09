@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet, Text, Platform, useWindowDimensions } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -9,7 +10,6 @@ import { useTheme } from '../context/ThemeContext';
 import { matchService, panoramaService, socialService, userService } from '../services/api';
 
 import LoginScreen from '../screens/LoginScreen';
-import RegisterScreen from '../screens/RegisterScreen';
 import TerminosScreen from '../screens/TerminosScreen';
 import HistoriasExitoScreen from '../screens/HistoriasExitoScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
@@ -51,7 +51,6 @@ function AuthNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="Terminos" component={TerminosScreen} />
       <Stack.Screen name="HistoriasExito" component={HistoriasExitoScreen} />
       <Stack.Screen name="MapaConexiones" component={MapaConexionesScreen} />
@@ -69,19 +68,48 @@ function MainTabs() {
 
   const checkBadges = async () => {
     try {
+      const lastVisits = {
+        Radar: Number(await AsyncStorage.getItem('@last_visit_Radar')) || 0,
+        Explorar: Number(await AsyncStorage.getItem('@last_visit_Explorar')) || 0,
+        Panoramas: Number(await AsyncStorage.getItem('@last_visit_Panoramas')) || 0,
+        Chat: Number(await AsyncStorage.getItem('@last_visit_Chat')) || 0,
+      };
+
       const [matchesRes, panoramasRes, cahuinRes] = await Promise.allSettled([
         matchService.getMisMatches(),
         panoramaService.listar({ region: usuario?.region }),
         socialService.getCahuinDia(),
       ]);
-      const newBadges = { Chat: 0, Panoramas: 0, Explorar: 0 };
-      if (matchesRes.status === 'fulfilled') newBadges.Chat = matchesRes.value.matches?.filter((m) => m.mensajesSinLeer > 0).length || 0;
-      if (panoramasRes.status === 'fulfilled') newBadges.Panoramas = panoramasRes.value.panoramas?.length || 0;
-      if (cahuinRes.status === 'fulfilled' && cahuinRes.value) newBadges.Explorar = 1;
+
+      const newBadges = { Chat: 0, Panoramas: 0, Explorar: 0, Radar: 0 };
+
+      if (matchesRes.status === 'fulfilled') {
+        newBadges.Chat = matchesRes.value.matches?.filter((m) => {
+          if (m.noLeidos > 0) return true;
+          const msgDate = new Date(m.fechaUltimoMensaje || 0).getTime();
+          return msgDate > lastVisits.Chat;
+        }).length || 0;
+      }
+      if (panoramasRes.status === 'fulfilled') {
+        newBadges.Panoramas = panoramasRes.value.panoramas?.filter(p => {
+          const pDate = new Date(p.createdAt || 0).getTime();
+          return pDate > lastVisits.Panoramas;
+        }).length || 0;
+      }
+      if (cahuinRes.status === 'fulfilled' && cahuinRes.value) {
+        const cDate = new Date(cahuinRes.value.createdAt || 0).getTime();
+        if (cDate > lastVisits.Explorar) newBadges.Explorar = 1;
+      }
+
       setBadges(newBadges);
     } catch (e) {
       console.log('Error badges:', e);
     }
+  };
+
+  const clearBadge = async (tabName) => {
+    setBadges(prev => ({ ...prev, [tabName]: 0 }));
+    await AsyncStorage.setItem(`@last_visit_${tabName}`, Date.now().toString());
   };
 
   useEffect(() => {
@@ -167,11 +195,11 @@ function MainTabs() {
         },
       })}
     >
-      <Tab.Screen name="Radar" component={HomeScreen} />
-      <Tab.Screen name="Explorar" component={ExplorarScreen} />
-      <Tab.Screen name="Panoramas" component={PanoramasScreen} />
-      <Tab.Screen name="Chat" component={ChatScreen} />
-      <Tab.Screen name="Perfil" component={PerfilScreen} />
+      <Tab.Screen name="Radar" component={HomeScreen} listeners={{ focus: () => clearBadge('Radar') }} />
+      <Tab.Screen name="Explorar" component={ExplorarScreen} listeners={{ focus: () => clearBadge('Explorar') }} />
+      <Tab.Screen name="Panoramas" component={PanoramasScreen} listeners={{ focus: () => clearBadge('Panoramas') }} />
+      <Tab.Screen name="Chat" component={ChatScreen} listeners={{ focus: () => clearBadge('Chat') }} />
+      <Tab.Screen name="Perfil" component={PerfilScreen} listeners={{ focus: () => clearBadge('Perfil') }} />
     </Tab.Navigator>
   );
 }

@@ -15,6 +15,7 @@ const Match = require('./models/Match');
 const Mensaje = require('./models/Mensaje');
 const Historia = require('./models/Historia');
 const Panorama = require('./models/Panorama');
+const CahuinDiario = require('./models/CahuinDiario');
 const cloudinary = require('./config/cloudinary');
 
 const app = express();
@@ -75,8 +76,10 @@ cron.schedule('0 3 * * *', async () => {
     // 2. Limpieza de Panoramas de usuarios vencidos hace más de 24 hrs
     const ayer = new Date(ahora.getTime() - 24 * 60 * 60 * 1000);
     const eventosVencidos = await Panorama.find({ 
-      fecha: { $lt: ayer },
-      esOficial: { $ne: true } 
+      $or: [
+        { fechaFin: { $lt: ayer } },
+        { fechaFin: { $exists: false }, fecha: { $lt: ayer } }
+      ]
     });
     for (let evento of eventosVencidos) {
       if (evento.imagen && evento.imagen.includes('cloudinary')) {
@@ -87,14 +90,41 @@ cron.schedule('0 3 * * *', async () => {
       }
     }
     const eventosBorrados = await Panorama.deleteMany({ 
-      fecha: { $lt: ayer },
-      esOficial: { $ne: true } 
+      $or: [
+        { fechaFin: { $lt: ayer } },
+        { fechaFin: { $exists: false }, fecha: { $lt: ayer } }
+      ]
     });
-    console.log(`🧹 ${eventosBorrados.deletedCount} panoramas de usuarios eliminados.`);
+    console.log(`🧹 ${eventosBorrados.deletedCount} panoramas (oficiales y comunidad) eliminados.`);
 
   } catch (e) {
     console.log('Error Limpieza:', e);
   }
+});
+
+// 🌟 CRON: CAHUÍN DEL DÍA CON IA (Se ejecuta a las 20:00 hrs)
+cron.schedule('0 20 * * *', async () => {
+  console.log('🗣️ Generando Cahuín del Día con Gemini...');
+  try {
+    if (!process.env.GEMINI_API_KEY) return;
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+    
+    const prompt = `Escribe un enunciado polémico, divertido o interesante sobre citas, amor, costumbres chilenas o vida cotidiana que sirva como "Cahuín del Día" para que usuarios de una app de citas en Chile voten "De acuerdo" o "Ni cagando". Debe ser de máximo 2 oraciones, con un tono relajado y chileno (pero sin exagerar). Ejemplo: "Mandar reels cuenta como lenguaje del amor." Responde SOLO con el enunciado, sin comillas.`;
+    const result = await model.generateContent(prompt);
+    const textoIA = result.response.text().trim().replace(/^"|"$/g, '');
+
+    const fechaChile = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' });
+    const fechaActual = fechaChile();
+    
+    // Upsert para no duplicar si se corre manualmente
+    await CahuinDiario.findOneAndUpdate(
+      { fecha: fechaActual },
+      { $setOnInsert: { fecha: fechaActual, texto: textoIA, autorAnonimo: 'Gemini (Inteligencia Cahuinera)' } },
+      { upsert: true, new: true }
+    );
+    console.log('✅ Cahuín del Día generado:', textoIA);
+  } catch (e) { console.log('Error Cron Cahuin:', e); }
 });
 
 // 🌟 IDEA 1: IA SALVA-CHATS (Se ejecuta todos los días a las 20:00 hrs)

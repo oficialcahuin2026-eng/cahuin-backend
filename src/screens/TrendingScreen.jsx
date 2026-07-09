@@ -10,16 +10,18 @@ export default function TrendingScreen({ navigation }) {
   const styles = getStyles(COLORS);
   const [trending, setTrending] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [scope, setScope] = useState('region');
 
   useEffect(() => {
     const fetchTrending = async () => {
+      setCargando(true);
       try {
-        const data = await userService.getTrending();
-        setTrending(data.trending);
+        const data = await userService.getTrending({ scope });
+        setTrending(data.trending || []);
       } catch (error) { console.log(error); } finally { setCargando(false); }
     };
     fetchTrending();
-  }, []);
+  }, [scope]);
 
   const renderItem = ({ item, index }) => (
     <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('OtroPerfil', { usuario: item })}>
@@ -47,7 +49,16 @@ export default function TrendingScreen({ navigation }) {
         <Text style={styles.headerTitulo}>Top Cahuines 🔥</Text>
         <View style={{ width: 26 }} />
       </View>
-      <Text style={styles.subtitulo}>Los perfiles más cotizados de tu región esta semana.</Text>
+      <Text style={styles.subtitulo}>Los perfiles más cotizados esta semana.</Text>
+
+      <View style={styles.tabsContainer}>
+        <TouchableOpacity style={[styles.tab, scope === 'region' && styles.tabActive]} onPress={() => setScope('region')}>
+          <Text style={[styles.tabText, scope === 'region' && styles.tabTextActive]}>Tu Región</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.tab, scope === 'nacional' && styles.tabActive]} onPress={() => setScope('nacional')}>
+          <Text style={[styles.tabText, scope === 'nacional' && styles.tabTextActive]}>Todo Chile</Text>
+        </TouchableOpacity>
+      </View>
 
       {cargando ? <ActivityIndicator size="large" color={COLORS.primario} style={{ marginTop: 50 }} /> : (
         <FlatList data={trending} keyExtractor={item => item._id} renderItem={renderItem} contentContainerStyle={styles.lista} />
@@ -70,5 +81,10 @@ const getStyles = (COLORS) => StyleSheet.create({
   ciudad: { fontSize: 13, color: COLORS.textMuted },
   arquetipo: { fontSize: 12, color: COLORS.primario, marginTop: 2, fontWeight: 'bold' },
   likesCaja: { alignItems: 'center', backgroundColor: 'rgba(229, 57, 53, 0.1)', padding: 10, borderRadius: 10 },
-  likesTexto: { color: COLORS.primario, fontWeight: 'bold', fontSize: 14, marginTop: 2 }
+  likesTexto: { color: COLORS.primario, fontWeight: 'bold', fontSize: 14, marginTop: 2 },
+  tabsContainer: { flexDirection: 'row', marginHorizontal: 20, marginBottom: 15, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20, padding: 4 },
+  tab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 16 },
+  tabActive: { backgroundColor: COLORS.primario },
+  tabText: { color: COLORS.textMuted, fontWeight: 'bold' },
+  tabTextActive: { color: '#FFF' }
 });

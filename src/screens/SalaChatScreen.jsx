@@ -54,7 +54,7 @@ export default function SalaChatScreen({ route, navigation }) {
   const [ratingSeleccionado, setRatingSeleccionado] = useState(0);
   const [enviandoRating, setEnviandoRating] = useState(false);
 
-  const [energiaChat, setEnergiaChat] = useState({ emoji: '❄️', estado: 'fría', nivel: 0 });
+  const [energiaChat, setEnergiaChat] = useState({ estado: 'fría', nivel: 0 });
   const [modalWingmanVisible, setModalWingmanVisible] = useState(false);
   const [consejoWingman, setConsejoWingman] = useState(null);
   const [cargandoWingman, setCargandoWingman] = useState(false);
@@ -75,7 +75,7 @@ export default function SalaChatScreen({ route, navigation }) {
   const socketRef = useRef(null);
   const piezasPuzzle = Math.min(9, Math.max(1, Math.floor((mensajes?.length || 0) / 10) + 1));
 
-  const avisar = (title, message, emoji = '🌶️', actions = []) => setModalCahuin({ title, message, emoji, actions });
+  const avisar = (title, message, emoji = '✨', actions = []) => setModalCahuin({ title, message, emoji, actions });
 
   useEffect(() => {
     cargarMensajesHistorial();
@@ -387,11 +387,7 @@ export default function SalaChatScreen({ route, navigation }) {
           <View>
             <Text style={styles.headerNombre}>{otroUsuario?.nombre || 'Anónimo'}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              {route.params?.esRuletaCiega ? (
-                <Text style={{ fontSize: 12, color: '#9C27B0', fontWeight: 'bold' }}>🎭 Cita a Ciegas</Text>
-              ) : (
-                <Text style={{ fontSize: 12, color: COLORS.textMuted }}>{textoActividad() || `${energiaChat.emoji} Energia ${energiaChat.estado}`}</Text>
-              )}
+                <Text style={{ fontSize: 12, color: COLORS.textMuted }}>{textoActividad() || `Energía ${energiaChat.estado}`}</Text>
             </View>
           </View>
         </TouchableOpacity>
@@ -414,7 +410,7 @@ export default function SalaChatScreen({ route, navigation }) {
         )}
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 80}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 20}>
         <FlatList
           ref={flatListRef}
           data={mensajes}
@@ -598,7 +594,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   destinoTexto: { fontSize: 13, color: COLORS.textPrimary, marginTop: 2, lineHeight: 18 },
 
   listContent: { padding: SPACING[4], gap: 10, paddingBottom: 96 }, 
-  puzzleCard: { backgroundColor: COLORS.tarjeta, borderRadius: 22, padding: SPACING[4], borderWidth: 1, borderColor: COLORS.border, marginBottom: 12, ...SHADOWS.light },
+  puzzleCard: { backgroundColor: COLORS.tarjeta, borderRadius: 22, padding: SPACING[4], marginBottom: 12, ...SHADOWS.light },
   puzzleTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   puzzleTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '900', fontFamily: FONTS.display },
   puzzleCount: { color: COLORS.primario, fontWeight: '900' },
@@ -609,31 +605,31 @@ const getStyles = (COLORS) => StyleSheet.create({
   midnightCard: { backgroundColor: '#10172A', borderRadius: 22, padding: SPACING[4], borderWidth: 1, borderColor: 'rgba(168,85,247,0.45)', marginBottom: 12 },
   midnightTitle: { color: '#C4B5FD', fontSize: 17, fontWeight: '900', fontFamily: FONTS.display },
   midnightText: { color: '#E5E7EB', fontSize: 13, lineHeight: 19, marginTop: 6 },
-  burbuja: { maxWidth: '78%', borderRadius: 20, padding: SPACING[3], paddingHorizontal: SPACING[4], ...SHADOWS.light },
-  burbujaPropia: { alignSelf: 'flex-end', backgroundColor: COLORS.primario, borderBottomRightRadius: 7 },
-  burbujaAjena: { alignSelf: 'flex-start', backgroundColor: COLORS.tarjeta, borderWidth: 1, borderColor: COLORS.border, borderBottomLeftRadius: 7 },
+  burbuja: { maxWidth: '78%', borderRadius: 20, padding: SPACING[3], paddingHorizontal: SPACING[4] },
+  burbujaPropia: { alignSelf: 'flex-end', backgroundColor: COLORS.primario },
+  burbujaAjena: { alignSelf: 'flex-start', backgroundColor: COLORS.tarjeta },
   textoMensaje: { fontSize: 16, lineHeight: 22 },
   textoPropio: { color: '#FFF' },
   textoAjeno: { color: COLORS.textPrimary },
   
-  btnWingman: { position: 'absolute', bottom: 85, right: 15, backgroundColor: '#9C27B0', width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', ...SHADOWS.lg, borderWidth: 2, borderColor: '#FFF' },
-  btnKaraoke: { position: 'absolute', bottom: 145, right: 15, backgroundColor: '#F0444F', width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', ...SHADOWS.lg, borderWidth: 2, borderColor: '#FFF' },
-  cajaConsejo: { backgroundColor: COLORS.fondo, padding: 15, borderRadius: RADIUS.md, marginBottom: 10, borderWidth: 1, borderColor: COLORS.border },
-  cajaOpener: { backgroundColor: 'rgba(156, 39, 176, 0.1)', padding: 15, borderRadius: RADIUS.md, marginBottom: 20, borderWidth: 1, borderColor: 'rgba(156, 39, 176, 0.3)' },
+  btnWingman: { position: 'absolute', bottom: 85, right: 15, backgroundColor: '#9C27B0', width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', ...SHADOWS.lg },
+  btnKaraoke: { position: 'absolute', bottom: 145, right: 15, backgroundColor: '#F0444F', width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', ...SHADOWS.lg },
+  cajaConsejo: { backgroundColor: 'rgba(0,0,0,0.03)', padding: 15, borderRadius: RADIUS.md, marginBottom: 10 },
+  cajaOpener: { backgroundColor: 'rgba(156, 39, 176, 0.1)', padding: 15, borderRadius: RADIUS.md, marginBottom: 20 },
   labelWingman: { fontSize: 12, fontWeight: 'bold', color: '#9C27B0', marginBottom: 5 },
   textoWingman: { fontSize: 15, color: COLORS.textPrimary, lineHeight: 22 },
 
-  inviteMessage: { maxWidth: '82%', borderRadius: 22, padding: SPACING[4], borderWidth: 1, marginVertical: 2, ...SHADOWS.light },
-  inviteMine: { alignSelf: 'flex-end', backgroundColor: COLORS.softRed, borderColor: 'rgba(240,68,79,0.25)' },
-  inviteOther: { alignSelf: 'flex-start', backgroundColor: COLORS.tarjeta, borderColor: COLORS.border },
+  inviteMessage: { maxWidth: '82%', borderRadius: 22, padding: SPACING[4], marginVertical: 2 },
+  inviteMine: { alignSelf: 'flex-end', backgroundColor: COLORS.softRed },
+  inviteOther: { alignSelf: 'flex-start', backgroundColor: COLORS.tarjeta },
   inviteHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   inviteLabel: { color: COLORS.primario, fontSize: 12, fontWeight: '900', textTransform: 'uppercase' },
   inviteText: { color: COLORS.textPrimary, fontSize: 15, lineHeight: 22, fontWeight: '700' },
   karaokeMessage: { maxWidth: '86%', borderRadius: 22, padding: SPACING[4], borderWidth: 1, marginVertical: 2, ...SHADOWS.light },
 
-  inputRow: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: SPACING[3], paddingVertical: 10, gap: 10, backgroundColor: COLORS.tarjeta, borderTopWidth: 1, borderTopColor: COLORS.border },
+  inputRow: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: SPACING[3], paddingVertical: 10, gap: 10, backgroundColor: 'transparent' },
   btnAttach: { marginBottom: 6, padding: 4 },
-  inputContainer: { flex: 1, minHeight: 44, maxHeight: 120, backgroundColor: COLORS.fondo, borderRadius: 22, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 16, justifyContent: 'center' },
+  inputContainer: { flex: 1, minHeight: 44, maxHeight: 120, backgroundColor: 'rgba(150,150,150,0.1)', borderRadius: 22, paddingHorizontal: 16, justifyContent: 'center' },
   inputText: { color: COLORS.textPrimary, fontSize: 16, paddingTop: 10, paddingBottom: 10 },
   btnVoice: { marginBottom: 6, padding: 8 },
   btnEnviar: { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.primario, justifyContent: 'center', alignItems: 'center', ...SHADOWS.sm, marginBottom: 2 },
