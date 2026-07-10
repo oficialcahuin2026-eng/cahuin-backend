@@ -72,13 +72,13 @@ IMPORTANTE: Responde ÚNICAMENTE con la tabla Markdown. No incluyas texto antes 
   try {
     const result = await model.generateContent(prompt);
     const text = result.response.text();
-    await parseAndSavePanoramas(text, region.nombre);
+    await parseAndSavePanoramas(text, region.nombre, region.nombreCorto);
   } catch (error) {
     console.error(`[Bot] Error obteniendo panoramas de ${region.nombre}:`, error.message);
   }
 };
 
-const parseAndSavePanoramas = async (markdown, regionName) => {
+const parseAndSavePanoramas = async (markdown, regionName, regionCorto) => {
   // Buscamos al "Usuario Sistema" para asignarle estos panoramas
   let systemUser = await User.findOne({ email: "bot@cahuin.cl" });
   if (!systemUser) {
@@ -132,7 +132,7 @@ const parseAndSavePanoramas = async (markdown, regionName) => {
         descripcion: descripcion,
         fecha: fecha,
         lugar: lugar,
-        region: regionName,
+        region: regionCorto, // Usar el nombre corto exacto que espera la App (ej: "Araucanía")
         privacidad: "Público",
         esOficial: true,
         categoria: clasificacion,
