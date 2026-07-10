@@ -184,13 +184,15 @@ export default function PremiumScreen({ navigation }) {
               <Text style={styles.compareHeaderCol}>Piola</Text>
               <Text style={[styles.compareHeaderCol, { color: '#F59E0B' }]}>A Fondo</Text>
             </View>
-            <CompareRow label="Likes diarios" free="5" piola="Ilimitados" full="Ilimitados" isText isDarkMode={isDarkMode} COLORS={COLORS} />
+            <CompareRow label="Likes diarios" free="30" piola="Ilimitados" full="Ilimitados" isText isDarkMode={isDarkMode} COLORS={COLORS} />
             <CompareRow label="Retroceder" free={false} piola={true} full={true} isDarkMode={isDarkMode} COLORS={COLORS} />
-            <CompareRow label="Ver quién te tinca" free={false} piola={false} full={true} isDarkMode={isDarkMode} COLORS={COLORS} />
-            <CompareRow label="La Pica" free={false} piola={false} full={true} isDarkMode={isDarkMode} COLORS={COLORS} />
+            <CompareRow label="Ver 'Le tinco'" free="Borroso" piola="50% Nítido" full="100% Nítido" isText isDarkMode={isDarkMode} COLORS={COLORS} />
+            <CompareRow label="La Pica (Likes)" free="1 al día" piola="Ilimitados" full="Ilimitados" isText isDarkMode={isDarkMode} COLORS={COLORS} />
+            <CompareRow label="La Pica (Superlikes)" free="0" piola="1 al día" full="Ilimitados" isText isDarkMode={isDarkMode} COLORS={COLORS} />
             <CompareRow label="Ruleta a Ciegas" free={false} piola={true} full={true} isDarkMode={isDarkMode} COLORS={COLORS} />
-            <CompareRow label="Modo Destacado" free={false} piola={false} full={true} isDarkMode={isDarkMode} COLORS={COLORS} />
-            <CompareRow label="Salvar Racha" free={false} piola={false} full={true} isDarkMode={isDarkMode} COLORS={COLORS} />
+            <CompareRow label="Doble Boost mensual" free={false} piola={false} full={true} isDarkMode={isDarkMode} COLORS={COLORS} />
+            <CompareRow label="Modo Fantasma" free={false} piola={false} full={true} isDarkMode={isDarkMode} COLORS={COLORS} />
+            <CompareRow label="Salvar Racha" free={false} piola={true} full={true} isDarkMode={isDarkMode} COLORS={COLORS} />
           </View>
 
           {purchasing ? <ActivityIndicator color="#F59E0B" style={{ marginTop: 20 }} /> : null}

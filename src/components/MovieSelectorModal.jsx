@@ -81,7 +81,7 @@ export default function MovieSelectorModal({ visible, onClose, selectedMovies = 
                     <>
                       <Image source={{ uri: movie.poster }} style={styles.slotImage} />
                       <TouchableOpacity style={styles.removeBadge} onPress={() => toggleMovie(movie)}>
-                        <Ionicons name="close" size={14} color="#FFF" />
+                        <Ionicons name="remove" size={14} color="#6B7280" />
                       </TouchableOpacity>
                     </>
                   ) : null}
@@ -113,8 +113,8 @@ export default function MovieSelectorModal({ visible, onClose, selectedMovies = 
                   activeOpacity={0.8}
                 >
                   <Image source={{ uri: movie.poster }} style={styles.moviePoster} />
-                  <View style={styles.addBadge}>
-                    <Ionicons name={isSelected ? "checkmark" : "add"} size={16} color="#FFF" />
+                  <View style={isSelected ? styles.selectedBadge : styles.addBadge}>
+                    <Ionicons name={isSelected ? "remove" : "add"} size={16} color={isSelected ? "#6B7280" : "#FFF"} />
                   </View>
                   <Text style={styles.movieTitle} numberOfLines={2}>{movie.titulo}</Text>
                 </TouchableOpacity>
@@ -181,11 +181,12 @@ const getStyles = (COLORS) => StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#000',
+    backgroundColor: '#FFF',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    ...SHADOWS.light,
   },
   searchBar: {
     flexDirection: 'row',
@@ -228,12 +229,28 @@ const getStyles = (COLORS) => StyleSheet.create({
     position: 'absolute',
     top: 6,
     right: 6,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.85)',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  selectedBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    ...SHADOWS.light,
   },
   movieTitle: {
     fontSize: 13,

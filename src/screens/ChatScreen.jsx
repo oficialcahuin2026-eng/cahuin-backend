@@ -3,21 +3,21 @@ import { ActivityIndicator, FlatList, Image, StyleSheet, Text, TouchableOpacity,
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { matchService, userService } from '../services/api';
+import { matchService, userService, panoramaService } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import {
   CahuinLogo, EmptyState, FilterPills,
-  InterestChip, OnlineDot, ScreenScaffold, SoftCard,
+  InterestChip, OnlineDot, ScreenScaffold, SoftCard, SegmentedControl
 } from '../components/CahuinUI';
-import { FONTS, RADIUS, SPACING } from '../utils/theme';
+import { FONTS, RADIUS, SPACING, SHADOWS } from '../utils/theme';
 
 const emptyChats = require('../assets/illustrations/empty-cahuines.png');
 
-// Sin emojis de interes
-
 export default function ChatScreen({ navigation }) {
+  const [tabActiva, setTabActiva] = useState('matches');
   const [matches, setMatches] = useState([]);
+  const [grupos, setGrupos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [likesData, setLikesData] = useState({ likes: [], topPicks: [], puedeRevelar: false, plan: 'free' });
   const [cargandoLikes, setCargandoLikes] = useState(false);
@@ -53,10 +53,14 @@ export default function ChatScreen({ navigation }) {
   const cargarMatches = async () => {
     try {
       setCargando(true);
-      const data = await matchService.getMisMatches();
-      setMatches(data.matches || []);
+      const [dataMatches, dataGrupos] = await Promise.all([
+        matchService.getMisMatches().catch(() => ({ matches: [] })),
+        panoramaService.listarMisGrupos().catch(() => ({ panoramas: [] }))
+      ]);
+      setMatches(dataMatches.matches || []);
+      setGrupos(dataGrupos.panoramas || []);
     } catch (error) {
-      console.log('Error cargando matches:', error);
+      console.log('Error cargando datos:', error);
     } finally {
       setCargando(false);
     }
@@ -112,35 +116,46 @@ export default function ChatScreen({ navigation }) {
       <View style={styles.carouselContainer}>
         <Text style={styles.carouselTitle}>Nuevos Cahuines</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carouselContent}>
-          
-          {/* Burbuja de Likes SIEMPRE visible */}
-          <TouchableOpacity activeOpacity={0.8} style={styles.carouselItem} onPress={() => navigation.navigate('LikesCahuin', { tab: 'likes' })}>
-            <View style={[styles.carouselBubble, styles.likesBubble]}>
-              <Image 
-                source={{ uri: likesData.likes[0]?.foto || 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200' }} 
-                style={styles.carouselPhoto} 
-                blurRadius={likesData.puedeRevelar ? 0 : 15}
-              />
-              <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={styles.carouselOverlay} />
-              <View style={styles.likesCountWrap}>
-                <Ionicons name="heart" size={14} color="#FFF" />
-                <Text style={styles.likesCountText}>{likesData.likes.length}</Text>
-              </View>
-              {!likesData.puedeRevelar && (
-                <View style={styles.lockOverlay}>
-                  <Ionicons name="lock-closed" size={18} color="#FFF" />
-                </View>
-              )}
+          {/* ── Premium Card: Te Tincan ── */}
+          <TouchableOpacity activeOpacity={0.9} style={[styles.premiumCard, { marginLeft: SPACING[5] }]} onPress={() => navigation.navigate('LikesCahuin', { tab: 'likes' })}>
+            <Image 
+              source={{ uri: likesData.likes[0]?.remitente?.foto || 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=200' }} 
+              style={styles.premiumCardBg} 
+              blurRadius={likesData.puedeRevelar ? 0 : 25}
+            />
+            <LinearGradient colors={['transparent', 'rgba(0,0,0,0.85)']} style={styles.premiumCardOverlay} />
+            
+            {!likesData.puedeRevelar && (
+               <View style={styles.premiumLockWrap}>
+                 <Ionicons name="lock-closed" size={16} color="#FFF" />
+               </View>
+            )}
+
+            <View style={styles.premiumCardContent}>
+               <View style={styles.premiumIconBox}>
+                 <Ionicons name="heart" size={16} color="#F0444F" />
+               </View>
+               <View style={{ marginLeft: 10, flex: 1 }}>
+                 <Text style={styles.premiumCardTitle}>Le Tincas</Text>
+                 <Text style={styles.premiumCardSubtitle}>{likesData.likes.length} personas</Text>
+               </View>
             </View>
-            <Text style={styles.carouselLabel} numberOfLines={1}>Te Tincan</Text>
           </TouchableOpacity>
 
-          {/* Burbuja de La Pica SIEMPRE visible */}
-          <TouchableOpacity activeOpacity={0.8} style={styles.carouselItem} onPress={() => navigation.navigate('LikesCahuin', { tab: 'pica' })}>
-            <LinearGradient colors={['#3B82F6', '#8B5CF6']} style={[styles.carouselBubble, styles.picaBubble, { alignItems: 'center', justifyContent: 'center' }]}>
-              <Ionicons name="diamond" size={32} color="#FFF" />
-            </LinearGradient>
-            <Text style={styles.carouselLabel} numberOfLines={1}>La Pica</Text>
+          {/* ── Premium Card: La Pica ── */}
+          <TouchableOpacity activeOpacity={0.9} style={styles.premiumCard} onPress={() => navigation.navigate('LikesCahuin', { tab: 'pica' })}>
+            <LinearGradient colors={['#1E293B', '#0F172A']} style={styles.premiumCardBg} />
+            <LinearGradient colors={['rgba(96,165,250,0.15)', 'transparent']} style={styles.premiumCardOverlay} />
+            
+            <View style={styles.premiumCardContent}>
+               <View style={[styles.premiumIconBox, { backgroundColor: 'rgba(96,165,250,0.15)' }]}>
+                 <Ionicons name="diamond" size={16} color="#60A5FA" />
+               </View>
+               <View style={{ marginLeft: 10, flex: 1 }}>
+                 <Text style={styles.premiumCardTitle}>La Pica</Text>
+                 <Text style={styles.premiumCardSubtitle}>Perfiles top</Text>
+               </View>
+            </View>
           </TouchableOpacity>
 
         </ScrollView>
@@ -217,6 +232,33 @@ export default function ChatScreen({ navigation }) {
     );
   };
 
+  const renderGrupo = ({ item }) => {
+    const isCreador = item.creador?._id === usuario?._id;
+    const ultimoMensaje = item.mensajesGrupo?.[item.mensajesGrupo.length - 1];
+    
+    return (
+      <TouchableOpacity 
+        style={styles.matchCard} 
+        activeOpacity={0.7} 
+        onPress={() => navigation.navigate('SalaChatGrupo', { panorama: item })}
+      >
+        <View style={styles.fotoContainer}>
+          <Image source={{ uri: item.imagen || item.creador?.foto || 'https://via.placeholder.com/150' }} style={styles.foto} />
+        </View>
+
+        <View style={styles.matchInfo}>
+          <View style={styles.nameRow}>
+            <Text style={styles.nombre} numberOfLines={1}>{item.titulo}</Text>
+            {isCreador && <Ionicons name="star" size={14} color={COLORS.doradoPremium} />}
+          </View>
+          <Text style={styles.preview} numberOfLines={1}>
+            {ultimoMensaje ? `${ultimoMensaje.remitente?.nombre || 'Alguien'}: ${ultimoMensaje.texto}` : 'No hay mensajes aún'}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   if (cargando) {
     return (
       <ScreenScaffold COLORS={COLORS} scroll={false}>
@@ -227,36 +269,49 @@ export default function ChatScreen({ navigation }) {
     );
   }
 
+  const isEmpty = tabActiva === 'matches' ? matches.length === 0 : grupos.length === 0;
+
   return (
-    <ScreenScaffold COLORS={COLORS} scroll={matches.length === 0}>
+    <ScreenScaffold COLORS={COLORS} scroll={isEmpty}>
       <View style={{ height: 20 }} />
 
-      {renderLikesCarousel()}
+      {tabActiva === 'matches' && renderLikesCarousel()}
 
       <View style={{ paddingHorizontal: SPACING[5] }}>
-        <Text style={styles.mensajesTitle}>Mensajes</Text>
-        {/* ── Filtros ── */}
-        <FilterPills options={filtroOptions} value={filtro} onChange={setFiltro} COLORS={COLORS} />
+        <Text style={styles.mensajesTitle}>Chats</Text>
+        
+        <SegmentedControl 
+          options={[
+            { value: 'matches', label: 'Matches', icon: 'chatbubbles' },
+            { value: 'grupos', label: 'Grupos', icon: 'people' }
+          ]} 
+          value={tabActiva}
+          onChange={(val) => setTabActiva(val)}
+          COLORS={COLORS}
+        />
+
+        {tabActiva === 'matches' && (
+          <View style={{ marginTop: 10 }}>
+            <FilterPills options={filtroOptions} value={filtro} onChange={setFiltro} COLORS={COLORS} />
+          </View>
+        )}
       </View>
 
-      {matches.length === 0 ? (
-        <EmptyState
-          COLORS={COLORS}
-          image={emptyChats}
-          title="Todavía no hay matches."
-          subtitle="Sigue deslizando para encontrar con quién cahuinear."
-          imageStyle={styles.emptyImage}
-          tip={{
-            icon: 'flame-outline',
-            title: 'Tip Cahuín',
-            text: 'Sé tú mismo, sé auténtico y la conversación correcta llegará.',
-          }}
-        />
+      {isEmpty ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: 10, paddingBottom: 60 }}>
+          <Image source={emptyChats} style={{ width: 340, height: 340, resizeMode: 'contain', marginBottom: 16 }} />
+          <Text style={{ fontSize: 24, fontWeight: '900', fontFamily: FONTS.display, color: COLORS.textPrimary, textAlign: 'center', marginBottom: 12 }}>
+            {tabActiva === 'matches' ? 'Sin cahuines nuevos' : 'Sin panoramas activos'}
+          </Text>
+          <Text style={{ fontSize: 16, color: COLORS.textSecondary, textAlign: 'center', paddingHorizontal: 32 }}>
+            {tabActiva === 'matches' ? 'No te desanimes, ¡sigue haciendo swipe!' : 'Anótate en un panorama de la comunidad o crea el tuyo.'}
+          </Text>
+        </View>
       ) : (
         <FlatList
-          data={matchesFiltrados}
-          keyExtractor={(item) => item.roomId}
-          renderItem={renderMatch}
+          data={tabActiva === 'matches' ? matchesFiltrados : grupos}
+          keyExtractor={(item) => tabActiva === 'matches' ? item.roomId : item._id}
+          renderItem={tabActiva === 'matches' ? renderMatch : renderGrupo}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.lista}
         />
@@ -295,67 +350,60 @@ const getStyles = (COLORS) => StyleSheet.create({
     paddingHorizontal: SPACING[5],
     gap: 16,
   },
-  carouselItem: {
-    alignItems: 'center',
-    width: 80,
-  },
-  carouselBubble: {
-    width: 80,
-    height: 100,
-    borderRadius: 16,
+  premiumCard: {
+    width: 170,
+    height: 90,
+    borderRadius: 20,
     overflow: 'hidden',
     backgroundColor: COLORS.tarjeta,
-    marginBottom: 8,
-    position: 'relative',
-    borderWidth: 2,
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    justifyContent: 'flex-end',
+    ...SHADOWS.light,
   },
-  likesBubble: {
-    borderColor: '#A855F7',
-  },
-  picaBubble: {
-    borderColor: '#FFD166',
-  },
-  carouselPhoto: {
+  premiumCardBg: {
+    ...StyleSheet.absoluteFillObject,
     width: '100%',
     height: '100%',
-    position: 'absolute',
   },
-  carouselOverlay: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '60%',
-  },
-  likesCountWrap: {
-    position: 'absolute',
-    bottom: 8,
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  likesCountText: {
-    color: '#FFF',
-    fontWeight: '900',
-    fontSize: 15,
-  },
-  picaIconWrap: {
-    position: 'absolute',
-    bottom: 8,
-    alignSelf: 'center',
-  },
-  lockOverlay: {
+  premiumCardOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(17,24,39,0.3)',
+  },
+  premiumLockWrap: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(17,24,39,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  carouselLabel: {
-    color: COLORS.textPrimary,
-    fontSize: 13,
-    fontWeight: '800',
-    textAlign: 'center',
+  premiumCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+  },
+  premiumIconBox: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  premiumCardTitle: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '900',
+    fontFamily: FONTS.display,
+  },
+  premiumCardSubtitle: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    marginTop: 2,
   },
 
   // ── Header ──

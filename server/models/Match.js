@@ -4,6 +4,7 @@ const matchSchema = new mongoose.Schema({
   remitente: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   receptor:  { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   tipo: { type: String, enum: ['like', 'dislike', 'superlike', 'relampago'], required: true },
+  origen: { type: String, enum: ['radar', 'pica'], default: 'radar' },
 
   respuestasRemitente: { type: [String], default: [] },
   respuestasReceptor:  { type: [String], default: [] },

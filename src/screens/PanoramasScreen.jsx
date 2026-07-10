@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   ActivityIndicator,
   Image,
@@ -50,6 +51,7 @@ import { FONTS, SHADOWS, SPACING } from '../utils/theme';
 const emptyPanoramas = require('../assets/illustrations/empty-panoramas.png');
 
 const REGIONES_CHILE = [
+  'Todas',
   'Arica y Parinacota', 'Tarapacá', 'Antofagasta', 'Atacama', 'Coquimbo',
   'Valparaíso', 'Metropolitana', "O'Higgins", 'Maule', 'Ñuble',
   'Bío Bío', 'Araucanía', 'Los Ríos', 'Los Lagos', 'Aysén', 'Magallanes',
@@ -133,9 +135,11 @@ export default function PanoramasScreen({ navigation }) {
 
   const avisar = (title, message, emoji = '✨', extra = {}) => setModalInfo({ title, message, emoji, ...extra });
 
-  useEffect(() => {
-    cargarTodo();
-  }, [usuario?.viaje?.ciudadDestino, regionOficial]);
+  useFocusEffect(
+    useCallback(() => {
+      cargarTodo();
+    }, [usuario?.viaje?.ciudadDestino, regionOficial])
+  );
 
   const cargarTodo = async () => {
     try {
@@ -150,9 +154,9 @@ export default function PanoramasScreen({ navigation }) {
 
       const regionLocal = usuario?.viaje?.ciudadDestino || usuario?.ciudad || usuario?.region || 'Metropolitana';
       
-      const [resComunidad, resOficiales, resMatches] = await Promise.all([
+      const resOficiales = await panoramaService.listar({ region: regionOficial === 'Todas' ? '' : regionOficial }).catch(() => ({ panoramas: [] }));
+      const [resComunidad, resMatches] = await Promise.all([
         panoramaService.listar({ region: regionLocal }).catch(() => ({ panoramas: [] })),
-        panoramaService.listar({ region: regionOficial }).catch(() => ({ panoramas: [] })),
         matchService.getMisMatches().catch(() => ({ matches: [] }))
       ]);
 
@@ -281,31 +285,52 @@ export default function PanoramasScreen({ navigation }) {
     );
   };
 
-  const renderCommunityCard = (item, index) => (
-    <View key={item._id || index}>
-      <View style={styles.communityCard}>
-        <View style={styles.communityIconBox}>
-        <Ionicons name="map" size={28} color="#FF6B45" />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.communityTitle}>{item.titulo}</Text>
-        <Text style={styles.communityDesc} numberOfLines={1}>{item.descripcion}</Text>
-        <TouchableOpacity style={styles.communityMetaRow} onPress={() => abrirMapa(item.lugar, usuario?.viaje?.ciudadDestino || usuario?.region)}>
-          <Ionicons name="location" size={14} color="#FF6B45" />
-          <Text style={styles.communityMetaText} numberOfLines={1}>{item.lugar} · {fechaCorta(item.fecha)}</Text>
-        </TouchableOpacity>
-        <View style={styles.groupHint}>
-          <Ionicons name="people" size={14} color="#FF6B45" />
-          <Text style={styles.groupHintText}>{item.participantes?.length || 0} anotados · el creador ve la lista</Text>
+  const renderCommunityCard = (item, index) => {
+    const isCreador = item.creador?._id === usuario?._id || item.creador === usuario?._id;
+    const isParticipant = item.participantes?.some(id => id._id === usuario?._id || id === usuario?._id);
+    const hasRequested = item.solicitudes?.some(id => id._id === usuario?._id || id === usuario?._id);
+
+    return (
+      <View key={item._id || index}>
+        <View style={styles.communityCard}>
+          <View style={styles.communityIconBox}>
+            <Ionicons name="map" size={28} color="#FF6B45" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.communityTitle}>{item.titulo}</Text>
+            <Text style={styles.communityDesc} numberOfLines={1}>{item.descripcion}</Text>
+            <TouchableOpacity style={styles.communityMetaRow} onPress={() => abrirMapa(item.lugar, usuario?.viaje?.ciudadDestino || usuario?.region)}>
+              <Ionicons name="location" size={14} color="#FF6B45" />
+              <Text style={styles.communityMetaText} numberOfLines={1}>{item.lugar} · {fechaCorta(item.fecha)}</Text>
+            </TouchableOpacity>
+            <View style={styles.groupHint}>
+              <Ionicons name="people" size={14} color="#FF6B45" />
+              <Text style={styles.groupHintText}>{item.participantes?.length || 0} anotados {item.privacidad !== 'Público' ? '· Privado' : '· Público'}</Text>
+            </View>
+          </View>
+          
+          {isCreador ? (
+            <TouchableOpacity style={[styles.joinButton, { backgroundColor: COLORS.doradoPremium }]} onPress={() => navigation.navigate('Chat', { screen: 'SalaChatGrupo', params: { panorama: item } })}>
+              <Text style={styles.joinButtonText}>Gestionar</Text>
+            </TouchableOpacity>
+          ) : isParticipant ? (
+            <TouchableOpacity style={[styles.joinButton, { backgroundColor: COLORS.success }]} disabled>
+              <Text style={styles.joinButtonText}>Listo ✅</Text>
+            </TouchableOpacity>
+          ) : hasRequested ? (
+            <TouchableOpacity style={[styles.joinButton, { backgroundColor: COLORS.textMuted }]} disabled>
+              <Text style={styles.joinButtonText}>Pendiente</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.joinButton} onPress={() => handleUnirse(item._id)}>
+              <Text style={styles.joinButtonText}>Me anoto</Text>
+            </TouchableOpacity>
+          )}
         </View>
+        <Divider COLORS={COLORS} />
       </View>
-      <TouchableOpacity style={styles.joinButton} onPress={() => handleUnirse(item._id)}>
-        <Text style={styles.joinButtonText}>Me anoto</Text>
-      </TouchableOpacity>
-    </View>
-    <Divider COLORS={COLORS} />
-  </View>
-  );
+    );
+  };
 
   return (
     <ScreenScaffold COLORS={COLORS}>
@@ -359,19 +384,22 @@ export default function PanoramasScreen({ navigation }) {
       {cargando ? (
         <ActivityIndicator size="large" color={COLORS.primario} style={{ marginTop: 80 }} />
       ) : listaActual.length === 0 ? (
-        <EmptyState
-          COLORS={COLORS}
-          image={emptyPanoramas}
-          title={tabActiva === 'eventos' ? 'No hay eventos todavía' : 'No hay panoramas todavía'}
-          subtitle={tabActiva === 'eventos'
-            ? 'Prueba otra región o vuelve más tarde para descubrir carteleras nuevas.'
-            : 'Los mejores panoramas nacen de la comunidad. Inventa uno tú y ayuda a otros a descubrirlo.'}
-          action={tabActiva === 'comunidad' ? (
-            <GradientButton icon="add" style={{ width: '100%', marginTop: 28 }} onPress={() => navigation.navigate('CrearPanorama')}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: 30, paddingBottom: 60 }}>
+          <Image source={emptyPanoramas} style={{ width: 340, height: 340, resizeMode: 'contain', marginBottom: 16 }} />
+          <Text style={{ fontSize: 24, fontWeight: '900', fontFamily: FONTS.display, color: COLORS.textPrimary, textAlign: 'center', marginBottom: 12 }}>
+            {tabActiva === 'eventos' ? 'Cero Movimiento' : 'Nada por aquí'}
+          </Text>
+          <Text style={{ fontSize: 16, color: COLORS.textMuted, textAlign: 'center', paddingHorizontal: 32, lineHeight: 24, marginBottom: 32 }}>
+            {tabActiva === 'eventos'
+              ? 'Parece que no hay movidas oficiales por acá todavía. Échale un ojo a otra región o vuelve más ratito.'
+              : 'La cosa está media muerta por acá. ¡Ponte la capa y ármate un buen carrete o panorama!'}
+          </Text>
+          {tabActiva === 'comunidad' && (
+            <GradientButton icon="add" style={{ width: '80%' }} onPress={() => navigation.navigate('CrearPanorama')}>
               Crear Panorama
             </GradientButton>
-          ) : null}
-        />
+          )}
+        </View>
       ) : (
         <>
           {tabActiva === 'eventos' ? (
@@ -555,8 +583,8 @@ const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
   modernHeaderSub: { color: COLORS.textMuted, fontSize: 15, marginTop: 4, marginBottom: 20 },
   modernRegionSelector: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.06)' : COLORS.inputBg, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 16, alignSelf: 'flex-start', marginBottom: 20, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.08)' : COLORS.border },
   modernRegionText: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '800' },
-  categoriesScroll: { marginBottom: 24, paddingBottom: 4 },
-  categoriesContainer: { gap: 10, paddingRight: 20 },
+  categoriesScroll: { marginBottom: 24, paddingBottom: 4, flexGrow: 0 },
+  categoriesContainer: { gap: 10, paddingRight: 20, alignItems: 'center' },
   categoryPill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : COLORS.border, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.04)' : COLORS.tarjeta },
   categoryPillActive: { backgroundColor: 'rgba(240,68,79,0.15)', borderColor: 'rgba(240,68,79,0.4)' },
   categoryPillText: { color: COLORS.textMuted, fontSize: 14, fontWeight: '700' },

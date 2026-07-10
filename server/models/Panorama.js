@@ -15,7 +15,9 @@ const panoramaSchema = new mongoose.Schema({
   imagen: { type: String }, // 🌟 NUEVO: Para el afiche del concierto
 
   maxPersonas: { type: Number, default: 100 },
+  privacidad: { type: String, enum: ['Público', 'Amigos', 'Solo invitación'], default: 'Público' },
   participantes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  solicitudes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   mensajesGrupo: [{
     remitente: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     texto: { type: String, required: true },

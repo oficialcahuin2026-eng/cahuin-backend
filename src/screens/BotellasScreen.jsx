@@ -107,8 +107,8 @@ export default function BotellasScreen({ navigation }) {
 
             <View style={styles.hero}>
               <View style={styles.heroIconWrap}><Ionicons name="water-outline" size={62} color={COLORS.primario} /></View>
-              <Text style={styles.heroTitle}>Lanza un cahuín a cualquier chileno</Text>
-              <Text style={styles.heroText}>Sin match, sin presión. Si alguien conecta con lo que escribiste, te puede responder.</Text>
+              <Text style={styles.heroTitle}>Lanza un cahuín por todo Chile</Text>
+              <Text style={styles.heroText}>Cero presión, cero compromisos. Si a alguien le tinca lo que escribiste, te va a responder y se arma la conversa.</Text>
             </View>
 
             <View style={styles.card}>
@@ -119,10 +119,10 @@ export default function BotellasScreen({ navigation }) {
                 icon="water-outline"
                 multiline
                 variant="textarea"
-                placeholder="Ej: Hoy vi una micro llena de gente y pensé que todos vamos cargando una historia..."
+                placeholder="Ej: Iba en la micro llena de gente y caché que todos andan en su propia volá..."
               />
               <TouchableOpacity style={styles.primaryButton} onPress={lanzar} disabled={enviando}>
-                {enviando ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryText}>Lanzar al mar digital</Text>}
+                {enviando ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryText}>Tirar botella al mar digital</Text>}
               </TouchableOpacity>
             </View>
 

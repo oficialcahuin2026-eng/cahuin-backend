@@ -27,6 +27,7 @@ import PremiumScreen from '../screens/PremiumScreen';
 import LikesCahuinScreen from '../screens/LikesCahuinScreen';
 import VerificacionScreen from '../screens/VerificacionScreen';
 import SalaChatScreen from '../screens/SalaChatScreen';
+import SalaChatGrupoScreen from '../screens/SalaChatGrupoScreen';
 import OtroPerfilScreen from '../screens/OtroPerfilScreen';
 import RompehieloScreen from '../screens/RompehieloScreen';
 import TestCahuineroScreen from '../screens/TestCahuineroScreen';
@@ -245,6 +246,7 @@ function MainNavigator() {
       <Stack.Screen name="Premium" component={PremiumScreen} />
       <Stack.Screen name="LikesCahuin" component={LikesCahuinScreen} />
       <Stack.Screen name="SalaChat" component={SalaChatScreen} />
+      <Stack.Screen name="SalaChatGrupo" component={SalaChatGrupoScreen} />
       <Stack.Screen name="OtroPerfil" component={OtroPerfilScreen} />
       <Stack.Screen name="Rompehielo" component={RompehieloScreen} />
       <Stack.Screen name="TestCahuinero" component={TestCahuineroScreen} />

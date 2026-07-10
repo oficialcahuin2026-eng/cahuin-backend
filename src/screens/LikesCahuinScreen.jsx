@@ -14,12 +14,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { userService } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { ScreenScaffold } from '../components/CahuinUI';
 import { FONTS, SPACING, SHADOWS } from '../utils/theme';
 import { PLAN_REVELA_LIKES } from '../config/economia';
 
 const TABS = [
-  { key: 'likes', label: 'Me tincaron', icon: 'heart' },
+  { key: 'likes', label: 'Le tinco', icon: 'heart' },
   { key: 'pica', label: 'La Pica', icon: 'sparkles' },
 ];
 
@@ -68,15 +69,23 @@ export default function LikesCahuinScreen({ navigation, route }) {
     }, [])
   );
 
-  const puedeRevelar = data.puedeRevelar || PLAN_REVELA_LIKES.includes(data.plan);
+  const { usuario } = useAuth();
+  const esA_Fondo = usuario?.premiumPlan === 'a_fondo' || usuario?.premiumPlan === 'gold' || usuario?.premiumPlan === 'platinum';
+  const esPiola = usuario?.premiumPlan === 'piola' || usuario?.premiumPlan === 'plus';
+  const countToReveal = esA_Fondo ? data.likes.length : (esPiola ? Math.ceil(data.likes.length / 2) : 0);
+
   const lista = tab === 'likes' ? data.likes : data.topPicks;
   const tituloCTA = tab === 'likes' ? 'Sapear quien te tinca' : 'Desbloquear La Pica';
   const bajadaCTA = tab === 'likes'
     ? 'Con Cahuín a Fondo ves los nombres, fotos y ciudad de quienes te dieron like.'
     : 'La Pica muestra una seleccion diaria de perfiles con mas onda cerca de ti.';
 
-  const abrirPerfil = (item) => {
-    if (!puedeRevelar) {
+  const abrirPerfil = (item, isPica, puedeRevelarItem) => {
+    if (isPica) {
+      if (item?._id) navigation.navigate('OtroPerfil', { id: item._id, userId: item._id, origen: 'pica' });
+      return;
+    }
+    if (!puedeRevelarItem) {
       navigation.navigate('Premium');
       return;
     }
@@ -118,32 +127,49 @@ export default function LikesCahuinScreen({ navigation, route }) {
       ) : (
         <>
           <View style={styles.grid}>
-            {lista.map((item, index) => (
-              <TouchableOpacity key={`${item._id || index}-${tab}`} activeOpacity={0.9} style={styles.tile} onPress={() => abrirPerfil(item)}>
+            {lista.map((item, index) => {
+              const fotoUrl = item.foto || 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?q=80&w=500';
+              const isPica = tab === 'pica';
+              const itemPuedeRevelar = isPica ? true : index < countToReveal;
+              
+              return (
+              <TouchableOpacity key={`${item._id || index}-${tab}`} activeOpacity={0.9} style={styles.tile} onPress={() => abrirPerfil(item, isPica, itemPuedeRevelar)}>
                 <Image
-                  source={{ uri: item.foto || 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?q=80&w=500' }}
+                  source={{ uri: fotoUrl }}
                   style={styles.photo}
-                  blurRadius={puedeRevelar ? 0 : 20}
+                  blurRadius={itemPuedeRevelar ? 0 : 30}
                 />
-                <LinearGradient colors={['transparent', 'rgba(0,0,0,0.82)']} style={styles.overlay} />
-                <View style={styles.tileInfo}>
-                  <View style={styles.nameRow}>
-                    <Text style={styles.name} numberOfLines={1}>
-                      {puedeRevelar ? `${item.nombre || 'Cahuin'}, ${item.edad || ''}` : `${item.edad || '??'}`}
+                
+                {/* Gradiente siempre presente para dar contraste al texto */}
+                <LinearGradient colors={['transparent', itemPuedeRevelar ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.5)']} style={styles.overlay} />
+
+                {/* Contenido cuando ES PREMIUM o se puede revelar */}
+                {itemPuedeRevelar ? (
+                  <View style={styles.tileInfo}>
+                    <View style={styles.nameRow}>
+                      <Text style={styles.name} numberOfLines={1}>
+                        {item.nombre || 'Cahuin'}, {item.edad || ''}
+                      </Text>
+                      {item.verificado ? (
+                        <MaterialCommunityIcons name="check-decagram" size={16} color="#93C5FD" />
+                      ) : null}
+                    </View>
+                    <Text style={[styles.meta, item.tipo === 'superlike' && { color: '#60A5FA', fontWeight: '800' }]} numberOfLines={1}>
+                      {item.activoReciente ? 'Activo hace poco' : tab === 'pica' ? `Quedan ${item.horasRestantes || 6} h` : (item.tipo === 'superlike' ? 'Súper Like ⭐' : 'Te tiró like')}
                     </Text>
-                    {puedeRevelar && item.verificado ? (
-                      <MaterialCommunityIcons name="check-decagram" size={16} color="#93C5FD" />
-                    ) : null}
                   </View>
-                  <Text style={[styles.meta, item.tipo === 'superlike' && { color: '#60A5FA', fontWeight: '800' }]} numberOfLines={1}>
-                    {item.activoReciente ? 'Activo hace poco' : tab === 'pica' ? `Quedan ${item.horasRestantes || 6} h` : (item.tipo === 'superlike' ? 'Súper Like ⭐' : 'Te tiro like')}
-                  </Text>
-                </View>
-                {!puedeRevelar ? (
-                  <View style={styles.lockBubble}>
-                    <Ionicons name="lock-closed" size={16} color="#FFF" />
+                ) : (
+                  /* Contenido cuando NO ES PREMIUM (borroso) */
+                  <View style={styles.tileInfoBlurred}>
+                    <View style={styles.blurredPill}>
+                      <View style={styles.blurredCircle} />
+                      <Text style={styles.blurredText}>??</Text>
+                    </View>
+                    <Text style={styles.blurredSub}>Cerca de ti</Text>
                   </View>
-                ) : null}
+                )}
+
+                {/* Burbuja de estrella para La Pica o Superlikes */}
                 {tab === 'pica' ? (
                   <View style={styles.starBubble}>
                     <Ionicons name="star" size={17} color="#BFD7FF" />
@@ -154,33 +180,29 @@ export default function LikesCahuinScreen({ navigation, route }) {
                   </View>
                 ) : null}
               </TouchableOpacity>
-            ))}
+            )})}
           </View>
 
           {!lista.length ? (
             <View style={styles.empty}>
-              <Ionicons name={tab === 'likes' ? 'heart-outline' : 'sparkles-outline'} size={42} color={COLORS.primario} />
-              <Text style={styles.emptyTitle}>{tab === 'likes' ? 'Todavia no hay likes' : 'La Pica esta calentando'}</Text>
+              <Ionicons name={tab === 'likes' ? 'heart-outline' : 'sparkles-outline'} size={52} color={COLORS.border} />
+              <Text style={styles.emptyTitle}>{tab === 'likes' ? 'Todavía no hay cahuines' : 'La Pica se está armando'}</Text>
               <Text style={styles.emptyText}>
-                {tab === 'likes' ? 'Completa tu perfil y sigue usando Radar para aparecerle a mas gente.' : 'Vuelve pronto para ver una seleccion nueva.'}
+                {tab === 'likes' ? 'Usa el Radar para que más gente te vea y te tire likes.' : 'Vuelve lueguito para ver los perfiles más cotizados.'}
               </Text>
             </View>
           ) : null}
 
-          {!puedeRevelar ? (
-            <TouchableOpacity activeOpacity={0.92} onPress={() => navigation.navigate('Premium')} style={styles.ctaWrap}>
-              <LinearGradient colors={['#111827', '#7A1518']} style={styles.cta}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.ctaTitle}>{tituloCTA}</Text>
-                  <Text style={styles.ctaText}>{bajadaCTA}</Text>
-                </View>
-                <View style={styles.ctaButton}>
-                  <Text style={styles.ctaButtonText}>Ver planes</Text>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          ) : null}
         </>
+      )}
+
+      {/* Floating CTA cuando no puede revelar */}
+      {!loading && !esA_Fondo && (
+        <View style={styles.floatingCtaContainer}>
+          <TouchableOpacity activeOpacity={0.9} onPress={() => navigation.navigate('Premium')} style={styles.floatingCta}>
+            <Text style={styles.floatingCtaText}>Sapear a quién le gustas</Text>
+          </TouchableOpacity>
+        </View>
       )}
     </ScreenScaffold>
   );
@@ -230,7 +252,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING[3], width: '100%', paddingHorizontal: SPACING[2] },
   tile: {
     width: '47.8%',
-    aspectRatio: 0.73,
+    height: 260,
     borderRadius: 20,
     overflow: 'hidden',
     backgroundColor: COLORS.tarjeta,
@@ -244,44 +266,70 @@ const getStyles = (COLORS) => StyleSheet.create({
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   name: { color: '#FFF', fontSize: 18, fontWeight: '900', fontFamily: FONTS.display, flexShrink: 1 },
   meta: { color: '#FFD166', fontSize: 12, fontWeight: '900', marginTop: 3 },
-  lockBubble: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(17,24,39,0.82)',
+  tileInfoBlurred: { position: 'absolute', left: 12, right: 12, bottom: 12 },
+  blurredPill: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+    marginBottom: 4,
   },
-  starBubble: {
+  blurredCircle: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  blurredText: { color: '#FFF', fontSize: 13, fontWeight: '900' },
+  blurredSub: { color: '#FFF', fontSize: 12, fontWeight: '700' },
+  floatingCtaContainer: {
     position: 'absolute',
-    right: 10,
-    bottom: 46,
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(17,24,39,0.82)',
+    bottom: 25,
+    left: 0,
+    right: 0,
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: SPACING[5],
   },
-  ctaWrap: { marginTop: SPACING[5], borderRadius: 24, overflow: 'hidden', ...SHADOWS.dark },
-  cta: { minHeight: 118, padding: SPACING[4], flexDirection: 'row', alignItems: 'center', gap: SPACING[3] },
-  ctaTitle: { color: '#FFF', fontSize: 20, fontWeight: '900', fontFamily: FONTS.display },
-  ctaText: { color: '#E5E7EB', fontSize: 13, lineHeight: 19, marginTop: 4 },
-  ctaButton: { backgroundColor: '#FFF', borderRadius: 99, paddingHorizontal: 16, paddingVertical: 10 },
-  ctaButtonText: { color: '#111827', fontWeight: '900', fontSize: 13 },
+  floatingCta: {
+    backgroundColor: '#111827',
+    paddingVertical: 16,
+    paddingHorizontal: 30,
+    borderRadius: 30,
+    width: '100%',
+    alignItems: 'center',
+    ...SHADOWS.dark,
+  },
+  floatingCtaText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '900',
+    fontFamily: FONTS.display,
+  },
   empty: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.tarjeta,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    backgroundColor: 'transparent',
     padding: SPACING[6],
-    marginTop: SPACING[4],
+    marginTop: SPACING[6],
   },
   emptyTitle: { color: COLORS.textPrimary, fontSize: 20, fontWeight: '900', fontFamily: FONTS.display, marginTop: 12 },
   emptyText: { color: COLORS.textMuted, textAlign: 'center', fontSize: 14, lineHeight: 20, marginTop: 6 },
+  starBubble: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+  },
 });
+// force reload

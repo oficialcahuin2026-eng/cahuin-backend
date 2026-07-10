@@ -53,8 +53,8 @@ export default function SwipePanoramasScreen({ navigation }) {
       const data = await socialService.votarPanorama(panorama._id, decision);
       if (data.match) {
         setModalInfo({
-          title: 'Match por destino',
-          message: data.message || 'Ambos quieren ir al mismo panorama.',
+          title: '¡Hay apañe! 🎉',
+          message: data.message || 'Hicieron match en este panorama. ¡Tienen el plan listo!',
           icon: 'ticket',
           accent: COLORS.primario,
           actions: [{ label: 'Ir al chat', onPress: () => { setModalInfo(null); navigation.navigate('Chat'); } }],
@@ -80,8 +80,8 @@ export default function SwipePanoramasScreen({ navigation }) {
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
         <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
       </TouchableOpacity>
-      <Text style={styles.title}>Swipe de Panoramas</Text>
-      <Text style={styles.subtitle}>Dale like a eventos de tu región{region ? ` (${region})` : ''}. Si alguien más quiere ir, nace un match con plan listo.</Text>
+      <Text style={styles.title}>Match de Panoramas</Text>
+      <Text style={styles.subtitle}>Tírale un like a los eventos de tu región{region ? ` (${region})` : ''}. Si hacen match en el mismo panorama, ¡ya tienen excusa para salir!</Text>
 
       {cargando ? <ActivityIndicator color={COLORS.primario} style={{ marginTop: 40 }} /> : panorama ? (
         <ImageBackground source={{ uri: panorama.imagen || fallback }} style={styles.card} imageStyle={styles.cardImage}>

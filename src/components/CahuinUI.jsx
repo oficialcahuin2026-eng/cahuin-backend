@@ -257,9 +257,7 @@ export function FilterPills({ options, value, onChange, COLORS }) {
             key={opt.value}
             style={[
               styles.filterPill,
-              {
-                backgroundColor: active ? COLORS?.textPrimary : 'transparent',
-              },
+              active && { backgroundColor: COLORS.primario, borderColor: COLORS.primario },
             ]}
             onPress={() => onChange(opt.value)}
             activeOpacity={0.8}
@@ -348,7 +346,7 @@ export function ExpandableSection({ title, icon, children, COLORS, defaultOpen =
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  scrollContent: { paddingHorizontal: SPACING[5], paddingTop: SPACING[4], paddingBottom: 172 },
+  scrollContent: { flexGrow: 1, paddingHorizontal: SPACING[5], paddingTop: SPACING[4], paddingBottom: 172 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING[5] },
   headerCentered: { justifyContent: 'center' },
   headerTitle: {
@@ -418,13 +416,17 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.display,
   },
   emptyWrap: {
+    marginTop: SPACING[10],
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: SPACING[4],
+    paddingBottom: SPACING[10],
+    paddingHorizontal: SPACING[4],
   },
   emptyImage: {
     width: '88%',
-    aspectRatio: 1,
+    maxHeight: 220,
+    resizeMode: 'contain',
     marginBottom: SPACING[2],
   },
   emptyTitle: {

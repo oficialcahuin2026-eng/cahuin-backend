@@ -16,7 +16,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Audio } from 'expo-av';
 import { useTheme } from '../context/ThemeContext';
-import { userService } from '../services/api';
+import { userService, matchService } from '../services/api';
 import CahuinModal from '../components/CahuinModal';
 import CahuinTextField from '../components/CahuinTextField';
 import { FONTS, RADIUS, SHADOWS, SPACING } from '../utils/theme';
@@ -31,8 +31,10 @@ const MOTIVOS_REPORTE = [
 ];
 
 export default function OtroPerfilScreen({ route, navigation }) {
-  const { usuario: perfilResumido } = route.params;
-  const [perfil, setPerfil] = useState(perfilResumido);
+  const { usuario: paramUsuario, userId: paramUserId, id, origen = 'radar' } = route.params || {};
+  const userId = paramUserId || id;
+  const targetUserId = paramUsuario?._id || userId;
+  const [perfil, setPerfil] = useState(paramUsuario || null);
   const [preguntasPublicas, setPreguntasPublicas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [preguntaAnonima, setPreguntaAnonima] = useState('');
@@ -52,6 +54,42 @@ export default function OtroPerfilScreen({ route, navigation }) {
   // Audio Playback
   const [soundToPlay, setSoundToPlay] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
+
+  const enviarAccion = async (accion) => {
+    try {
+      let res;
+      if (accion === 'like') {
+        res = await matchService.darLike(targetUserId, origen);
+      } else if (accion === 'superlike') {
+        res = await matchService.darSuperLike(targetUserId, origen);
+      } else {
+        res = await matchService.pasar(targetUserId);
+      }
+
+      if (res?.esMatch || res?.data?.esMatch) {
+        setModalInfo({
+          title: '¡Match! ¿YOOO?',
+          emoji: '🔥',
+          message: 'Se armó el Cahuín. ¡Anda a hablarle!',
+          actions: [{ label: 'Ir a Mensajes', primary: true, onPress: () => { setModalInfo(null); navigation.navigate('Chat'); } }]
+        });
+      } else {
+        navigation.goBack();
+      }
+    } catch (e) {
+      if (e.response?.status === 403) {
+         setModalInfo({
+           title: 'Límite alcanzado',
+           emoji: '😅',
+           message: e.response.data?.message || 'Llegaste al límite.',
+           actions: [
+             { label: 'Ver Planes', primary: true, onPress: () => { setModalInfo(null); navigation.navigate('Premium'); } },
+             { label: 'Cerrar', onPress: () => setModalInfo(null) }
+           ]
+         });
+      }
+    }
+  };
 
   const toggleAudio = async () => {
     if (!perfil.audioRompehielos) return;
@@ -80,8 +118,9 @@ export default function OtroPerfilScreen({ route, navigation }) {
 
   useEffect(() => {
     const cargarPerfilCompleto = async () => {
+      if (!targetUserId) return;
       try {
-        const data = await userService.getPerfil(perfilResumido._id);
+        const data = await userService.getPerfil(targetUserId);
         if (data.perfil) setPerfil(data.perfil);
         setPreguntasPublicas(data.preguntas || []);
       } catch (error) {
@@ -91,7 +130,7 @@ export default function OtroPerfilScreen({ route, navigation }) {
       }
     };
     cargarPerfilCompleto();
-  }, [perfilResumido._id]);
+  }, [targetUserId]);
 
   const enviarPreguntaAnonima = async () => {
     if (!preguntaAnonima.trim()) return;
@@ -167,8 +206,38 @@ export default function OtroPerfilScreen({ route, navigation }) {
     return <View style={styles.lsWrap}>{pills}</View>;
   };
 
+
+
+  if (!perfil) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="chevron-back" size={28} color={COLORS.textPrimary} />
+          </TouchableOpacity>
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={COLORS.primario} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   const fotosGaleria = perfil.fotos?.length > 0 ? perfil.fotos : [perfil.foto || 'https://via.placeholder.com/400'];
   const interesesPerfil = perfil.intereses || [];
+
+  const getProximosDias = () => {
+    const dias = [];
+    for(let i = 0; i < 7; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      d.setHours(0,0,0,0);
+      dias.push(d);
+    }
+    return dias;
+  };
+  const diasDisponibilidad = getProximosDias();
+  const tieneDisponibilidad = perfil.fechasDisponibles?.length > 0;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -229,6 +298,32 @@ export default function OtroPerfilScreen({ route, navigation }) {
           <View style={styles.seccion}>
             <Text style={styles.bioTexto}>{perfil.descripcion || perfil.biografia || 'En busca de buenas vibras y algo piola.'}</Text>
           </View>
+
+          {tieneDisponibilidad && (
+            <View style={styles.seccion}>
+              <View style={styles.seccionHeader}>
+                <Ionicons name="calendar-outline" size={24} color={COLORS.primario} />
+                <Text style={styles.seccionTitulo}>Disponibilidad</Text>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingVertical: 10 }}>
+                {diasDisponibilidad.map(d => {
+                   const iso = d.toISOString();
+                   const selected = (perfil.fechasDisponibles || []).includes(iso);
+                   const diaNombre = d.toLocaleDateString('es-ES', { weekday: 'short' });
+                   const diaNum = d.getDate();
+                   return (
+                     <View 
+                       key={iso} 
+                       style={[styles.dayBox, selected && styles.dayBoxSelected, { borderColor: selected ? COLORS.primario : COLORS.border, backgroundColor: selected ? COLORS.primario : COLORS.tarjeta }]} 
+                     >
+                       <Text style={[styles.dayName, { color: selected ? '#FFF' : COLORS.textMuted }]}>{diaNombre.toUpperCase()}</Text>
+                       <Text style={[styles.dayNum, { color: selected ? '#FFF' : COLORS.textPrimary }]}>{diaNum}</Text>
+                     </View>
+                   );
+                })}
+              </ScrollView>
+            </View>
+          )}
 
           {renderLifestylePills(perfil)}
           
@@ -322,9 +417,23 @@ export default function OtroPerfilScreen({ route, navigation }) {
             </View>
           ) : null}
 
-          <View style={{ height: 40 }} />
+          <View style={{ height: 120 }} />
         </View>
       </ScrollView>
+
+      {/* Floating Action Bar */}
+      <View style={styles.floatingActionBar}>
+        <TouchableOpacity style={styles.fabPass} onPress={() => enviarAccion('pasar')}>
+          <Ionicons name="close" size={32} color="#F43F5E" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.fabSuperlike} onPress={() => enviarAccion('superlike')}>
+          <Ionicons name="star" size={30} color="#3B82F6" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.fabLike} onPress={() => enviarAccion('like')}>
+          <Ionicons name="heart" size={36} color="#10B981" />
+        </TouchableOpacity>
+      </View>
+
       <Modal visible={modalReporteVisible} transparent animationType="fade" onRequestClose={() => setModalReporteVisible(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.reporteModal}>
@@ -368,6 +477,10 @@ export default function OtroPerfilScreen({ route, navigation }) {
 
 const getStyles = (COLORS) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.bg },
+  floatingActionBar: { position: 'absolute', bottom: 30, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 20 },
+  fabPass: { width: 64, height: 64, borderRadius: 32, backgroundColor: COLORS.tarjeta, justifyContent: 'center', alignItems: 'center', shadowColor: '#F43F5E', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 20, elevation: 5, borderWidth: 1, borderColor: 'rgba(244,63,94,0.2)' },
+  fabSuperlike: { width: 56, height: 56, borderRadius: 28, backgroundColor: COLORS.tarjeta, justifyContent: 'center', alignItems: 'center', shadowColor: '#3B82F6', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 20, elevation: 5, borderWidth: 1, borderColor: 'rgba(59,130,246,0.2)' },
+  fabLike: { width: 72, height: 72, borderRadius: 36, backgroundColor: COLORS.tarjeta, justifyContent: 'center', alignItems: 'center', shadowColor: '#10B981', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 20, elevation: 5, borderWidth: 1, borderColor: 'rgba(16,185,129,0.2)' },
   btnVolver: { position: 'absolute', top: 50, left: 20, zIndex: 100, backgroundColor: 'rgba(0,0,0,0.5)', padding: 8, borderRadius: 20 },
   btnReportar: { position: 'absolute', top: 50, right: 20, zIndex: 100, backgroundColor: 'rgba(240,68,79,0.88)', padding: 10, borderRadius: 20 },
   scrollContent: { flexGrow: 1, backgroundColor: COLORS.bg },

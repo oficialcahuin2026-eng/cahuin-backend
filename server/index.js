@@ -53,6 +53,7 @@ app.use('/api/recetas',   require('./routes/recetas'));
 app.use('/api/cartas',    require('./routes/cartas'));
 app.use('/api/ia',        require('./routes/iaRoutes'));
 app.use('/api/social',    require('./routes/socialRoutes'));
+app.use('/api/bot',       require('./routes/bot'));
 
 // 🌟 CRON: Limpieza de almacenamiento y base de datos (Se ejecuta a las 03:00 AM)
 cron.schedule('0 3 * * *', async () => {

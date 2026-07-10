@@ -146,6 +146,7 @@ exports.actualizarPerfil = async (req, res) => {
       if (regionInferida) req.body.region = regionInferida;
     }
 
+    console.log('ACTUALIZAR_PERFIL_BODY:', Object.keys(req.body));
     const usuario = await User.findByIdAndUpdate(
       req.user._id, 
       { $set: req.body }, 
@@ -173,7 +174,9 @@ exports.descubrir = async (req, res) => {
     const { categoria } = req.query;
     const miUsuario = await User.findById(req.user._id);
     if (miUsuario.modoRecuperacion && miUsuario.swipesHoy >= 10) return res.json({ perfiles: [], mensaje: 'Alcanzaste tu limite consciente de hoy.' });
-    const ignorarIds = [miUsuario._id, ...(miUsuario.bloqueados || [])];
+    const misSwipes = await Match.find({ remitente: req.user._id }).select('receptor');
+    const swipedIds = misSwipes.map((m) => m.receptor.toString());
+    const ignorarIds = [miUsuario._id.toString(), ...(miUsuario.bloqueados || []).map(id => id.toString()), ...swipedIds];
 
     const ciudadBusqueda = miUsuario.ciudad && miUsuario.ciudad !== 'Por definir' ? miUsuario.ciudad : '';
     let regionBusqueda = miUsuario.region && miUsuario.region !== 'Por definir' ? miUsuario.region : inferirRegionPorCiudad(ciudadBusqueda);
@@ -192,7 +195,9 @@ exports.descubrir = async (req, res) => {
 
     query.edad = { $gte: minAge, $lte: maxAge };
 
-    if (terminosUbicacion.length > 0) {
+    const isMaster = miUsuario.email === 'oficialcahuin2026@gmail.com';
+
+    if (!isMaster && terminosUbicacion.length > 0) {
       query.$or = [
         { region: { $in: terminosUbicacion } },
         { ciudad: { $in: terminosUbicacion } },
@@ -200,10 +205,12 @@ exports.descubrir = async (req, res) => {
       ];
     }
 
-    if (miUsuario.preferencia === 'Hombres') {
-      query.genero = 'Hombre';
-    } else if (miUsuario.preferencia === 'Mujeres') {
-      query.genero = 'Mujer';
+    if (!isMaster) {
+      if (miUsuario.preferencia === 'Hombres') {
+        query.genero = 'Hombre';
+      } else if (miUsuario.preferencia === 'Mujeres') {
+        query.genero = 'Mujer';
+      }
     }
 
     if (miUsuario.tipoApego === 'Evitativo') query.tipoApego = { $ne: 'Evitativo' };
@@ -243,7 +250,7 @@ exports.descubrir = async (req, res) => {
       const mismaCiudad = ciudadBusqueda && perfil.ciudad === ciudadBusqueda;
       const ubicacionCompatibleSinGps = dist === null && (mismaCiudad || mismaRegion);
 
-      if (esVisitante || (dist !== null && dist <= limiteDistancia) || ubicacionCompatibleSinGps) {
+      if (isMaster || esVisitante || (dist !== null && dist <= limiteDistancia) || ubicacionCompatibleSinGps) {
         const obj = perfil.toObject();
         obj.distanciaKm = esVisitante ? 'Modo Viajero' : (dist !== null ? dist : 'Cerca');
         obj.esVisitante = esVisitante;
@@ -442,28 +449,41 @@ exports.getLikesRecibidos = async (req, res) => {
       .limit(12)
       .select('nombre foto fotos edad ciudad region verificado ultimaConexion intereses descripcion likesRecibidos');
 
-    const normalizar = (item, index) => {
+    const normalizar = (item, index, esPica = false) => {
       const perfil = item.remitente || item;
       const foto = perfil?.foto || perfil?.fotos?.[0] || '';
+      
+      let itemPuedeRevelar = false;
+      if (esPica) {
+        itemPuedeRevelar = true;
+      } else if (['a_fondo', 'gold', 'platinum'].includes(plan)) {
+        itemPuedeRevelar = true;
+      } else if (['piola', 'plus'].includes(plan)) {
+        const countToReveal = Math.ceil(likes.length / 2);
+        if (index < countToReveal) {
+          itemPuedeRevelar = true;
+        }
+      }
+
       return {
         _id: perfil?._id,
-        nombre: puedeRevelar ? perfil?.nombre : null,
+        nombre: itemPuedeRevelar ? perfil?.nombre : null,
         edad: perfil?.edad,
-        ciudad: puedeRevelar ? perfil?.ciudad : null,
-        foto: puedeRevelar ? foto : foto,
+        ciudad: itemPuedeRevelar ? perfil?.ciudad : null,
+        foto: foto,
         verificado: perfil?.verificado,
         tipo: item.tipo || 'top_pick',
         horasRestantes: Math.max(1, 6 - index),
         activoReciente: perfil?.ultimaConexion ? (Date.now() - new Date(perfil.ultimaConexion).getTime()) < 2 * 60 * 60 * 1000 : false,
-        revelado: puedeRevelar,
+        revelado: itemPuedeRevelar,
       };
     };
 
     res.json({
       plan,
       puedeRevelar,
-      likes: likes.map(normalizar),
-      topPicks: topPicks.map(normalizar),
+      likes: likes.map((like, index) => normalizar(like, index, false)),
+      topPicks: topPicks.map((pick, index) => normalizar(pick, index, true)),
     });
   } catch (error) {
     res.status(500).json({ message: 'Error cargando likes recibidos' });
@@ -489,8 +509,14 @@ exports.getTrending = async (req, res) => {
       query.region = miUsuario.region;
     }
     
-    const topPerfiles = await User.find(query)
+    let topPerfiles = await User.find(query)
       .sort({ likesRecibidos: -1 }).limit(10).select('nombre foto edad ciudad likesRecibidos arquetipoCahuinero fotos');
+      
+    if (topPerfiles.length === 0 && scope !== 'nacional') {
+      delete query.region;
+      topPerfiles = await User.find(query)
+        .sort({ likesRecibidos: -1 }).limit(10).select('nombre foto edad ciudad likesRecibidos arquetipoCahuinero fotos');
+    }
       
     // Fix: if they don't have foto but have fotos[0], map it properly for the frontend
     const results = topPerfiles.map(p => {

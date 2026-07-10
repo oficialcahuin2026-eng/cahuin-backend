@@ -77,7 +77,7 @@ export default function JuegosSelectorModal({ visible, onClose, selectedJuegos =
                 <View key={juego.id} style={styles.selectedMovie}>
                   <Image source={{ uri: juego.poster }} style={styles.selectedImage} />
                   <TouchableOpacity style={styles.removeBadge} onPress={() => toggleJuego(juego)}>
-                    <Ionicons name="close" size={12} color="#FFF" />
+                    <Ionicons name="remove" size={14} color="#6B7280" />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -109,8 +109,8 @@ export default function JuegosSelectorModal({ visible, onClose, selectedJuegos =
                 activeOpacity={0.8}
               >
                 <Image source={{ uri: juego.poster }} style={styles.moviePoster} />
-                <View style={styles.addBadge}>
-                  <Ionicons name={isSelected ? "checkmark" : "add"} size={16} color="#FFF" />
+                <View style={isSelected ? styles.selectedBadge : styles.addBadge}>
+                  <Ionicons name={isSelected ? "remove" : "add"} size={16} color={isSelected ? "#6B7280" : "#FFF"} />
                 </View>
                 <Text style={styles.movieTitle} numberOfLines={2}>{juego.titulo}</Text>
               </TouchableOpacity>
@@ -184,11 +184,12 @@ const getStyles = (COLORS) => StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: COLORS.primario,
+    backgroundColor: '#FFF',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.bg,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    ...SHADOWS.light,
   },
   gridWrap: {
     flex: 1,
@@ -219,13 +220,29 @@ const getStyles = (COLORS) => StyleSheet.create({
   },
   addBadge: {
     position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    top: 6,
+    right: 6,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.85)',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  selectedBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    ...SHADOWS.light,
   }
 });

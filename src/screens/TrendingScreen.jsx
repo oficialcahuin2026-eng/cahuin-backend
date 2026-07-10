@@ -49,7 +49,7 @@ export default function TrendingScreen({ navigation }) {
         <Text style={styles.headerTitulo}>Top Cahuines 🔥</Text>
         <View style={{ width: 26 }} />
       </View>
-      <Text style={styles.subtitulo}>Los perfiles más cotizados esta semana.</Text>
+      <Text style={styles.subtitulo}>Los perfiles que andan prendiendo la semana.</Text>
 
       <View style={styles.tabsContainer}>
         <TouchableOpacity style={[styles.tab, scope === 'region' && styles.tabActive]} onPress={() => setScope('region')}>

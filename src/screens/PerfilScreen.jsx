@@ -131,6 +131,31 @@ export default function PerfilScreen({ navigation }) {
     navigation.navigate('Verificacion');
   };
 
+  const toggleDisponibilidad = async (fechaIso) => {
+    try {
+      const fechas = usuario?.fechasDisponibles || [];
+      const nuevas = fechas.includes(fechaIso)
+        ? fechas.filter((f) => f !== fechaIso)
+        : [...fechas, fechaIso];
+      await actualizarUsuario({ fechasDisponibles: nuevas });
+      await userService.actualizar({ fechasDisponibles: nuevas });
+    } catch (error) {
+      Alert.alert('Error', 'No pudimos actualizar tu calendario.');
+    }
+  };
+
+  const getProximosDias = () => {
+    const dias = [];
+    for(let i = 0; i < 7; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      d.setHours(0,0,0,0);
+      dias.push(d);
+    }
+    return dias;
+  };
+  const diasDisponibilidad = getProximosDias();
+
   // Calcular completitud del perfil ponderada
   const calcularCompletitud = () => {
     let score = 0;
@@ -302,6 +327,36 @@ export default function PerfilScreen({ navigation }) {
 
       <Divider COLORS={COLORS} />
 
+      {/* ── Calendario de Disponibilidad ── */}
+      <SoftCard COLORS={COLORS} style={styles.questionsCard}>
+        <View style={styles.cardTitleRow}>
+          <Ionicons name="calendar-outline" size={28} color={COLORS.textPrimary} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.infoTitle}>Mi Disponibilidad</Text>
+            <Text style={styles.infoSub}>Toca los días que estás libre para salir.</Text>
+          </View>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingVertical: 10 }}>
+          {diasDisponibilidad.map(d => {
+             const iso = d.toISOString();
+             const selected = (usuario?.fechasDisponibles || []).includes(iso);
+             const diaNombre = d.toLocaleDateString('es-ES', { weekday: 'short' });
+             const diaNum = d.getDate();
+             return (
+               <TouchableOpacity 
+                 key={iso} 
+                 style={[styles.dayBox, selected && styles.dayBoxSelected, { borderColor: selected ? COLORS.primario : COLORS.border, backgroundColor: selected ? COLORS.primario : COLORS.tarjeta }]} 
+                 onPress={() => toggleDisponibilidad(iso)}
+                 activeOpacity={0.7}
+               >
+                 <Text style={[styles.dayName, { color: selected ? '#FFF' : COLORS.textMuted }]}>{diaNombre.toUpperCase()}</Text>
+                 <Text style={[styles.dayNum, { color: selected ? '#FFF' : COLORS.textPrimary }]}>{diaNum}</Text>
+               </TouchableOpacity>
+             );
+          })}
+        </ScrollView>
+      </SoftCard>
+
       <Divider COLORS={COLORS} />
 
       {/* ── Preguntas anónimas ── */}
@@ -342,28 +397,7 @@ export default function PerfilScreen({ navigation }) {
         )}
       </SoftCard>
 
-      <Divider COLORS={COLORS} />
 
-      {/* ── Tests de personalidad ── */}
-      {testsPendientes.length > 0 ? (
-        <SoftCard COLORS={COLORS} style={styles.testsCard}>
-          <View style={styles.cardTitleRow}>
-            <Ionicons name="flask-outline" size={28} color={COLORS.textPrimary} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.infoTitle}>Tests de personalidad</Text>
-              <Text style={styles.infoSub}>Descubre tu apego y arquetipo.</Text>
-            </View>
-          </View>
-          <View style={styles.testActions}>
-            {testsPendientes.map((test) => (
-              <TouchableOpacity key={test.key} style={styles.testButton} onPress={() => navigation.navigate(test.route)}>
-                <Ionicons name={test.icon} size={26} color={COLORS.primario} style={{ marginBottom: 6 }} />
-                <Text style={styles.testText}>{test.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </SoftCard>
-      ) : null}
 
       {/* ── Modals ── */}
       <Modal visible={modalArticuloVisible} animationType="slide" transparent={false}>
@@ -501,9 +535,23 @@ const getStyles = (COLORS) => StyleSheet.create({
 
   // ── Questions ──
   questionsCard: { marginBottom: SPACING[4] },
-  cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: SPACING[3] },
-  infoTitle: { color: COLORS.textPrimary, fontSize: 16, fontWeight: '900', flex: 1 },
-  infoSub: { color: COLORS.textMuted, fontSize: 12, lineHeight: 16, marginTop: 2 },
+  cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
+  infoTitle: { color: COLORS.textPrimary, fontSize: 18, fontWeight: '800' },
+  infoSub: { color: COLORS.textMuted, fontSize: 13, marginTop: 2 },
+  
+  dayBox: {
+    width: 60, height: 75,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4
+  },
+  dayBoxSelected: {
+    shadowColor: COLORS.primario, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5
+  },
+  dayName: { fontSize: 12, fontWeight: '700' },
+  dayNum: { fontSize: 20, fontWeight: '900' },
   counterPill: { minWidth: 28, textAlign: 'center', color: '#FFF', backgroundColor: COLORS.primario, borderRadius: 14, paddingVertical: 4, overflow: 'hidden', fontWeight: '900', fontSize: 12 },
   emptyQuestionBox: { backgroundColor: COLORS.fondo, borderRadius: 14, padding: SPACING[3] },
   emptyQuestionTitle: { color: COLORS.textPrimary, fontWeight: '900', fontSize: 14 },

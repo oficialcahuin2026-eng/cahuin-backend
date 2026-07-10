@@ -64,7 +64,7 @@ export default function EditarPerfilScreen({ navigation }) {
   const [isPlaying, setIsPlaying] = useState(false);
   
   // Basic info
-  const [metaRelacion, setMetaRelacion] = useState(usuario?.metaRelacion || '');
+  const [queBuscas, setQueBuscas] = useState(usuario?.queBuscas || '');
   const [pronombres, setPronombres] = useState(usuario?.pronombres || '');
   
   // Identidad
@@ -246,7 +246,7 @@ export default function EditarPerfilScreen({ navigation }) {
     try {
       const payloadIdiomas = idiomas ? idiomas.split(',').map(s => s.trim()) : [];
       
-      const response = await userService.actualizarPerfil({
+      const response = await userService.actualizar({
         fotos: fotosGaleria,
         foto: fotosGaleria[0] || '',
         descripcion,
@@ -264,7 +264,7 @@ export default function EditarPerfilScreen({ navigation }) {
         personalidad,
         estiloComunicacion,
         recibirAmor,
-        metaRelacion,
+        queBuscas,
         pronombres,
         genero,
         orientacionSexual,
@@ -274,6 +274,9 @@ export default function EditarPerfilScreen({ navigation }) {
         idiomas: payloadIdiomas,
         habitos: {
           mascotas, beber, fumar, ejercicio, alimentacion, redesSociales, habitosSueno, carrete, vacaciones, transporte
+        },
+        mapaValores: {
+          planesHijos
         },
         mostrarEdad,
         mostrarDistancia,
@@ -332,19 +335,75 @@ export default function EditarPerfilScreen({ navigation }) {
     );
   };
 
-  const renderInteresCard = (title, iconName, count, onPress) => {
+  const renderInteresCard = (title, iconName, selectedItems, onPress) => {
+    const hasItems = selectedItems && selectedItems.length > 0;
+    
     return (
       <TouchableOpacity style={styles.interesCard} onPress={onPress} activeOpacity={0.8}>
-        <View style={styles.interesCardHeader}>
-          <View style={[styles.interesIconWrap, { backgroundColor: COLORS.bg }]}>
-            <Ionicons name={iconName} size={24} color={COLORS.primario} />
-          </View>
-          <View style={styles.interesAddIcon}>
-            <Ionicons name="add" size={16} color={COLORS.bg} />
-          </View>
+        <View style={styles.interesEditIcon}>
+          <Ionicons name="pencil" size={12} color={COLORS.textPrimary} />
         </View>
-        <Text style={styles.interesCardTitle}>{title}</Text>
-        {count > 0 && <Text style={styles.interesCardCount}>{count} seleccionados</Text>}
+        
+        <View style={styles.interesContent}>
+          {hasItems ? (
+            <View style={styles.interesPostersContainer}>
+              {selectedItems.slice(0, 3).map((item, index) => {
+                // Hobbies usaba 'icon' o emojis, pero series/juegos/pelis usan 'poster' o 'foto'
+                const imageUrl = item.poster || item.foto;
+                
+                if (imageUrl) {
+                  return (
+                    <Image 
+                      key={item.id || index} 
+                      source={{ uri: imageUrl }} 
+                      style={[
+                        styles.interesMiniPoster, 
+                        { 
+                          zIndex: 3 - index,
+                          transform: [
+                            { translateX: index * -15 },
+                            { rotate: index === 0 ? '-5deg' : index === 1 ? '5deg' : '0deg' }
+                          ] 
+                        }
+                      ]} 
+                    />
+                  );
+                } else {
+                  return (
+                    <View 
+                      key={item.id || index} 
+                      style={[
+                        styles.interesMiniPosterText, 
+                        { 
+                          zIndex: 3 - index,
+                          transform: [{ translateX: index * -15 }] 
+                        }
+                      ]}
+                    >
+                      <Text style={{fontSize: 24}}>{item.icon || '📌'}</Text>
+                    </View>
+                  );
+                }
+              })}
+            </View>
+          ) : (
+            <View style={[styles.interesIconWrap, { backgroundColor: 'transparent' }]}>
+              <Ionicons name={iconName} size={36} color={COLORS.primario} style={{opacity: 0.5}} />
+            </View>
+          )}
+        </View>
+
+        <View style={styles.interesTextContainer}>
+          <Text style={styles.interesCardTitle}>{title}</Text>
+          {hasItems ? (
+            <Text style={styles.interesCardSubtitle} numberOfLines={1}>
+              {selectedItems[0].titulo || selectedItems[0].nombre || selectedItems[0].label || 'Varios'}
+              {selectedItems.length > 1 ? `, +${selectedItems.length - 1}` : ''}
+            </Text>
+          ) : (
+            <Text style={styles.interesCardSubtitle}>Agregar</Text>
+          )}
+        </View>
       </TouchableOpacity>
     );
   };
@@ -425,7 +484,9 @@ export default function EditarPerfilScreen({ navigation }) {
               {renderPill("musical-notes", carrete)}
               {renderPill("airplane", vacaciones)}
               {renderPill("bus", transporte)}
-              {renderPill("eye", metaRelacion)}
+              {queBuscas ? (
+                renderPill("eye", queBuscas)
+              ) : null}
               {renderPill("person", pronombres)}
               {renderPill("resize", altura ? `${altura} cm` : '')}
               {renderPill("language", idiomas)}
@@ -527,7 +588,7 @@ export default function EditarPerfilScreen({ navigation }) {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Metas de tu relación</Text>
             <View style={styles.listGroup}>
-              {renderListGroupRow('eye', 'Busco', metaRelacion, () => openSelector('Busco', OPTIONS.metaRelacion, metaRelacion, setMetaRelacion), true)}
+              {renderListGroupRow('eye', 'Busco', queBuscas, () => openSelector('Busco', OPTIONS.metaRelacion, queBuscas, setQueBuscas), true)}
             </View>
           </View>
 
@@ -640,10 +701,10 @@ export default function EditarPerfilScreen({ navigation }) {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Intereses</Text>
             <View style={styles.interesesGrid}>
-              {renderInteresCard('Hobbies', 'grid', hobbies.length, () => setModalHobbies(true))}
-              {renderInteresCard('Películas', 'film', peliculasFavoritas.length, () => setModalMovies(true))}
-              {renderInteresCard('Series', 'tv', seriesFavoritas.length, () => setModalSeries(true))}
-              {renderInteresCard('Juegos', 'game-controller', juegosFavoritos.length, () => setModalJuegos(true))}
+              {renderInteresCard('Hobbies', 'flash', hobbies, () => setModalHobbies(true))}
+              {renderInteresCard('Películas', 'film', peliculasFavoritas, () => setModalMovies(true))}
+              {renderInteresCard('Shows', 'tv', seriesFavoritas, () => setModalSeries(true))}
+              {renderInteresCard('Juegos', 'game-controller', juegosFavoritos, () => setModalJuegos(true))}
             </View>
           </View>
 
@@ -954,44 +1015,81 @@ const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
   },
   interesCard: {
     width: '48%',
-    backgroundColor: COLORS.fondo,
-    borderRadius: RADIUS.lg,
+    backgroundColor: COLORS.fondo, // O puedes usar un color más claro si es dark mode
+    borderRadius: RADIUS.xl,
     padding: 16,
-    height: 110,
-    justifyContent: 'space-between',
+    height: 140,
     borderWidth: 1,
     borderColor: COLORS.border,
-  },
-  interesCardHeader: {
-    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    ...SHADOWS.sm,
   },
-  interesIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  interesEditIcon: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: COLORS.tarjeta,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    ...SHADOWS.light,
+  },
+  interesContent: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  interesPostersContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    paddingLeft: 20, // offset for negative translate
+  },
+  interesMiniPoster: {
+    width: 45,
+    height: 65,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: COLORS.fondo,
+    backgroundColor: COLORS.tarjeta,
+  },
+  interesMiniPosterText: {
+    width: 45,
+    height: 65,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: COLORS.fondo,
     backgroundColor: COLORS.tarjeta,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  interesAddIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: COLORS.textPrimary,
+  interesIconWrap: {
+    width: 50,
+    height: 50,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  interesTextContainer: {
+    alignItems: 'center',
+    width: '100%',
   },
   interesCardTitle: {
     fontSize: 15,
     fontWeight: '800',
     color: COLORS.textPrimary,
   },
-  interesCardCount: {
+  interesCardSubtitle: {
     fontSize: 12,
-    color: COLORS.primario,
-    fontWeight: '600',
+    color: COLORS.textMuted,
+    fontWeight: '500',
     marginTop: 2,
   },
   bottomBar: {

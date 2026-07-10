@@ -13,6 +13,7 @@ const userSchema = new mongoose.Schema({
   region:      { type: String, default: 'Por definir' },
 
   genero:             { type: String, default: 'Por definir' },
+  pronombres:         { type: String, default: '' },
   mostrarGenero:      { type: Boolean, default: false },
   orientacionSexual:  { type: String, default: 'Por definir' },
   mostrarOrientacion: { type: Boolean, default: false },
@@ -39,25 +40,43 @@ const userSchema = new mongoose.Schema({
   latitud:     { type: Number, default: null },
   longitud:    { type: Number, default: null },
   descripcion: { type: String, default: '' },
+  prompts:     { type: [mongoose.Schema.Types.Mixed], default: [] },
   altura:      { type: String, default: '' },
   peso:        { type: String, default: '' },
 
   universidad:        { type: String, default: '' },
+  centroEstudios:     { type: String, default: '' },
   nivelEscolaridad:   { type: String, default: '' },
   estiloComunicacion: { type: String, default: '' },
   recibirAmor:        { type: String, default: '' },
+  trabajo:            { type: String, default: '' },
+  profesion:          { type: String, default: '' },
+  personalidad:       { type: String, default: '' },
+  idiomas:            { type: [String], default: [] },
 
   habitos: {
-    beber:     { type: String, default: '' },
-    fumar:     { type: String, default: '' },
-    ejercicio: { type: String, default: '' },
-    mascotas:  { type: String, default: '' }
+    beber:         { type: String, default: '' },
+    fumar:         { type: String, default: '' },
+    ejercicio:     { type: String, default: '' },
+    mascotas:      { type: String, default: '' },
+    alimentacion:  { type: String, default: '' },
+    redesSociales: { type: String, default: '' },
+    habitosSueno:  { type: String, default: '' },
+    carrete:       { type: String, default: '' },
+    vacaciones:    { type: String, default: '' },
+    transporte:    { type: String, default: '' }
   },
 
   // 🌟 FIX: EL CAMPO QUE FALTABA PARA QUE TE DEJE GUARDAR
   intereses: { type: [String], default: [] },
+  hobbies: { type: [mongoose.Schema.Types.Mixed], default: [] },
+  peliculasFavoritas: { type: [mongoose.Schema.Types.Mixed], default: [] },
+  seriesFavoritas: { type: [mongoose.Schema.Types.Mixed], default: [] },
+  juegosFavoritos: { type: [mongoose.Schema.Types.Mixed], default: [] },
+  artistasSpotify: { type: [mongoose.Schema.Types.Mixed], default: [] },
+  
   categoriasExplorar: { type: [String], default: [] },
-  fechasDisponibles: { type: [String], default: [] }, // Aseguramos que guarde el calendario
+  fechasDisponibles: { type: [String], default: [] }, 
 
   musica:      { type: String, default: '' },
   peliculas:   { type: String, default: '' },

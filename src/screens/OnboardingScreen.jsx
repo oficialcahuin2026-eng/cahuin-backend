@@ -15,8 +15,9 @@ import {
   Modal,
   FlatList,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
+import Slider from '@react-native-community/slider';
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/api';
@@ -31,14 +32,26 @@ const DATOS = {
   generos: ['Hombre', 'Mujer', 'Más allá del binario'],
   orientacion: ['Heterosexual', 'Gay', 'Lesbiana', 'Bisexual', 'Asexual', 'Demisexual', 'Pansexual', 'Queer'],
   preferencias: ['Hombres', 'Mujeres', 'Todxs'],
-  buscando: ['Pololeo serio', 'Estable, pero no me cierro', 'Un vacile / Nada serio', 'Hacer yuntas / Amigxs', 'Aún no cacho'],
+  buscando: ['Algo serio, pa pololear', 'Pasarlo bien y ver qué onda', 'Un rato nomás, sin atados', 'Conocer gente y apañar', 'Ni idea, fluyendo'],
   distancias: [5, 10, 30, 50, 100],
-  beber: ['Cero alcohol', 'Su chelita piola', 'Solo en carretes', 'Me tomo el agua del florero'],
-  fumar: ['No le hago', 'Solo cuando tomo', 'Fumo harto', 'Puro Vaper', 'Fumo weed'],
-  mascotas: ['Dog Lover', 'Cat Lover', 'Amo a todos los bichos', 'No tengo, pero me encantan', 'Cero mascotas'],
+  beber: ['No tomo, soy sanito/a', 'Su copete social nomás', 'Bueno/a pal copete'],
+  fumar: ['Fumo en los carretes', 'Fumo harto', 'Cero humo', 'Tratando de dejarlo'],
+  mascotas: ['Team Perro', 'Team Gato', 'Reptiles locos', 'Aves', 'Peces', 'No tengo pero apañan', 'Alergia a los bichos', 'Paso de mascotas'],
   zodiaco: ['Aries', 'Tauro', 'Géminis', 'Cáncer', 'Leo', 'Virgo', 'Libra', 'Escorpio', 'Sagitario', 'Capricornio', 'Acuario', 'Piscis'],
   mbti: ['INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP', 'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP'],
-  interesesLista: ['Videojuegos', 'Anime / Manga', 'Música en vivo', 'Bares y Chelas', 'Naturaleza', 'Gym / Deporte', 'Cocinar', 'Astrología', 'Arte / Museos', 'Mascotas', 'Viajar', 'Fotografía', 'Cine y Series'],
+  interesesLista: [
+    { id: 'h6', nombre: 'Videojuegos', icon: 'game-controller' },
+    { id: 'h17', nombre: 'Cine y Series', icon: 'film' },
+    { id: 'h33', nombre: 'Conciertos', icon: 'musical-notes' },
+    { id: 'h12', nombre: 'Bares y Chelas', icon: 'beer' },
+    { id: 'h19', nombre: 'Naturaleza', icon: 'walk' },
+    { id: 'h20', nombre: 'Gym / Deporte', icon: 'fitness' },
+    { id: 'h4', nombre: 'Cocinar', icon: 'restaurant' },
+    { id: 'h38', nombre: 'Viajar', icon: 'airplane' },
+    { id: 'h13', nombre: 'Arte / Museos', icon: 'color-palette' },
+    { id: 'h9', nombre: 'Fotografía', icon: 'camera' },
+    { id: 'h1', nombre: 'Leer', icon: 'book' },
+  ],
 };
 
 const TOTAL_PASOS = 14;
@@ -138,8 +151,9 @@ export default function OnboardingScreen() {
   };
 
   const toggleInteres = (interes) => {
-    if (intereses.includes(interes)) {
-      setIntereses(intereses.filter((item) => item !== interes));
+    const existe = intereses.some(i => i.id === interes.id);
+    if (existe) {
+      setIntereses(intereses.filter((item) => item.id !== interes.id));
     } else if (intereses.length < 5) {
       setIntereses([...intereses, interes]);
     } else {
@@ -191,8 +205,8 @@ export default function OnboardingScreen() {
         zodiaco,
         altura: Number(altura),
         personalidad,
-        profesion: trabajo,
-        intereses,
+        trabajo,
+        hobbies: intereses,
       });
 
       let usuarioFinal = res.usuario;
@@ -315,42 +329,7 @@ export default function OnboardingScreen() {
                     </TouchableOpacity>
                   )}
 
-                  {(Platform.OS === 'web' || (!region && !ciudad)) && (
-                    <View style={{ marginTop: 24, gap: 14 }}>
-                      <Text style={{ color: '#6B7280', fontSize: 14, textAlign: 'center' }}>
-                        {Platform.OS === 'web' ? 'Selecciona tu ubicación:' : 'O selecciona tu ubicación manualmente:'}
-                      </Text>
-                    
-                    <TouchableOpacity 
-                      style={[styles.bigInputModern, { backgroundColor: 'rgba(10,12,18,0.72)', borderWidth: 1.5, borderColor: '#F0444F', padding: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
-                      onPress={() => { setLocationStep('region'); setLocationSearch(''); setModalLocationVisible(true); }}
-                    >
-                      <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-                        <Ionicons name="map-outline" size={24} color="#FFF" />
-                        <Text style={{ color: region ? '#FFF' : '#6B7280', fontSize: 18, fontWeight: '700' }}>{region || 'Seleccionar Región...'}</Text>
-                      </View>
-                      <Ionicons name="chevron-down" size={24} color="#FFF" />
-                    </TouchableOpacity>
 
-                    <TouchableOpacity 
-                      style={[styles.bigInputModern, { backgroundColor: 'rgba(10,12,18,0.72)', borderWidth: 1.5, borderColor: region ? '#F0444F' : '#333', padding: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', opacity: region ? 1 : 0.5 }]}
-                      onPress={() => { 
-                        if(region) {
-                          setLocationStep('ciudad'); setLocationSearch(''); setModalLocationVisible(true); 
-                        } else {
-                          avisar('Oops', 'Primero elige una región.');
-                        }
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-                        <Ionicons name="business-outline" size={24} color="#FFF" />
-                        <Text style={{ color: ciudad ? '#FFF' : '#6B7280', fontSize: 18, fontWeight: '700' }}>{ciudad || 'Seleccionar Ciudad...'}</Text>
-                      </View>
-                      <Ionicons name="chevron-down" size={24} color={region ? '#FFF' : '#333'} />
-                    </TouchableOpacity>
-
-                  </View>
-                  )}
                 </View>
               )}
 
@@ -406,7 +385,35 @@ export default function OnboardingScreen() {
               {paso === 7 && <View>{titleWithAccent('Tu orientación ', 'sexual')}<Text style={styles.subtitle}>Para mostrarte a las personas correctas.</Text>{renderOptionList(DATOS.orientacion, orientacion, setOrientacion)}</View>}
               {paso === 8 && <View>{titleWithAccent('A quién te interesa ', 'ver?')}<Text style={styles.subtitle}>El radar solo te mostrará a este grupo.</Text>{renderOptionList(DATOS.preferencias, preferencia, setPreferencia)}</View>}
               {paso === 9 && <View>{titleWithAccent('Qué andai ', 'buscando?')}<Text style={styles.subtitle}>Sé sincerx, hay Cahuín para todxs.</Text>{renderOptionList(DATOS.buscando, queBuscas, setQueBuscas)}</View>}
-              {paso === 10 && <View>{titleWithAccent('A qué distancia ', 'apañas?')}<Text style={styles.subtitle}>¿A cuántos kilómetros te moverías?</Text>{renderChips(DATOS.distancias.map((km) => `${km} km`), `${distanciaMax} km`, (op) => setDistanciaMax(Number(op.replace(' km', ''))))}</View>}
+              {paso === 10 && (
+                <View>
+                  {titleWithAccent('A qué distancia ', 'apañas?')}
+                  <Text style={styles.subtitle}>¿A cuántos kilómetros te moverías?</Text>
+                  
+                  <View style={{ alignItems: 'center', marginTop: 40, marginBottom: 40 }}>
+                    <Text style={{ fontSize: 48, fontWeight: '900', color: '#F0444F', fontFamily: FONTS.display }}>
+                      {distanciaMax} km
+                    </Text>
+                    <Text style={{ color: '#6B7280', fontSize: 16, marginTop: 5 }}>Radio máximo de búsqueda</Text>
+                  </View>
+
+                  <Slider
+                    style={{ width: '100%', height: 40 }}
+                    minimumValue={1}
+                    maximumValue={100}
+                    step={1}
+                    value={distanciaMax}
+                    onValueChange={(val) => setDistanciaMax(val)}
+                    minimumTrackTintColor="#F0444F"
+                    maximumTrackTintColor="#333333"
+                    thumbTintColor="#F0444F"
+                  />
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 10 }}>
+                    <Text style={{ color: '#6B7280', fontSize: 12, fontWeight: '700' }}>1 km</Text>
+                    <Text style={{ color: '#6B7280', fontSize: 12, fontWeight: '700' }}>100 km</Text>
+                  </View>
+                </View>
+              )}
               {paso === 11 && <View>{titleWithAccent('Hablemos de ', 'hábitos')}<Text style={styles.label}>¿Tomas alcohol?</Text>{renderOptionList(DATOS.beber, beber, setBeber)}<Text style={styles.label}>¿Fumas?</Text>{renderOptionList(DATOS.fumar, fumar, setFumar)}<Text style={styles.label}>¿Mascotas?</Text>{renderOptionList(DATOS.mascotas, mascotas, setMascotas)}</View>}
               {paso === 12 && (
                 <View>
@@ -447,11 +454,15 @@ export default function OnboardingScreen() {
                   {titleWithAccent('Qué te ', 'gusta?')}
                   <Text style={styles.subtitle}>Elige hasta 5 intereses para que tu perfil brille.</Text>
                   <View style={styles.chipsGrid}>
-                    {DATOS.interesesLista.map((interes) => (
-                      <TouchableOpacity key={interes} style={[styles.chip, intereses.includes(interes) && styles.chipActive]} onPress={() => toggleInteres(interes)}>
-                        <Text style={[styles.chipText, intereses.includes(interes) && styles.optionTextActive]}>{interes}</Text>
-                      </TouchableOpacity>
-                    ))}
+                    {DATOS.interesesLista.map((interes) => {
+                      const isActive = intereses.some(i => i.id === interes.id);
+                      return (
+                        <TouchableOpacity key={interes.id} style={[styles.chip, isActive && styles.chipActive]} onPress={() => toggleInteres(interes)}>
+                          <Ionicons name={interes.icon} size={16} color={isActive ? '#FFF' : '#333'} style={{ marginRight: 6 }} />
+                          <Text style={[styles.chipText, isActive && styles.optionTextActive]}>{interes.nombre}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
                 </View>
               )}

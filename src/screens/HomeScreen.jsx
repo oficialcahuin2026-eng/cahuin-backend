@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
+  Image,
   ImageBackground,
   Modal,
   SafeAreaView,
@@ -47,6 +48,7 @@ export default function HomeScreen({ navigation }) {
   const [fotoIndex, setFotoIndex] = useState(0);
   const [modalTransparencia, setModalTransparencia] = useState(false);
   const [motivosAlgoritmo, setMotivosAlgoritmo] = useState([]);
+  const [compatPorcentajeIA, setCompatPorcentajeIA] = useState(0);
   const [matchCelebrado, setMatchCelebrado] = useState(null);
   const [procesandoAccion, setProcesandoAccion] = useState(false);
   const [modalInfo, setModalInfo] = useState(null);
@@ -125,6 +127,11 @@ export default function HomeScreen({ navigation }) {
     procesarInteraccion(action);
   };
 
+  const actionsRef = useRef({ forceSwipe, resetPosition });
+  useEffect(() => {
+    actionsRef.current = { forceSwipe, resetPosition };
+  });
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
@@ -136,13 +143,11 @@ export default function HomeScreen({ navigation }) {
       },
       onPanResponderRelease: (evt, gestureState) => {
         if (gestureState.dx > SWIPE_THRESHOLD) {
-          forceSwipe('right');
+          actionsRef.current.forceSwipe('right');
         } else if (gestureState.dx < -SWIPE_THRESHOLD) {
-          forceSwipe('left');
-        } else if (gestureState.dy < -SWIPE_THRESHOLD) {
-          forceSwipe('up');
+          actionsRef.current.forceSwipe('left');
         } else {
-          resetPosition();
+          actionsRef.current.resetPosition();
         }
       }
     })
@@ -239,21 +244,6 @@ export default function HomeScreen({ navigation }) {
       const recibidos = data.perfiles || data.usuarios || [];
       
       if (JSON.stringify(recibidos) !== cachedData) {
-        // Inyección de mock publicitario general
-        if (!usuario?.isPremium && recibidos.length > 2) {
-          recibidos.splice(2, 0, {
-            _id: 'AD_MOCK_' + Date.now(),
-            nombre: 'Oferta Especial',
-            edad: 99,
-            ciudad: 'Publicidad',
-            foto: 'https://i.imgur.com/vHqJk6K.jpeg',
-            fotos: ['https://i.imgur.com/vHqJk6K.jpeg'],
-            descripcion: '¡Promo especial de envío sin costo! Desliza a la derecha para reclamar tu código.',
-            intereses: ['Promoción', 'Descuento'],
-            isAd: true
-          });
-        }
-
         setPerfiles(recibidos);
         await AsyncStorage.setItem(cacheKey, JSON.stringify(recibidos));
       }
@@ -406,14 +396,26 @@ export default function HomeScreen({ navigation }) {
     const p = perfiles[perfilActual];
     if (!p) return;
     const motivos = [];
+    let puntos = 50;
 
-    if (p.queBuscas === usuario?.queBuscas && p.queBuscas) motivos.push(`Ambos buscan lo mismo: ${p.queBuscas}.`);
-    if (p.tipoApego === usuario?.tipoApego && p.tipoApego) motivos.push(`Comparten apego relacional ${p.tipoApego}.`);
-    if (typeof p.distanciaKm === 'number' && p.distanciaKm <= 10) motivos.push(`Está muy cerca tuyo: a ${p.distanciaKm} km.`);
-    if (p.habitos?.beber === usuario?.habitos?.beber && p.habitos?.beber) motivos.push('Tienen hábitos sociales compatibles.');
-    if (motivos.length === 0) motivos.push('El radar detectó una buena vibra general.');
+    if (p.queBuscas === usuario?.queBuscas && p.queBuscas) { motivos.push(`Ambos buscan lo mismo: ${p.queBuscas}.`); puntos += 10; }
+    if (p.tipoApego === usuario?.tipoApego && p.tipoApego) { motivos.push(`Comparten apego relacional ${p.tipoApego}.`); puntos += 10; }
+    if (typeof p.distanciaKm === 'number' && p.distanciaKm <= 10) { motivos.push(`Está muy cerca tuyo: a ${p.distanciaKm} km.`); puntos += 15; }
+    if (p.habitos?.beber === usuario?.habitos?.beber && p.habitos?.beber) { motivos.push('Tienen hábitos sociales compatibles.'); puntos += 5; }
+    
+    if (p.intereses && usuario?.intereses) {
+      const comunes = p.intereses.filter(i => usuario.intereses.includes(i)).length;
+      if (comunes > 0) {
+         motivos.push(`Tienen ${comunes} intereses en común.`);
+         puntos += (comunes * 3);
+      }
+    }
 
+    if (motivos.length === 0) motivos.push('Tienen una buena vibra general.');
+
+    puntos = Math.min(puntos, 99);
     setMotivosAlgoritmo(motivos);
+    setCompatPorcentajeIA(puntos);
     setModalTransparencia(true);
   };
 
@@ -465,31 +467,6 @@ export default function HomeScreen({ navigation }) {
   }
 
   const perfil = perfiles[perfilActual];
-
-  if (!perfil) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <EmptyState
-          COLORS={COLORS}
-          image={emptyRadar}
-          title="No hay más perfiles en tu "
-          highlight="radar."
-          subtitle="Amplía tu distancia máxima o rango de edad en los ajustes para descubrir más Cahuines."
-          action={(
-            <View style={{ width: '100%', gap: 12, marginTop: 20 }}>
-              <GradientButton onPress={() => setModalPreferencias(true)} icon="options-outline" style={{ width: '100%' }}>
-                Ajustar Filtros
-              </GradientButton>
-              <TouchableOpacity onPress={cargarPerfilesConFiltros} style={{ alignItems: 'center', padding: 12 }}>
-                <Text style={{ color: COLORS.textMuted, fontWeight: '700' }}>Reintentar Búsqueda</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        />
-        <CahuinModal visible={!!modalInfo} title={modalInfo?.title} message={modalInfo?.message} icon={modalInfo?.icon} actions={modalInfo?.actions || []} accent={modalInfo?.accent} tone={modalInfo?.tone} details={modalInfo?.details} onClose={() => setModalInfo(null)} />
-      </SafeAreaView>
-    );
-  }
 
   const renderFloatingActions = () => (
     <View style={styles.floatingActionRow}>
@@ -632,15 +609,6 @@ export default function HomeScreen({ navigation }) {
                     ))}
                   </View>
                 )}
-                <View style={styles.compatBox}>
-                  <View style={styles.compatCircleWrap}>
-                    <Text style={styles.compatPercent}>{compatPorcentaje}%</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.compatLabel}>{compatInfo}</Text>
-                    <Text style={styles.compatDesc}>Tienen intereses compatibles.</Text>
-                  </View>
-                </View>
               </ScrollView>
             </View>
           </LinearGradient>
@@ -654,9 +622,34 @@ export default function HomeScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={{ flex: 1 }}>
-        {perfilSiguiente && renderCard(perfilSiguiente, false)}
-        {renderCard(perfil, true)}
-        {renderFloatingActions()}
+        {!perfil ? (
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.bg, paddingHorizontal: 24, paddingBottom: 60 }}>
+            <Image 
+              source={emptyRadar} 
+              style={{ width: 340, height: 340, resizeMode: 'contain', marginBottom: 16 }} 
+            />
+            <Text style={{ fontSize: 32, fontWeight: '900', fontFamily: FONTS.display, color: COLORS.textPrimary, textAlign: 'center', marginBottom: 12 }}>
+              Radar <Text style={{ color: COLORS.primario }}>vacío.</Text>
+            </Text>
+            <Text style={{ fontSize: 16, color: COLORS.textMuted, textAlign: 'center', marginBottom: 32, lineHeight: 24 }}>
+              No hay nadie más por acá. Ajusta tus filtros o amplía la distancia para encontrar más Cahuines.
+            </Text>
+            <View style={{ gap: 12, width: '100%', maxWidth: 400 }}>
+              <GradientButton onPress={() => setModalPreferencias(true)} icon="options-outline" style={{ width: '100%' }}>
+                Ajustar Filtros
+              </GradientButton>
+              <GradientButton onPress={() => { setCargando(true); cargarPerfilesConFiltros(); }} icon="refresh-outline" style={{ width: '100%' }}>
+                Reintentar Búsqueda
+              </GradientButton>
+            </View>
+          </View>
+        ) : (
+          <>
+            {perfilSiguiente && renderCard(perfilSiguiente, false)}
+            {renderCard(perfil, true)}
+            {renderFloatingActions()}
+          </>
+        )}
       </View>
 
       {/* ── Modal transparencia ── */}
@@ -665,9 +658,9 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.modalBox}>
             <View style={styles.modalHeader}>
               <Ionicons name="analytics" size={30} color={COLORS.primario} />
-              <Text style={styles.modalTitulo}>Radar IA</Text>
+              <Text style={styles.modalTitulo}>Radar ({compatPorcentajeIA}% compatibles)</Text>
             </View>
-            <Text style={styles.modalIntro}>¿Por qué te mostramos a {perfil.nombre}?</Text>
+            <Text style={styles.modalIntro}>¿Por qué te mostramos a {perfil?.nombre || 'este perfil'}?</Text>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.motivosScroll}>
               {motivosAlgoritmo.map((motivo, idx) => (
                 <View key={idx} style={styles.motivoRow}>
@@ -726,11 +719,11 @@ const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
 
   // ── Dark mode full-screen card ──
   cardWrapper: {
-    flex: 1,
-    marginHorizontal: 12,
-    marginTop: Platform.OS === 'android' ? 35 : 12,
-    marginBottom: 105,
-    borderRadius: 32,
+    position: 'absolute',
+    top: 0, bottom: 0, left: 0, right: 0,
+    marginTop: Platform.OS === 'android' ? 0 : 0,
+    marginBottom: 0,
+    borderRadius: 16,
     ...SHADOWS.dark,
     backgroundColor: '#111',
   },
@@ -783,7 +776,7 @@ const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
   compatDesc: { color: 'rgba(255,255,255,0.7)', fontSize: 12 },
 
   // ── Dark mode floating action buttons ──
-  floatingActionRow: { position: 'absolute', bottom: 20, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16, zIndex: 1000, elevation: 10 },
+  floatingActionRow: { position: 'absolute', bottom: 85, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16, zIndex: 9999, elevation: 50, paddingVertical: 10 },
   actionBtnSmallWrap: { ...SHADOWS.md },
   actionBtnSmall: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center' },
   actionBtnLargeWrap: { ...SHADOWS.lg },

@@ -14,6 +14,9 @@ export const PLANES_CAHUIN = [
     accent: '#FF6B5E',
     beneficios: [
       'Likes diarios sin limite',
+      'Likes infinitos en La Pica',
+      '1 Superlike diario en La Pica',
+      'Revela 50% de los perfiles en "Le tinco"',
       'Retroceder cuando pasaste a alguien sin querer',
       'Ruleta a Ciegas',
       'Salvar racha de swipes',
@@ -21,8 +24,8 @@ export const PLANES_CAHUIN = [
       'Sin anuncios',
     ],
     bloqueados: [
-      'Sapear quien te tinca',
-      'Entrar a La Pica',
+      'Ver el 100% de "Le tinco"',
+      'Superlikes infinitos en La Pica',
       'Modo Destacado',
     ],
   },
@@ -42,8 +45,10 @@ export const PLANES_CAHUIN = [
     destacado: true,
     beneficios: [
       'Todo lo de Cahuín Piola',
-      'Ver quien te tiro like',
-      'La Pica: seleccion diaria de perfiles con mas onda',
+      'Revela el 100% de los perfiles en "Le tinco"',
+      'Superlikes infinitos en La Pica',
+      'Doble Boost mensual',
+      'Modo Fantasma',
       'Tus likes aparecen antes',
       'Modo Destacado',
       'Salvar Match Relampago',

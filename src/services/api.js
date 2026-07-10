@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { mockPanoramas } from '../data/mockPanoramas';
 
-export const BASE_URL = (process.env.EXPO_PUBLIC_API_URL || 'https://cahuin-backend-1.onrender.com/api').replace(/\/+$/, '');
+export const BASE_URL = (process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.15:5000/api').replace(/\/+$/, '');
 
 // ðŸŒŸ LA SOLUCIÃ“N: Faltaba la palabra "export" aquí para que el AuthContext lo pueda usar
 export const api = axios.create({ 
@@ -58,7 +58,11 @@ api.interceptors.request.use(async (config) => {
 
 api.interceptors.response.use(
   (res) => res.data || {},
-  (err) => Promise.reject(new Error(err.response?.data?.message || "Error de conexión po'"))
+  (err) => {
+    const customError = new Error(err.response?.data?.message || "Error de conexión po'");
+    customError.response = err.response;
+    return Promise.reject(customError);
+  }
 );
 
 export const authService = {
@@ -86,16 +90,10 @@ export const userService = {
   descubrir: async (q) => {
     try {
       const data = await api.get('/users/descubrir', { params: q });
-      if (data && data.usuarios && data.usuarios.length > 0) return data;
-    } catch (e) {}
-    // Fake data for UI redesign
-    return {
-      usuarios: [
-        { _id: 'mock1', nombre: 'Valeria', edad: 24, foto: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=900', biografia: 'Amante de los gatos y el sushi 🍣', profesion: 'Diseñadora', universidad: 'UAndes', arquetipo: { nombre: 'La Artista', emoji: '🎨', color: '#F472B6' }, ciudad: 'Santiago' },
-        { _id: 'mock2', nombre: 'Joaquín', edad: 26, foto: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=900', biografia: 'Siempre listo para un pique a la playa 🏄‍♂️', profesion: 'Ingeniero', universidad: 'PUC', arquetipo: { nombre: 'El Aventurero', emoji: '🏕️', color: '#34A853' }, ciudad: 'Viña del Mar' },
-        { _id: 'mock3', nombre: 'Sofía', edad: 22, foto: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=900', biografia: 'Busco alguien para ir a conciertos 🎸', profesion: 'Estudiante', universidad: 'UCh', arquetipo: { nombre: 'La Melómana', emoji: '🎧', color: '#8B5CF6' }, ciudad: 'Concepción' }
-      ]
-    };
+      return data || { perfiles: [] };
+    } catch (e) {
+      return { perfiles: [] };
+    }
   },
   getPerfil:        (id)            => api.get(`/users/${id}`),
   bloquear:         (id)            => api.post(`/users/${id}/bloquear`, {}),
@@ -120,21 +118,17 @@ export const userService = {
 };
 
 export const matchService = {
-  darLike:        (id) => api.post(`/matches/like/${id}`, {}),
-  darSuperLike:   (id) => api.post(`/matches/superlike/${id}`, {}),
+  darLike:        (id, origen = 'radar') => api.post(`/matches/like/${id}`, { origen }),
+  darSuperLike:   (id, origen = 'radar') => api.post(`/matches/superlike/${id}`, { origen }),
   pasar:          (id) => api.post(`/matches/pass/${id}`, {}),
   darDislike:     (id) => api.post(`/matches/pass/${id}`, {}),
   getMisMatches: async () => {
     try {
       const data = await api.get('/matches');
-      if (data && data.matches && data.matches.length > 0) return data;
-    } catch (e) {}
-    return {
-      matches: [
-        { roomId: 'room1', usuario: { _id: 'mock1', nombre: 'Valeria', foto: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=900' }, ultimoMensaje: 'Jajaja literal', fechaUltimoMensaje: new Date().toISOString() },
-        { roomId: 'room2', usuario: { _id: 'mock3', nombre: 'Sofía', foto: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=900' }, ultimoMensaje: '¿Vamos o qué?', fechaUltimoMensaje: new Date(Date.now() - 3600000).toISOString() }
-      ]
-    };
+      return data || { matches: [] };
+    } catch (e) {
+      return { matches: [] };
+    }
   },
   eliminar:       (id) => api.delete(`/matches/${id}`),
   responderRompehielo: (id, respuestas) => api.post(`/matches/${id}/rompehielo`, { respuestas }),
@@ -148,7 +142,7 @@ export const matchService = {
 export const mensajeService = {
   listar: async (matchId) => {
     try { return await api.get(`/mensajes/${matchId}`); } catch (e) {
-      return { mensajes: [ { _id: 'm1', texto: '¡Hola! Qué buena vibra tu perfil 🔥', remitente: { _id: 'mock1', nombre: 'Match' }, createdAt: new Date(Date.now() - 3600000).toISOString() } ] };
+      return { mensajes: [] };
     }
   },
   enviar: async (matchId, texto) => {
@@ -197,7 +191,12 @@ export const panoramaService = {
     return { panoramas: filtered };
   },
   crear:  (data)   => api.post('/panoramas', data),
-  unirse: (id)     => api.post(`/panoramas/${id}/unirse`, {})
+  unirse: (id)     => api.post(`/panoramas/${id}/unirse`, {}),
+  gestionarSolicitud: (id, usuarioId, accion) => api.post(`/panoramas/gestionar`, { id, usuarioId, accion }),
+  abandonar: (id)  => api.post(`/panoramas/${id}/abandonar`, {}),
+  enviarMensaje: (id, texto, audioUrl) => api.post(`/panoramas/${id}/mensajes`, { texto, audioUrl }),
+  listarMisGrupos: () => api.get('/panoramas/mis-grupos'),
+  obtener: (id) => api.get(`/panoramas/${id}`)
 };
 
 export const socialService = {

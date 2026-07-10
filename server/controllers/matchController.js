@@ -58,18 +58,28 @@ exports.darLike = async (req, res) => {
   try {
     const receptorId  = req.params.id;
     const remitenteId = req.user._id;
+    const origen = req.body.origen || 'radar';
+    const esPica = origen === 'pica';
+
+    const inicioHoy = new Date(); inicioHoy.setHours(0, 0, 0, 0);
 
     if (!req.user.isPremium) {
-      const inicioHoy = new Date(); inicioHoy.setHours(0, 0, 0, 0);
-      const likesHoy = await Match.countDocuments({
-        remitente: remitenteId, tipo: 'like', createdAt: { $gte: inicioHoy }
-      });
-      if (likesHoy >= 5) return res.status(403).json({ message: 'Se acabaron tus likes de hoy. Pasa a Cahuin Piola para seguir.' });
+      if (esPica) {
+        const picaLikesHoy = await Match.countDocuments({
+          remitente: remitenteId, tipo: 'like', origen: 'pica', createdAt: { $gte: inicioHoy }
+        });
+        if (picaLikesHoy >= 1) return res.status(403).json({ message: 'Límite de 1 Like diario en La Pica para usuarios gratuitos. Pasa a Cahuín Piola para más.' });
+      } else {
+        const likesHoy = await Match.countDocuments({
+          remitente: remitenteId, tipo: 'like', createdAt: { $gte: inicioHoy }
+        });
+        if (likesHoy >= 30) return res.status(403).json({ message: 'Se acabaron tus 30 likes gratuitos de hoy. Pasa a Cahuín Piola para seguir deslizando sin límites.' });
+      }
     }
 
     await Match.findOneAndUpdate(
       { remitente: remitenteId, receptor: receptorId },
-      { $set: { tipo: 'like' } },
+      { $set: { tipo: 'like', origen } },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
     const usuarioActualizado = await actualizarRachaSwipes(remitenteId);
@@ -114,9 +124,27 @@ exports.darLike = async (req, res) => {
 // ─────────────────────────────────────────────
 exports.darSuperLike = async (req, res) => {
   try {
+    const receptorId = req.params.id;
+    const remitenteId = req.user._id;
+    const origen = req.body.origen || 'radar';
+    const esPica = origen === 'pica';
+
+    if (!req.user.isPremium) {
+      return res.status(403).json({ message: 'Los Superlikes son exclusivos de los planes Premium.' });
+    }
+
+    const inicioHoy = new Date(); inicioHoy.setHours(0, 0, 0, 0);
+
+    if (req.user.premiumPlan === 'piola' && esPica) {
+      const picaSuperlikesHoy = await Match.countDocuments({
+        remitente: remitenteId, tipo: 'superlike', origen: 'pica', createdAt: { $gte: inicioHoy }
+      });
+      if (picaSuperlikesHoy >= 1) return res.status(403).json({ message: 'Cahuín Piola incluye solo 1 Superlike diario en La Pica. Pasa a Cahuín A Fondo para Superlikes infinitos.' });
+    }
+
     await Match.findOneAndUpdate(
-      { remitente: req.user._id, receptor: req.params.id },
-      { $set: { tipo: 'superlike' } },
+      { remitente: remitenteId, receptor: receptorId },
+      { $set: { tipo: 'superlike', origen } },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
     const usuarioActualizado = await actualizarRachaSwipes(req.user._id);

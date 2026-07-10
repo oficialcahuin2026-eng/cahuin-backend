@@ -70,11 +70,17 @@ export default function CrearPanoramaScreen({ navigation }) {
   };
 
   const handleCrear = async () => {
-    if (!titulo.trim() || !lugar.trim()) return;
+    if (!titulo.trim() || !lugar.trim() || !descripcion.trim()) return;
     setGuardando(true);
     try {
       await panoramaService.crear({
-        titulo, lugar, fecha, descripcion, vibes, cupos: parseInt(cupos) || 4, privacidad
+        titulo, 
+        lugar, 
+        fecha, 
+        descripcion, 
+        categoria: vibes.length > 0 ? vibes[0] : 'Carrete', 
+        maxPersonas: parseInt(cupos) || 4, 
+        privacidad
       });
       navigation.goBack();
     } catch (e) {
@@ -243,7 +249,11 @@ export default function CrearPanoramaScreen({ navigation }) {
             </View>
           </View>
 
-          <GradientButton style={styles.btnSubmit} onPress={handleCrear} disabled={guardando}>
+          <GradientButton 
+            style={styles.btnSubmit} 
+            onPress={handleCrear} 
+            disabled={guardando || !titulo.trim() || !lugar.trim() || !descripcion.trim()}
+          >
             {guardando ? "Publicando..." : "Publicar panorama"}
           </GradientButton>
 
