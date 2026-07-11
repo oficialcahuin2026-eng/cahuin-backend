@@ -5,16 +5,16 @@ const eventosOficiales = require('../utils/seedEventos');
 const { normalizarRegionChile, inferirRegionPorCiudad } = require('../utils/chileLocations');
 
 const normalizarTexto = (valor = '') => valor
-  .replace(/ÃƒÂ¡/g, 'a')
-  .replace(/ÃƒÂ©/g, 'e')
-  .replace(/ÃƒÂ­/g, 'i')
-  .replace(/ÃƒÂ³/g, 'o')
-  .replace(/ÃƒÂº/g, 'u')
-  .replace(/ÃƒÂ±/g, 'n')
-  .replace(/Ãƒâ€˜/g, 'n')
+  .replace(/á/g, 'a')
+  .replace(/é/g, 'e')
+  .replace(/í/g, 'i')
+  .replace(/ó/g, 'o')
+  .replace(/ú/g, 'u')
+  .replace(/ñ/g, 'n')
+  .replace(/Ñ/g, 'n')
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
-  .replace(/[â€™']/g, '')
+  .replace(/['']/g, '')
   .toLowerCase()
   .trim();
 
@@ -30,12 +30,12 @@ const inicioDeHoy = () => {
 const regexRegion = (region) => {
   const r = normalizarRegionChile(region) || region;
   return r
-    .replace(/[aÃ¡]/gi, '[aÃ¡]')
-    .replace(/[eÃ©]/gi, '[eÃ©]')
-    .replace(/[iÃ­]/gi, '[iÃ­]')
-    .replace(/[oÃ³]/gi, '[oÃ³]')
-    .replace(/[uÃº]/gi, '[uÃº]')
-    .replace(/[Ã±]/gi, '[nÃ±]');
+    .replace(/[aá]/gi, '[aá]')
+    .replace(/[eé]/gi, '[eé]')
+    .replace(/[ií]/gi, '[ií]')
+    .replace(/[oó]/gi, '[oó]')
+    .replace(/[uú]/gi, '[uú]')
+    .replace(/[ñ]/gi, '[nñ]');
 };
 
 const eventosFallbackPorRegion = (region) => {
@@ -58,20 +58,20 @@ const eventosFallbackPorRegion = (region) => {
 // ðŸŒŸ FIX CLAVE: Diccionario para conectar las ciudades con sus regiones
 const DICCIONARIO_REGIONES = {
   'Arica y Parinacota': ['Arica', 'Putre', 'Camarones', 'General Lagos'],
-  'TarapacÃ¡': ['Iquique', 'Alto Hospicio', 'Pozo Almonte', 'Pica', 'Huara'],
+  'Tarapacá': ['Iquique', 'Alto Hospicio', 'Pozo Almonte', 'Pica', 'Huara'],
   'Antofagasta': ['Antofagasta', 'Calama', 'Tocopilla', 'San Pedro de Atacama', 'Mejillones'],
-  'Atacama': ['CopiapÃ³', 'Vallenar', 'Caldera', 'ChaÃ±aral', 'Huasco'],
-  'Coquimbo': ['La Serena', 'Coquimbo', 'Ovalle', 'Illapel', 'VicuÃ±a'],
-  'ValparaÃ­so': ['ValparaÃ­so', 'ViÃ±a del Mar', 'QuilpuÃ©', 'Villa Alemana', 'San Antonio', 'OlmuÃ©', 'Limache', 'Quintero'],
-  'Metropolitana': ['Santiago', 'Santiago Centro', 'Providencia', 'MaipÃº', 'Puente Alto', 'La Florida', 'Ã‘uÃ±oa', 'Melipilla'],
-  'Oâ€™Higgins': ['Rancagua', 'San Fernando', 'Pichilemu', 'Santa Cruz', 'MachalÃ­', 'Mostazal', 'San Francisco de Mostazal'],
-  'Maule': ['Talca', 'CuricÃ³', 'Linares', 'Cauquenes', 'ConstituciÃ³n'],
-  'Ã‘uble': ['ChillÃ¡n', 'San Carlos', 'Bulnes', 'Quirihue', 'Coihueco'],
-  'BÃ­o BÃ­o': ['ConcepciÃ³n', 'Talcahuano', 'Los Ãngeles', 'San Pedro de la Paz', 'Coronel'],
-  'AraucanÃ­a': ['Temuco', 'Villarrica', 'PucÃ³n', 'Angol', 'Victoria', 'Padre Las Casas'],
-  'Los RÃ­os': ['Valdivia', 'La UniÃ³n', 'Panguipulli', 'RÃ­o Bueno', 'Futrono'],
+  'Atacama': ['Copiapó', 'Vallenar', 'Caldera', 'Chañaral', 'Huasco'],
+  'Coquimbo': ['La Serena', 'Coquimbo', 'Ovalle', 'Illapel', 'Vicuña'],
+  'Valparaíso': ['Valparaíso', 'Viña del Mar', 'Quilpué', 'Villa Alemana', 'San Antonio', 'Olmué', 'Limache', 'Quintero'],
+  'Metropolitana': ['Santiago', 'Santiago Centro', 'Providencia', 'Maipú', 'Puente Alto', 'La Florida', 'Ñuñoa', 'Melipilla'],
+  'O'Higgins': ['Rancagua', 'San Fernando', 'Pichilemu', 'Santa Cruz', 'Machalí', 'Mostazal', 'San Francisco de Mostazal'],
+  'Maule': ['Talca', 'Curicó', 'Linares', 'Cauquenes', 'Constitución'],
+  'Ñuble': ['Chillán', 'San Carlos', 'Bulnes', 'Quirihue', 'Coihueco'],
+  'Bío Bío': ['Concepción', 'Talcahuano', 'Los íngeles', 'San Pedro de la Paz', 'Coronel'],
+  'Araucanía': ['Temuco', 'Villarrica', 'Pucón', 'Angol', 'Victoria', 'Padre Las Casas'],
+  'Los Ríos': ['Valdivia', 'La Unión', 'Panguipulli', 'Río Bueno', 'Futrono'],
   'Los Lagos': ['Puerto Montt', 'Osorno', 'Castro', 'Puerto Varas', 'Ancud', 'Frutillar'],
-  'AysÃ©n': ['Coyhaique', 'Puerto AysÃ©n', 'Chile Chico', 'Cochrane'],
+  'Aysén': ['Coyhaique', 'Puerto Aysén', 'Chile Chico', 'Cochrane'],
   'Magallanes': ['Punta Arenas', 'Puerto Natales', 'Porvenir', 'Cabo de Hornos']
 };
 
@@ -103,7 +103,7 @@ exports.listar = async (req, res) => {
     const regionNormalizada = normalizarRegionChile(region || '') || inferirRegionPorCiudad(region || '');
 
     if (region) {
-      // ðŸŒŸ BUSCADOR INTELIGENTE: Expande la bÃºsqueda a TODA la regiÃ³n
+      // ðŸŒŸ BUSCADOR INTELIGENTE: Expande la búsqueda a TODA la región
       let terminos = [new RegExp(regexRegion(region), 'i')];
       if (regionNormalizada && regionNormalizada !== region) terminos.push(new RegExp(regexRegion(regionNormalizada), 'i'));
       if (region === 'Santiago Centro') terminos.push(new RegExp('Santiago', 'i'));
@@ -111,13 +111,13 @@ exports.listar = async (req, res) => {
       const regionBuscadaNorm = normalizarTexto(region);
       for (const [nombreReg, ciudades] of Object.entries(DICCIONARIO_REGIONES)) {
         const nombreRegNormalizado = normalizarRegionChile(nombreReg);
-        // Si el usuario buscÃ³ por ciudad (ej: "Puente Alto"), agregamos la regiÃ³n ("Metropolitana")
+        // Si el usuario buscó por ciudad (ej: "Puente Alto"), agregamos la región ("Metropolitana")
         if (ciudades.some(c => normalizarTexto(c) === regionBuscadaNorm) || (region === 'Santiago Centro' && nombreRegNormalizado === 'Metropolitana')) {
           terminos.push(new RegExp(nombreReg, 'i'));
           if (nombreRegNormalizado !== nombreReg) terminos.push(new RegExp(nombreRegNormalizado, 'i'));
           break;
         }
-        // Si el usuario buscÃ³ directo por la RegiÃ³n, agregamos todas sus ciudades
+        // Si el usuario buscó directo por la Región, agregamos todas sus ciudades
         if (normalizarTexto(nombreReg) === regionBuscadaNorm || normalizarTexto(nombreRegNormalizado) === regionBuscadaNorm) {
           terminos.push(new RegExp(nombreReg, 'i'));
           if (nombreRegNormalizado !== nombreReg) terminos.push(new RegExp(nombreRegNormalizado, 'i'));
@@ -141,7 +141,7 @@ exports.listar = async (req, res) => {
 
     let panoramas = await Panorama.find(filtro)
       .populate('creador', 'nombre foto region verificado')
-      .sort({ fecha: 1 }); // CronolÃ³gico: Los mÃ¡s prÃ³ximos primero
+      .sort({ fecha: 1 }); // Cronológico: Los más próximos primero
 
     if (region && panoramas.filter((p) => p.esOficial).length === 0 && (!categoria || categoria === 'Evento Oficial')) {
       const fallback = eventosFallbackPorRegion(regionNormalizada || region);
@@ -156,14 +156,14 @@ exports.crear = async (req, res) => {
   try {
     const { titulo, descripcion, region, lugar, direccion, fecha, categoria, emoji, maxPersonas, privacidad } = req.body;
     if (new Date(fecha) < inicioDeHoy()) {
-      return res.status(400).json({ message: 'Ese panorama ya pasÃ³. Armemos uno con fecha vigente.' });
+      return res.status(400).json({ message: 'Ese panorama ya pasó. Armemos uno con fecha vigente.' });
     }
     const regionFinal = normalizarRegionChile(region || req.user.region || '') || inferirRegionPorCiudad(req.user.ciudad || '') || 'Metropolitana';
 
     const panorama = await Panorama.create({
       titulo, descripcion, region: regionFinal, lugar, direccion, fecha: new Date(fecha),
       categoria, emoji, maxPersonas,
-      privacidad: privacidad || 'PÃºblico',
+      privacidad: privacidad || 'Público',
       activo: true,
       creador: req.user._id, participantes: [req.user._id],
       mensajesGrupo: [{
@@ -187,7 +187,7 @@ exports.unirse = async (req, res) => {
     if (new Date(panorama.fecha) < inicioDeHoy()) {
       panorama.activo = false;
       await panorama.save();
-      return res.status(400).json({ message: 'Este panorama ya terminÃ³.' });
+      return res.status(400).json({ message: 'Este panorama ya terminó.' });
     }
     if (panorama.participantes.length >= panorama.maxPersonas)
       return res.status(400).json({ message: "Panorama lleno po'" });
@@ -196,10 +196,10 @@ exports.unirse = async (req, res) => {
     const yaSolicitado = panorama.solicitudes?.some(id => id.toString() === req.user._id.toString());
     
     if (yaInscrito) {
-      return res.status(400).json({ message: 'Ya estÃ¡s anotado' });
+      return res.status(400).json({ message: 'Ya estás anotado' });
     }
 
-    if (panorama.privacidad !== 'PÃºblico') {
+    if (panorama.privacidad !== 'Público') {
       if (!yaSolicitado) {
         if (!panorama.solicitudes) panorama.solicitudes = [];
         panorama.solicitudes.push(req.user._id);
@@ -207,18 +207,18 @@ exports.unirse = async (req, res) => {
       }
       return res.json({ message: 'Solicitud enviada al creador', panorama });
     } else {
-      // PÃºblico: Se une de inmediato
+      // Público: Se une de inmediato
       panorama.participantes.push(req.user._id);
       panorama.mensajesGrupo.push({
         remitente: req.user._id,
-        texto: `${req.user.nombre || 'Alguien'} se uniÃ³ al panorama.`,
+        texto: `${req.user.nombre || 'Alguien'} se unió al panorama.`,
         tipo: 'sistema'
       });
       await panorama.save();
     }
     await panorama.populate('creador', 'nombre foto');
     await panorama.populate('participantes', 'nombre foto');
-    res.json({ message: 'Te anotaste. El creador y el grupo ya pueden ver quiÃ©n se sumÃ³.', panorama });
+    res.json({ message: 'Te anotaste. El creador y el grupo ya pueden ver quién se sumó.', panorama });
   } catch (err) { res.status(500).json({ message: err.message }); }
 };
 
