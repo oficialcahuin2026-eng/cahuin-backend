@@ -33,8 +33,8 @@ const fetchPanoramasParaRegion = async (region) => {
     return;
   }
   const genAI = new GoogleGenerativeAI(apiKey);
-  // Usaremos gemini-2.0-flash-lite para tener un límite gratuito alto y evitar cuotas excedidas
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+  // Usaremos gemini-flash-latest 
+  const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
   const prompt = `Actúa como un investigador experto en la agenda oficial y local de panoramas en ${region.nombre}, Chile. Tu objetivo es elaborar una guía exhaustiva, ultra detallada y completa de absolutamente todos los eventos —musicales, culturales, deportivos, gastronómicos, ferias, festivales, shows en vivo, celebraciones municipales y actividades en bares, hoteles, restaurantes, discotecas y cualquier otro local— que se realizarán en las comunas de la ${region.nombre} durante el día siguiente.
 

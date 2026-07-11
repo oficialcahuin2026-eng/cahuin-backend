@@ -1,9 +1,10 @@
 import React from 'react';
-import { Modal, StyleSheet, Text, TouchableOpacity, View, ScrollView } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import { FONTS, SHADOWS, SPACING } from '../utils/theme';
+import CahuinBottomSheet from './CahuinBottomSheet';
 
 export default function CahuinModal({
   visible,
@@ -19,7 +20,6 @@ export default function CahuinModal({
 }) {
   const { COLORS, isDarkMode } = useTheme();
   const accentColor = accent || getToneColor(tone, COLORS);
-  // Only force dark panel if already in dark mode (premium modals won't look wrong in light mode)
   const forceDark = isDarkMode && (tone === 'premium' || tone === 'dark');
   const styles = getStyles(COLORS, isDarkMode, accentColor, forceDark);
   const finalActions = actions.length > 0
@@ -27,61 +27,67 @@ export default function CahuinModal({
     : [{ label: 'Listo', variant: 'primary', onPress: onClose }];
 
   return (
-    <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.card}>
-          <ScrollView contentContainerStyle={{ alignItems: 'center', paddingBottom: 10 }} showsVerticalScrollIndicator={false} style={{ width: '100%' }}>
-            <View style={styles.sheetHandle} />
-            <View style={styles.sparkleOne}><Text style={styles.sparkleText}>*</Text></View>
-            <View style={styles.sparkleTwo}><Text style={styles.sparkleText}>*</Text></View>
-            <View style={styles.sparkleDot} />
+    <CahuinBottomSheet
+      visible={visible}
+      onClose={onClose}
+      snapPoints={['50%']}
+      style={{
+        borderTopLeftRadius: 34,
+        borderTopRightRadius: 34,
+      }}
+    >
+      <View style={{ alignItems: 'center', paddingBottom: 16, paddingTop: 4, paddingHorizontal: 24, width: '100%' }}>
+        
+        <View style={styles.sparkleOne}><Text style={styles.sparkleText}>*</Text></View>
+        <View style={styles.sparkleTwo}><Text style={styles.sparkleText}>*</Text></View>
+        <View style={styles.sparkleDot} />
 
-            <LinearGradient colors={[hexToRgba(accentColor, 0.16), hexToRgba(accentColor, 0.04)]} style={styles.iconHalo}>
-              <View style={styles.iconWrap}>
-                <Ionicons name={icon} size={42} color={accentColor} />
-              </View>
-            </LinearGradient>
-            <Text style={styles.title}>{title}</Text>
-            {message ? <Text style={styles.message}>{message}</Text> : null}
-            {details ? <Text style={styles.details}>{details}</Text> : null}
+        <LinearGradient colors={[hexToRgba(accentColor, 0.16), hexToRgba(accentColor, 0.04)]} style={styles.iconHalo}>
+          <View style={styles.iconWrap}>
+            <Ionicons name={icon} size={42} color={accentColor} />
+          </View>
+        </LinearGradient>
+        <Text style={styles.title}>{title}</Text>
+        {message ? <Text style={styles.message}>{message}</Text> : null}
+        {details ? <Text style={styles.details}>{details}</Text> : null}
 
-            <View style={[
-              styles.actions, 
-              finalActions.length === 1 && styles.actionsSingle,
-              finalActions.length > 2 && { flexDirection: 'column' }
-            ]}>
-              {finalActions.map((action) => {
-                const primary = action.variant !== 'secondary';
-                const danger = action.variant === 'danger';
-                const actionColor = action.color || (danger ? '#F0444F' : accentColor);
-                return (
-                  <TouchableOpacity
-                    key={action.label}
-                    activeOpacity={0.9}
-                    style={[
-                      styles.button,
-                      action.variant === 'secondary' && styles.secondaryButton,
-                    ]}
-                    onPress={action.onPress || onClose}
-                  >
-                    {primary ? (
-                      <LinearGradient colors={[actionColor, lighten(actionColor)]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={styles.buttonGradient}>
-                        {action.icon ? <Ionicons name={action.icon} size={18} color="#FFF" style={{ marginRight: 8 }} /> : null}
-                        <Text style={[styles.buttonText, styles.primaryText]}>{action.label}</Text>
-                      </LinearGradient>
-                    ) : (
-                      <Text style={[styles.buttonText, styles.secondaryText, { color: action.color || accentColor }]}>
-                        {action.label}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </ScrollView>
+        <View style={[
+          styles.actions, 
+          finalActions.length === 1 && styles.actionsSingle,
+          finalActions.length > 2 && { flexDirection: 'column' }
+        ]}>
+          {finalActions.map((action, index) => {
+            const primary = action.variant !== 'secondary';
+            const danger = action.variant === 'danger';
+            const actionColor = action.color || (danger ? '#F0444F' : accentColor);
+            const isColumn = finalActions.length > 2;
+            return (
+              <TouchableOpacity
+                key={action.label + index}
+                activeOpacity={0.9}
+                style={[
+                  styles.button,
+                  isColumn && { width: '100%', flex: 0 },
+                  action.variant === 'secondary' && styles.secondaryButton,
+                ]}
+                onPress={action.onPress || onClose}
+              >
+                {primary ? (
+                  <LinearGradient colors={[actionColor, lighten(actionColor)]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={styles.buttonGradient}>
+                    {action.icon ? <Ionicons name={action.icon} size={18} color="#FFF" style={{ marginRight: 8 }} /> : null}
+                    <Text style={[styles.buttonText, styles.primaryText]}>{action.label}</Text>
+                  </LinearGradient>
+                ) : (
+                  <Text style={[styles.buttonText, styles.secondaryText, { color: action.color || accentColor }]}>
+                    {action.label}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
-    </Modal>
+    </CahuinBottomSheet>
   );
 }
 

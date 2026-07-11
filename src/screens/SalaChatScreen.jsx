@@ -496,7 +496,7 @@ export default function SalaChatScreen({ route, navigation }) {
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}><Ionicons name="arrow-back" size={26} color={COLORS.textPrimary} /></TouchableOpacity>
         
-        <TouchableOpacity style={styles.headerInfo} disabled={route.params?.esRuletaCiega && !route.params?.ambosRevelaron} onPress={() => navigation.navigate('OtroPerfil', { usuario: otroUsuario })}>
+        <TouchableOpacity style={styles.headerInfo} disabled={route.params?.esRuletaCiega && !route.params?.ambosRevelaron} onPress={() => navigation.navigate('OtroPerfil', { usuario: otroUsuario, hideActions: true })}>
           <Image source={{ uri: otroUsuario?.foto || 'https://images.unsplash.com/photo-1511882150382-421056c89033?q=80&w=150' }} style={styles.avatar} />
           <View>
             <Text style={styles.headerNombre}>{otroUsuario?.nombre || 'Anónimo'}</Text>

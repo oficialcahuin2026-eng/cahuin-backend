@@ -78,6 +78,8 @@ export const userService = {
   verificar:   ()     => api.post('/users/me/verificar', {}),
   actualizar:  (data) => api.put('/users/me', data),
   
+  subirFotoBase64: (base64) => api.post('/users/fotos/base64', { base64 }),
+
   actualizarFotos: async (formData) => {
     const respuesta = await fetch(`${BASE_URL}/users/fotos`, {
       method: 'POST', 

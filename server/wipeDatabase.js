@@ -7,6 +7,16 @@ const Mensaje = require('./models/Mensaje');
 const Panorama = require('./models/Panorama');
 const Historia = require('./models/Historia');
 
+const Botella = require('./models/Botella');
+const Carta = require('./models/Carta');
+const CuecaDigital = require('./models/CuecaDigital');
+const HistoriaExito = require('./models/HistoriaExito');
+const PanoramaSwipe = require('./models/PanoramaSwipe');
+const PreguntaAnonima = require('./models/PreguntaAnonima');
+const Receta = require('./models/Receta');
+const Reporte = require('./models/Reporte');
+const CahuinDiario = require('./models/CahuinDiario');
+
 async function wipeDatabase() {
   try {
     console.log('⏳ Conectando a MongoDB Atlas...');
@@ -27,6 +37,17 @@ async function wipeDatabase() {
 
     await Historia.deleteMany({});
     console.log('🗑️  Historias eliminadas.');
+
+    await Botella.deleteMany({});
+    await Carta.deleteMany({});
+    await CuecaDigital.deleteMany({});
+    await HistoriaExito.deleteMany({});
+    await PanoramaSwipe.deleteMany({});
+    await PreguntaAnonima.deleteMany({});
+    await Receta.deleteMany({});
+    await Reporte.deleteMany({});
+    await CahuinDiario.deleteMany({});
+    console.log('🗑️  Demás colecciones eliminadas.');
 
     console.log('✨ Base de datos reseteada a 0. ¡Cahuín está como nuevo!');
     process.exit(0);

@@ -3,6 +3,7 @@ import React from 'react';
 import { Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider } from './src/context/AuthContext';
@@ -14,8 +15,16 @@ import WebShell from './src/web/WebShell';
 import { ClerkProvider } from '@clerk/clerk-expo';
 import * as SecureStore from 'expo-secure-store';
 import * as WebBrowser from 'expo-web-browser';
+import mobileAds from 'react-native-google-mobile-ads';
 
 WebBrowser.maybeCompleteAuthSession();
+
+// Inicializar Google AdMob para producción
+mobileAds()
+  .initialize()
+  .then(adapterStatuses => {
+    console.log('AdMob inicializado:', adapterStatuses);
+  });
 
 // 2. Crear el "Caché de Tokens" para que la sesión se quede guardada en el celular
 const tokenCache = {
@@ -61,14 +70,16 @@ export default function App() {
     // 4. Envolver toda la aplicación con ClerkProvider
     <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <SafeAreaProvider>
-          <ThemeProvider>
-            <AuthProvider>
-              {Platform.OS === 'web' ? <WebShell /> : <AppNavigator />}
-              <StatusBar style="auto" />
-            </AuthProvider>
-          </ThemeProvider>
-        </SafeAreaProvider>
+        <BottomSheetModalProvider>
+          <SafeAreaProvider>
+            <ThemeProvider>
+              <AuthProvider>
+                {Platform.OS === 'web' ? <WebShell /> : <AppNavigator />}
+                <StatusBar style="auto" />
+              </AuthProvider>
+            </ThemeProvider>
+          </SafeAreaProvider>
+        </BottomSheetModalProvider>
       </GestureHandlerRootView>
     </ClerkProvider>
   );

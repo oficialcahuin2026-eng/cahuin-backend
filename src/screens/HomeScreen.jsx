@@ -341,7 +341,12 @@ export default function HomeScreen({ navigation }) {
         tone: 'premium',
         details: isAFondo ? `Super Likes diarios agotados (${maxFree}/${maxFree})` : (isPiola ? `Super Likes diarios agotados (${maxFree}/${maxFree})` : 'Cuesta 2 anuncios'),
         actions: [
-          { label: 'Cancelar', variant: 'secondary', color: '#8B5CF6', onPress: () => setModalInfo(null) },
+          { 
+            label: 'Comprar Cahuin Premium', 
+            variant: 'secondary', 
+            color: '#8B5CF6', 
+            onPress: () => { setModalInfo(null); navigation.navigate('Premium'); } 
+          },
           { 
             label: `Ver ${cantAds} Anuncio${cantAds > 1 ? 's' : ''}`, 
             icon: 'play',
@@ -370,7 +375,12 @@ export default function HomeScreen({ navigation }) {
       tone: 'premium',
       details: isAFondo ? 'Incluido en tu plan A Fondo' : (isPiola ? 'Para ti solo cuesta 1 anuncio' : 'Cuesta 2 anuncios'),
       actions: [
-        { label: 'Cancelar', variant: 'secondary', color: '#8B5CF6', onPress: () => setModalInfo(null) },
+        ...(isAFondo ? [] : [{ 
+          label: 'Comprar Cahuin Premium', 
+          variant: 'secondary', 
+          color: '#8B5CF6', 
+          onPress: () => { setModalInfo(null); navigation.navigate('Premium'); } 
+        }]),
         {
           label: isAFondo ? 'Activar' : `Ver ${cantAds} Anuncio${cantAds > 1 ? 's' : ''}`,
           icon: isAFondo ? 'sparkles' : 'play',

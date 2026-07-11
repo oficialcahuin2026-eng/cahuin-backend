@@ -422,17 +422,19 @@ export default function OtroPerfilScreen({ route, navigation }) {
       </ScrollView>
 
       {/* Floating Action Bar */}
-      <View style={styles.floatingActionBar}>
-        <TouchableOpacity style={styles.fabPass} onPress={() => enviarAccion('pasar')}>
-          <Ionicons name="close" size={32} color="#F43F5E" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.fabSuperlike} onPress={() => enviarAccion('superlike')}>
-          <Ionicons name="star" size={30} color="#3B82F6" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.fabLike} onPress={() => enviarAccion('like')}>
-          <Ionicons name="heart" size={36} color="#10B981" />
-        </TouchableOpacity>
-      </View>
+      {!route.params?.hideActions && (
+        <View style={styles.floatingActionBar}>
+          <TouchableOpacity style={styles.fabPass} onPress={() => enviarAccion('pasar')}>
+            <Ionicons name="close" size={32} color="#F43F5E" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.fabSuperlike} onPress={() => enviarAccion('superlike')}>
+            <Ionicons name="star" size={30} color="#3B82F6" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.fabLike} onPress={() => enviarAccion('like')}>
+            <Ionicons name="heart" size={36} color="#10B981" />
+          </TouchableOpacity>
+        </View>
+      )}
 
       <Modal visible={modalReporteVisible} transparent animationType="fade" onRequestClose={() => setModalReporteVisible(false)}>
         <View style={styles.modalBackdrop}>

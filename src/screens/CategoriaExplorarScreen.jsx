@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -215,7 +215,7 @@ export default function CategoriaExplorarScreen({ navigation, route }) {
             <TouchableOpacity
               key={perfil._id}
               activeOpacity={0.92}
-              onPress={() => navigation.navigate('OtroPerfil', { userId: perfil._id })}
+              onPress={() => navigation.navigate('OtroPerfil', { userId: perfil._id, hideActions: true })}
               style={[styles.profileCard, { borderColor: COLORS.border, backgroundColor: COLORS.tarjeta }]}
             >
               <Image source={{ uri: perfil.foto || perfil.fotos?.[0] || fotoFallback }} style={styles.profileImage} />

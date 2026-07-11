@@ -146,7 +146,7 @@ export default function AjustesScreen({ navigation }) {
       actualizarUsuario(res.usuario);
       setModalViaje(false);
       setStepViaje(1);
-      Alert.alert('Listo', ciudad === '' ? 'Volviste a casa.' : `Ahora el radar te mostrará gente de ${ciudad}.`);
+      avisar('Listo', ciudad === '' ? 'Volviste a casa.' : `Ahora el radar te mostrará gente de ${ciudad}.`, { emoji: '✈️', accent: COLORS.primario });
     } catch {
       avisar('Error', 'No pudimos procesar el viaje.', { emoji: '🧭', tone: 'danger' });
     } finally {
@@ -221,7 +221,21 @@ export default function AjustesScreen({ navigation }) {
               bg={isDarkMode ? "rgba(139,92,246,0.15)" : "#F4ECFF"}
               title="Modo Viajero"
               subtitle={usuario?.viaje?.ciudadDestino ? `Viajando a: ${usuario.viaje.ciudadDestino}` : 'Teletranspórtate a otra ciudad'}
-              onPress={() => { setStepViaje(1); setModalViaje(true); }}
+              onPress={() => {
+                const plan = usuario?.premiumPlan || 'free';
+                const isAFondo = plan === 'a_fondo' || plan === 'gold' || plan === 'platinum';
+                if (!isAFondo) {
+                  avisar('Modo Viajero', 'Teletranspórtate a cualquier ciudad. Exclusivo del plan Cahuín A Fondo.', {
+                    emoji: '✈️',
+                    tone: 'premium',
+                    actions: [
+                      { label: 'Ver Planes', color: COLORS.primario, onPress: () => { setModalInfo(null); navigation.navigate('Premium'); } }
+                    ]
+                  });
+                  return;
+                }
+                setStepViaje(1); setModalViaje(true); 
+              }}
             />
             <SettingsRow
               COLORS={COLORS} isDarkMode={isDarkMode}

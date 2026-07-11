@@ -50,7 +50,9 @@ const normalizarTexto = (valor = '') => valor
   .trim();
 
 const regionUsuario = (user = {}) => {
-  const region = normalizarRegionChile(user.region || '') || inferirRegionPorCiudad(user.ciudad || '');
+  const viajeActivo = user.viaje && user.viaje.ciudadDestino && new Date() < new Date(user.viaje.fechaFin);
+  const ubicacion = viajeActivo ? user.viaje.ciudadDestino : (user.region || user.ciudad || '');
+  const region = normalizarRegionChile(ubicacion) || inferirRegionPorCiudad(ubicacion) || ubicacion;
   return region && region !== 'Por definir' ? region : '';
 };
 

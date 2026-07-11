@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, SafeAreaView, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import CahuinBottomSheet from './CahuinBottomSheet';
 
 export default function GenericSelectorModal({ visible, onClose, onSave, options, selectedValue, title, COLORS }) {
   const styles = getStyles(COLORS);
@@ -18,18 +19,18 @@ export default function GenericSelectorModal({ visible, onClose, onSave, options
   };
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }}>
+    <CahuinBottomSheet visible={visible} onClose={onClose} snapPoints={['60%', '90%']}>
+      <View style={{ backgroundColor: COLORS.bg, flexShrink: 1 }}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose}>
-            <Ionicons name="close" size={28} color={COLORS.textPrimary} />
-          </TouchableOpacity>
           <Text style={styles.title}>{title}</Text>
-          <View style={{ width: 28 }} />
         </View>
 
-        <ScrollView style={styles.listWrap}>
-          {options.map((item, index) => {
+        <FlatList
+          data={options}
+          keyExtractor={(_, index) => String(index)}
+          style={[styles.listWrap, { flexShrink: 1 }]}
+          contentContainerStyle={{ flexGrow: 1 }}
+          renderItem={({ item }) => {
             const isObject = typeof item === 'object';
             const label = isObject ? item.label : item;
             const icon = isObject ? item.icon : null;
@@ -37,7 +38,6 @@ export default function GenericSelectorModal({ visible, onClose, onSave, options
 
             return (
               <TouchableOpacity
-                key={index}
                 style={styles.optionRow}
                 onPress={() => handleSelect(item)}
                 activeOpacity={0.7}
@@ -49,10 +49,10 @@ export default function GenericSelectorModal({ visible, onClose, onSave, options
                 {isSelected && <Ionicons name="checkmark" size={24} color={COLORS.primario} />}
               </TouchableOpacity>
             );
-          })}
-        </ScrollView>
-      </SafeAreaView>
-    </Modal>
+          }}
+        />
+      </View>
+    </CahuinBottomSheet>
   );
 }
 
@@ -60,7 +60,7 @@ const getStyles = (COLORS) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -72,7 +72,6 @@ const getStyles = (COLORS) => StyleSheet.create({
     color: COLORS.textPrimary,
   },
   listWrap: {
-    flex: 1,
     backgroundColor: COLORS.tarjeta,
   },
   optionRow: {

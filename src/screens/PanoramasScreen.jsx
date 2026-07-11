@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   ActivityIndicator,
-  Image,
   Linking,
   Modal,
   Platform,
@@ -12,12 +11,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { matchService, mensajeService, panoramaService } from '../services/api';
 import CahuinModal from '../components/CahuinModal';
+import CahuinBottomSheet from '../components/CahuinBottomSheet';
 import {
   BottomSheetHandle,
   EmptyState,
@@ -385,7 +386,7 @@ export default function PanoramasScreen({ navigation }) {
         <ActivityIndicator size="large" color={COLORS.primario} style={{ marginTop: 80 }} />
       ) : listaActual.length === 0 ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', marginTop: 30, paddingBottom: 60 }}>
-          <Image source={emptyPanoramas} style={{ width: 340, height: 340, resizeMode: 'contain', marginBottom: 16 }} />
+          <Image source={emptyPanoramas} style={{ width: 340, height: 340, marginBottom: 16 }} contentFit="contain" />
           <Text style={{ fontSize: 24, fontWeight: '900', fontFamily: FONTS.display, color: COLORS.textPrimary, textAlign: 'center', marginBottom: 12 }}>
             {tabActiva === 'eventos' ? 'Cero Movimiento' : 'Nada por aquí'}
           </Text>
@@ -412,117 +413,99 @@ export default function PanoramasScreen({ navigation }) {
         </>
       )}
 
-      <Modal visible={!!eventoActivo} animationType="slide" transparent>
-        <View style={styles.modalFondo}>
-          <View style={styles.modalCard}>
-            <BottomSheetHandle />
-            <View style={styles.modalTitleRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.modalTituloGrande}>{eventoActivo?.titulo}</Text>
-                <Text style={styles.modalSubSmall}>{eventoActivo?.descripcion}</Text>
-              </View>
-              <TouchableOpacity style={styles.closeButton} onPress={() => setEventoActivo(null)}>
-                <Ionicons name="close" size={24} color={COLORS.textPrimary} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.detailRow}>
-              <Ionicons name="location" size={20} color={COLORS.primario} />
-              <Text style={styles.detailText}>{eventoActivo?.lugar}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Ionicons name="calendar" size={20} color={COLORS.primario} />
-              <Text style={styles.detailText}>{eventoActivo ? fechaCorta(eventoActivo.fecha) : ''}</Text>
-            </View>
-
-            <View style={styles.actionRow}>
-              <TouchableOpacity style={styles.secondaryAction} onPress={() => abrirMapa(eventoActivo?.lugar, regionOficial)}>
-                <Ionicons name="map" size={20} color={COLORS.textPrimary} />
-                <Text style={styles.secondaryActionText}>Abrir mapa</Text>
-              </TouchableOpacity>
-              <GradientButton icon="send" style={styles.primaryAction} onPress={() => abrirInvitaciones(eventoActivo)}>
-                Invitar
-              </GradientButton>
+      <CahuinBottomSheet visible={!!eventoActivo} onClose={() => setEventoActivo(null)}>
+        <View style={{ paddingHorizontal: 20, paddingBottom: 20, flexShrink: 1 }}>
+          <View style={styles.modalTitleRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.modalTituloGrande}>{eventoActivo?.titulo}</Text>
+              <Text style={styles.modalSubSmall}>{eventoActivo?.descripcion}</Text>
             </View>
           </View>
-        </View>
-      </Modal>
 
-      <Modal visible={!!eventoParaInvitar} animationType="slide" transparent>
-        <View style={styles.modalFondo}>
-          <View style={styles.modalCard}>
-            <BottomSheetHandle />
-            <View style={styles.modalTitleRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.modalTituloGrande}>Invitar a un Cahuín</Text>
-                <Text style={styles.modalSubSmall}>{eventoParaInvitar?.titulo}</Text>
-              </View>
-              <TouchableOpacity style={styles.closeButton} onPress={() => setEventoParaInvitar(null)}>
-                <Ionicons name="close" size={24} color={COLORS.textPrimary} />
-              </TouchableOpacity>
-            </View>
+          <View style={styles.detailRow}>
+            <Ionicons name="location" size={20} color={COLORS.primario} />
+            <Text style={styles.detailText}>{eventoActivo?.lugar}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Ionicons name="calendar" size={20} color={COLORS.primario} />
+            <Text style={styles.detailText}>{eventoActivo ? fechaCorta(eventoActivo.fecha) : ''}</Text>
+          </View>
 
-            {misMatchesReales.length === 0 ? (
-              <View style={styles.emptyInvite}>
-                <Text style={styles.emptyInviteTitle}>Aún no hay chats para invitar.</Text>
-                <Text style={styles.emptyInviteText}>Cuando tengas matches, aparecerán aquí para mandarles panoramas directo al chat.</Text>
-              </View>
-            ) : (
-              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-                {misMatchesReales.map((match) => (
-                  <TouchableOpacity
-                    key={match.roomId}
-                    style={styles.matchInviteRow}
-                    activeOpacity={0.88}
-                    disabled={enviandoInvitacion}
-                    onPress={() => enviarInvitacion(match)}
-                  >
-                    <Image source={{ uri: match.usuario?.foto || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200' }} style={styles.matchAvatar} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.matchName}>{match.usuario?.nombre || 'Match'}</Text>
-                      <Text style={styles.matchHint}>Enviar invitación al chat</Text>
-                    </View>
-                    <Ionicons name="send" size={20} color={COLORS.primario} />
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
+          <View style={styles.actionRow}>
+            <TouchableOpacity style={styles.secondaryAction} onPress={() => abrirMapa(eventoActivo?.lugar, regionOficial)}>
+              <Ionicons name="map" size={20} color={COLORS.textPrimary} />
+              <Text style={styles.secondaryActionText}>Abrir mapa</Text>
+            </TouchableOpacity>
+            <GradientButton icon="send" style={styles.primaryAction} onPress={() => abrirInvitaciones(eventoActivo)}>
+              Invitar
+            </GradientButton>
           </View>
         </View>
-      </Modal>
+      </CahuinBottomSheet>
 
-      <Modal visible={modalExplorador} animationType="slide" transparent>
-        <View style={styles.modalFondo}>
-          <View style={[styles.modalCard, { maxHeight: '85%' }]}>
-            <BottomSheetHandle />
-            <View style={styles.modalTitleRow}>
-              <View style={styles.modalTitleLeft}>
-                <Ionicons name="map" size={28} color="#8B5CF6" />
-                <Text style={styles.modalTituloGrande}>Explorar Chile</Text>
-              </View>
-              <TouchableOpacity style={styles.closeButton} onPress={() => setModalExplorador(false)}>
-                <Ionicons name="close" size={24} color={COLORS.textPrimary} />
-              </TouchableOpacity>
+      <CahuinBottomSheet visible={!!eventoParaInvitar} onClose={() => setEventoParaInvitar(null)}>
+        <View style={{ paddingHorizontal: 20, paddingBottom: 20, flexShrink: 1 }}>
+          <View style={styles.modalTitleRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.modalTituloGrande}>Invitar a un Cahuín</Text>
+              <Text style={styles.modalSubSmall}>{eventoParaInvitar?.titulo}</Text>
             </View>
-            <Text style={styles.modalSub}>Revisa la cartelera oficial de cualquier parte del país para planear un pique e invitar a tus matches.</Text>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {REGIONES_CHILE.map((reg) => {
-                const active = regionOficial === reg;
-                return (
-                  <TouchableOpacity
-                    key={reg}
-                    style={[styles.regionButton, active && styles.regionButtonActive]}
-                    onPress={() => { setRegionOficial(reg); setModalExplorador(false); }}
-                  >
-                    <Text style={[styles.regionButtonText, active && { fontWeight: '900', color: isDarkMode ? '#FFF' : COLORS.primario }]}>{reg}</Text>
-                    {active ? <View style={styles.regionCheck}><Ionicons name="checkmark" size={16} color="#FFF" /></View> : null}
-                  </TouchableOpacity>
-                );
-              })}
+          </View>
+
+          {misMatchesReales.length === 0 ? (
+            <View style={styles.emptyInvite}>
+              <Text style={styles.emptyInviteTitle}>Aún no hay chats para invitar.</Text>
+              <Text style={styles.emptyInviteText}>Cuando tengas matches, aparecerán aquí para mandarles panoramas directo al chat.</Text>
+            </View>
+          ) : (
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+              {misMatchesReales.map((match) => (
+                <TouchableOpacity
+                  key={match.roomId}
+                  style={styles.matchInviteRow}
+                  activeOpacity={0.88}
+                  disabled={enviandoInvitacion}
+                  onPress={() => enviarInvitacion(match)}
+                >
+                  <Image source={{ uri: match.usuario?.foto || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200' }} style={styles.matchAvatar} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.matchName}>{match.usuario?.nombre || 'Match'}</Text>
+                    <Text style={styles.matchHint}>Enviar invitación al chat</Text>
+                  </View>
+                  <Ionicons name="send" size={20} color={COLORS.primario} />
+                </TouchableOpacity>
+              ))}
             </ScrollView>
-          </View>
+          )}
         </View>
-      </Modal>
+      </CahuinBottomSheet>
+
+      <CahuinBottomSheet visible={modalExplorador} onClose={() => setModalExplorador(false)}>
+        <View style={{ paddingHorizontal: 20, paddingBottom: 20, flexShrink: 1 }}>
+          <View style={styles.modalTitleRow}>
+            <View style={styles.modalTitleLeft}>
+              <Ionicons name="map" size={28} color="#8B5CF6" />
+              <Text style={styles.modalTituloGrande}>Explorar Chile</Text>
+            </View>
+          </View>
+          <Text style={styles.modalSub}>Revisa la cartelera oficial de cualquier parte del país para planear un pique e invitar a tus matches.</Text>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+            {REGIONES_CHILE.map((reg) => {
+              const active = regionOficial === reg;
+              return (
+                <TouchableOpacity
+                  key={reg}
+                  style={[styles.regionButton, active && styles.regionButtonActive]}
+                  onPress={() => { setRegionOficial(reg); setModalExplorador(false); }}
+                >
+                  <Text style={[styles.regionButtonText, active && { fontWeight: '900', color: isDarkMode ? '#FFF' : COLORS.primario }]}>{reg}</Text>
+                  {active ? <View style={styles.regionCheck}><Ionicons name="checkmark" size={16} color="#FFF" /></View> : null}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </CahuinBottomSheet>
 
       <CahuinModal
         visible={!!modalInfo}

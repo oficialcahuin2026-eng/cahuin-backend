@@ -24,7 +24,7 @@ export default function TrendingScreen({ navigation }) {
   }, [scope]);
 
   const renderItem = ({ item, index }) => (
-    <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('OtroPerfil', { usuario: item })}>
+    <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('OtroPerfil', { usuario: item, hideActions: true })}>
       <Text style={styles.rank}>#{index + 1}</Text>
       <Image source={{ uri: item.foto || 'https://via.placeholder.com/100' }} style={styles.foto} />
       <View style={styles.info}>

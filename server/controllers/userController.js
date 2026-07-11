@@ -514,7 +514,9 @@ exports.getTrending = async (req, res) => {
     const query = { _id: { $ne: miUsuario._id } };
     
     if (scope !== 'nacional') {
-      query.region = miUsuario.region;
+      const viajeActivo = miUsuario.viaje && miUsuario.viaje.ciudadDestino && new Date() < new Date(miUsuario.viaje.fechaFin);
+      const ubicacion = viajeActivo ? miUsuario.viaje.ciudadDestino : miUsuario.region;
+      query.region = normalizarRegionChile(ubicacion) || inferirRegionPorCiudad(ubicacion) || ubicacion;
     }
     
     let topPerfiles = await User.find(query)

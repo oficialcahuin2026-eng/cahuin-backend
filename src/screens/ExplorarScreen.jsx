@@ -119,7 +119,7 @@ export default function ExplorarScreen({ navigation }) {
       'Te empareja al azar con alguien por 1 hora de chat sin fotos. Incluida en Cahuín Piola y A Fondo.',
       '🎭',
       [
-        { label: 'Cancelar', variant: 'secondary', color: COLORS.primario, onPress: () => setModalInfo(null) },
+
         {
           label: tienePiola ? 'Girar Ruleta' : 'Comprar Plan',
           icon: tienePiola ? 'sparkles' : 'cart',
@@ -313,7 +313,7 @@ export default function ExplorarScreen({ navigation }) {
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.trendingContent}>
               {trendingPerfiles.map((p, idx) => (
-                <TouchableOpacity key={p._id || idx} style={styles.trendingCard} activeOpacity={0.85} onPress={() => navigation.navigate('OtroPerfil', { userId: p._id })}>
+                <TouchableOpacity key={p._id || idx} style={styles.trendingCard} activeOpacity={0.85} onPress={() => navigation.navigate('OtroPerfil', { userId: p._id, hideActions: true })}>
                   <Image source={{ uri: p.foto || p.fotos?.[0] || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200' }} style={styles.trendingAvatar} />
                   <View style={styles.trendingOverlay}>
                     <Text style={styles.trendingName} numberOfLines={1}>{p.nombre}</Text>
