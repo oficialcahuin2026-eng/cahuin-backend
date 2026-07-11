@@ -36,7 +36,8 @@ app.use(cors({
     credentials: true
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 app.get('/', (req, res) => res.json({ ok: true, mensaje: 'API de Cahuin activa' }));
 app.get('/api', (req, res) => res.json({ ok: true, mensaje: 'API de Cahuin funcionando' }));
