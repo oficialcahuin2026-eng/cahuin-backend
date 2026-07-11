@@ -64,7 +64,7 @@ const DICCIONARIO_REGIONES = {
   'Coquimbo': ['La Serena', 'Coquimbo', 'Ovalle', 'Illapel', 'Vicuña'],
   'Valparaíso': ['Valparaíso', 'Viña del Mar', 'Quilpué', 'Villa Alemana', 'San Antonio', 'Olmué', 'Limache', 'Quintero'],
   'Metropolitana': ['Santiago', 'Santiago Centro', 'Providencia', 'Maipú', 'Puente Alto', 'La Florida', 'Ñuñoa', 'Melipilla'],
-  'O'Higgins': ['Rancagua', 'San Fernando', 'Pichilemu', 'Santa Cruz', 'Machalí', 'Mostazal', 'San Francisco de Mostazal'],
+  "O'Higgins": ['Rancagua', 'San Fernando', 'Pichilemu', 'Santa Cruz', 'Machalí', 'Mostazal', 'San Francisco de Mostazal'],
   'Maule': ['Talca', 'Curicó', 'Linares', 'Cauquenes', 'Constitución'],
   'Ñuble': ['Chillán', 'San Carlos', 'Bulnes', 'Quirihue', 'Coihueco'],
   'Bío Bío': ['Concepción', 'Talcahuano', 'Los íngeles', 'San Pedro de la Paz', 'Coronel'],
