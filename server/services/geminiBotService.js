@@ -151,16 +151,87 @@ const parseAndSavePanoramas = async (markdown, regionName, regionCorto) => {
   console.log(`[Bot] ${lines.length - 2} panoramas procesados para ${regionName}.`);
 };
 
+const CahuinDiario = require("../models/CahuinDiario");
+const Match = require("../models/Match");
+const Mensaje = require("../models/Mensaje");
+
+const generarCahuinDelDia = async () => {
+  console.log('🗣️ Generando Cahuín del Día con Gemini...');
+  try {
+    if (!process.env.GEMINI_API_KEY) return;
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+    
+    const prompt = `Escribe un enunciado polémico, divertido o interesante sobre citas, amor, costumbres chilenas o vida cotidiana que sirva como "Cahuín del Día" para que usuarios de una app de citas en Chile voten "De acuerdo" o "Ni cagando". Debe ser de máximo 2 oraciones, con un tono relajado y chileno (pero sin exagerar). Ejemplo: "Mandar reels cuenta como lenguaje del amor." Responde SOLO con el enunciado, sin comillas.`;
+    const result = await model.generateContent(prompt);
+    const textoIA = result.response.text().trim().replace(/^"|"$/g, '');
+
+    const fechaChile = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' });
+    const fechaActual = fechaChile();
+    
+    await CahuinDiario.findOneAndUpdate(
+      { fecha: fechaActual },
+      { $setOnInsert: { fecha: fechaActual, texto: textoIA, autorAnonimo: 'Gemini (Inteligencia Cahuinera)' } },
+      { upsert: true, new: true }
+    );
+    console.log('✅ Cahuín del Día generado:', textoIA);
+  } catch (e) { console.log('Error Cron Cahuin:', e); }
+};
+
+const ejecutarSalvaChats = async () => {
+  console.log('🤖 IA Salva-chats: Revisando conversaciones estancadas...');
+  try {
+    if (!process.env.GEMINI_API_KEY) return;
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+    
+    const hace48Horas = new Date(Date.now() - 48 * 60 * 60 * 1000);
+    const matchesEstancados = await Match.find({ iaIntervino: false });
+
+    for (let match of matchesEstancados) {
+      const ultimosMensajes = await Mensaje.find({ matchId: match._id }).sort({ createdAt: -1 }).limit(1);
+      
+      if (ultimosMensajes.length > 0) {
+        const ultimo = ultimosMensajes[0];
+        if (ultimo.createdAt < hace48Horas && ultimo.tipo !== 'ia_wingman') {
+          
+          const prompt = `Analiza este último mensaje de un chat de citas en Chile: "${ultimo.texto}". Escribe UNA sola oración amigable y corta, como un asistente que intenta revivir la charla mencionando de qué hablaban. Termina con una pregunta abierta.`;
+          const result = await model.generateContent(prompt);
+          const textoIA = result.response.text().trim();
+
+          await Mensaje.create({
+            matchId: match._id,
+            texto: `🤖 Wingman: ¡Oigan! La charla estaba buena. ${textoIA}`,
+            tipo: 'ia_wingman'
+          });
+
+          match.iaIntervino = true;
+          await match.save();
+          // Nota: Socket.io broadcast omitido al ejecutarse en background, los usuarios lo verán al abrir la app.
+        }
+      }
+    }
+    console.log('✅ IA Salva-chats finalizado.');
+  } catch (e) { console.log('Error Cron IA:', e); }
+};
+
 const runDailyScrape = async () => {
-  console.log("[Bot] Iniciando recopilación diaria de panoramas...");
-  // Iteramos sobre las regiones de forma secuencial
+  console.log("[Bot] Iniciando recopilación diaria secuencial...");
+  
   for (const region of regiones) {
     console.log(`[Bot] Solicitando a Gemini para la región: ${region.nombre}...`);
     await fetchPanoramasParaRegion(region);
-    // Esperamos 10 segundos para no exceder cuotas de API gratis
     await new Promise(resolve => setTimeout(resolve, 10000)); 
   }
-  console.log("[Bot] Recopilación finalizada exitosamente.");
+
+  console.log("[Bot] Ejecutando Cahuín del Día...");
+  await generarCahuinDelDia();
+  await new Promise(resolve => setTimeout(resolve, 10000));
+
+  console.log("[Bot] Ejecutando Salva-chats...");
+  await ejecutarSalvaChats();
+
+  console.log("[Bot] Recopilación y rutinas IA finalizadas exitosamente.");
 };
 
 module.exports = {

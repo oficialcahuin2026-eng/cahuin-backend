@@ -105,71 +105,8 @@ cron.schedule('0 3 * * *', async () => {
   }
 });
 
-// 🌟 CRON: CAHUÍN DEL DÍA CON IA (Se ejecuta a las 20:00 hrs)
-cron.schedule('0 20 * * *', async () => {
-  console.log('🗣️ Generando Cahuín del Día con Gemini...');
-  try {
-    if (!process.env.GEMINI_API_KEY) return;
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
-    
-    const prompt = `Escribe un enunciado polémico, divertido o interesante sobre citas, amor, costumbres chilenas o vida cotidiana que sirva como "Cahuín del Día" para que usuarios de una app de citas en Chile voten "De acuerdo" o "Ni cagando". Debe ser de máximo 2 oraciones, con un tono relajado y chileno (pero sin exagerar). Ejemplo: "Mandar reels cuenta como lenguaje del amor." Responde SOLO con el enunciado, sin comillas.`;
-    const result = await model.generateContent(prompt);
-    const textoIA = result.response.text().trim().replace(/^"|"$/g, '');
-
-    const fechaChile = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' });
-    const fechaActual = fechaChile();
-    
-    // Upsert para no duplicar si se corre manualmente
-    await CahuinDiario.findOneAndUpdate(
-      { fecha: fechaActual },
-      { $setOnInsert: { fecha: fechaActual, texto: textoIA, autorAnonimo: 'Gemini (Inteligencia Cahuinera)' } },
-      { upsert: true, new: true }
-    );
-    console.log('✅ Cahuín del Día generado:', textoIA);
-  } catch (e) { console.log('Error Cron Cahuin:', e); }
-});
-
-// 🌟 IDEA 1: IA SALVA-CHATS (Se ejecuta todos los días a las 20:00 hrs)
-cron.schedule('0 20 * * *', async () => {
-  console.log('🤖 IA Salva-chats: Revisando conversaciones estancadas...');
-  try {
-    if (!process.env.GEMINI_API_KEY) return;
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
-    
-    const hace48Horas = new Date(Date.now() - 48 * 60 * 60 * 1000);
-    const matchesEstancados = await Match.find({ iaIntervino: false });
-
-    for (let match of matchesEstancados) {
-      const ultimosMensajes = await Mensaje.find({ matchId: match._id }).sort({ createdAt: -1 }).limit(1);
-      
-      if (ultimosMensajes.length > 0) {
-        const ultimo = ultimosMensajes[0];
-        // Si pasaron 48 hrs y no es un mensaje del sistema
-        if (ultimo.createdAt < hace48Horas && ultimo.tipo !== 'ia_wingman') {
-          
-          const prompt = `Analiza este último mensaje de un chat de citas en Chile: "${ultimo.texto}". Escribe UNA sola oración amigable y corta, como un asistente que intenta revivir la charla mencionando de qué hablaban. Termina con una pregunta abierta.`;
-          const result = await model.generateContent(prompt);
-          const textoIA = result.response.text().trim();
-
-          // Inyecta el mensaje salvavidas directo al chat
-          const nuevoMensaje = await Mensaje.create({
-            matchId: match._id,
-            texto: `🤖 Wingman: ¡Oigan! La charla estaba buena. ${textoIA}`,
-            tipo: 'ia_wingman'
-          });
-
-          match.iaIntervino = true;
-          await match.save();
-
-          // Notifica a los celulares si están conectados
-          io.to(match._id.toString()).emit('recibirMensaje', nuevoMensaje);
-        }
-      }
-    }
-  } catch (e) { console.log('Error Cron IA:', e); }
-});
+// Nota: Las funciones de Cahuín del Día e IA Salva-chats ahora se ejecutan de forma secuencial 
+// dentro de geminiBotService.js al terminar de recopilar panoramas, para evitar colisiones en la API de Gemini.
 
 // Tracking de conectados por región
 const conectadosPorRegion = {};
