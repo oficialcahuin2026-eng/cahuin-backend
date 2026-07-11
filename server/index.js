@@ -17,6 +17,7 @@ const Historia = require('./models/Historia');
 const Panorama = require('./models/Panorama');
 const CahuinDiario = require('./models/CahuinDiario');
 const cloudinary = require('./config/cloudinary');
+const appwrite = require('./config/appwrite');
 
 const app = express();
 const server = http.createServer(app); 

@@ -15,6 +15,7 @@ const Reporte = require('../models/Reporte');
 const PreguntaAnonima = require('../models/PreguntaAnonima');
 const { Readable } = require('stream');
 const cloudinary = require('../config/cloudinary');
+const appwrite = require('../config/appwrite');
 const {
   inferirRegionPorCiudad,
   normalizarCiudadChile,
@@ -51,20 +52,27 @@ const obtenerEdadValida = (fechaNacimiento, edad) => {
   return edadFinal;
 };
 
-const subirFotoPerfil = (file) => new Promise((resolve, reject) => {
-  const stream = cloudinary.uploader.upload_stream(
-    {
-      folder: 'cahuin_perfiles',
-      resource_type: 'image',
-      transformation: [{ width: 800, height: 1000, crop: 'limit' }],
-    },
-    (error, result) => {
-      if (error) return reject(error);
-      resolve(result.secure_url);
+const subirFotoPerfil = (file) => new Promise(async (resolve, reject) => {
+  if (appwrite.isConfigured) {
+    try {
+      const fileId = appwrite.ID.unique();
+      const input = appwrite.InputFile.fromBuffer(file.buffer, file.originalname || 'foto.jpg');
+      const response = await appwrite.storage.createFile(appwrite.getBucketId(), fileId, input);
+      const url = `${appwrite.getEndpoint()}/storage/buckets/${appwrite.getBucketId()}/files/${response.$id}/view?project=${appwrite.getProjectId()}`;
+      resolve(url);
+    } catch (e) {
+      reject(e);
     }
-  );
-
-  Readable.from(file.buffer).pipe(stream);
+  } else {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: 'cahuin_perfiles', resource_type: 'image', transformation: [{ width: 800, height: 1000, crop: 'limit' }] },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result.secure_url);
+      }
+    );
+    Readable.from(file.buffer).pipe(stream);
+  }
 });
 
 exports.getMiPerfil = async (req, res) => {
@@ -705,8 +713,17 @@ exports.subirFotoBase64 = async (req, res) => {
     const imageToUpload = base64.startsWith('data:image') ? base64 : 'data:image/jpeg;base64,' + base64;
     const cloudinary = require('../config/cloudinary');
     
-    const result = await cloudinary.uploader.upload(imageToUpload, { folder: 'cahuin_perfiles' });
-    res.json({ fotoUrl: result.secure_url });
+    if (appwrite.isConfigured) {
+      const buffer = Buffer.from(base64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+      const fileId = appwrite.ID.unique();
+      const input = appwrite.InputFile.fromBuffer(buffer, 'foto.jpg');
+      const response = await appwrite.storage.createFile(appwrite.getBucketId(), fileId, input);
+      const url = `${appwrite.getEndpoint()}/storage/buckets/${appwrite.getBucketId()}/files/${response.$id}/view?project=${appwrite.getProjectId()}`;
+      res.json({ fotoUrl: url });
+    } else {
+      const result = await cloudinary.uploader.upload(imageToUpload, { folder: 'cahuin_perfiles' });
+      res.json({ fotoUrl: result.secure_url });
+    }
   } catch (error) {
     console.error('Error subiendo foto base64:', error);
     res.status(500).json({ message: 'Error interno al subir la foto' });
