@@ -39,6 +39,7 @@ router.get('/diario/:matchId', proteger, userController.getDiarioMatch);
 router.post('/diario/:matchId', proteger, userController.escribirDiario);
 
 // Galería Múltiple
+router.post('/fotos/base64', proteger, userController.subirFotoBase64);
 router.post('/fotos', proteger, upload.array('nuevasFotos', 6), userController.actualizarFotosMult);
 
 // Interacciones con otros perfiles

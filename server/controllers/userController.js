@@ -695,3 +695,20 @@ exports.responderPreguntaAnonima = async (req, res) => {
     res.status(500).json({ message: 'Error respondiendo pregunta' });
   }
 };
+
+
+exports.subirFotoBase64 = async (req, res) => {
+  try {
+    const { base64 } = req.body;
+    if (!base64) return res.status(400).json({ message: 'No se envió ninguna foto' });
+    
+    const imageToUpload = base64.startsWith('data:image') ? base64 : 'data:image/jpeg;base64,' + base64;
+    const cloudinary = require('../config/cloudinary');
+    
+    const result = await cloudinary.uploader.upload(imageToUpload, { folder: 'cahuin_perfiles' });
+    res.json({ fotoUrl: result.secure_url });
+  } catch (error) {
+    console.error('Error subiendo foto base64:', error);
+    res.status(500).json({ message: 'Error interno al subir la foto' });
+  }
+};
