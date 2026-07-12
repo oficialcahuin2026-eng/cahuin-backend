@@ -186,47 +186,78 @@ const ejecutarSalvaChats = async () => {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
     
     const hace48Horas = new Date(Date.now() - 48 * 60 * 60 * 1000);
-    const matchesEstancados = await Match.find({ iaIntervino: false });
+    // Limitamos a 100 chats máximos por ejecución para evitar payloads inmensos
+    const matchesEstancados = await Match.find({ iaIntervino: false }).limit(100);
+    const chatsParaProcesar = [];
 
     for (let match of matchesEstancados) {
       const ultimosMensajes = await Mensaje.find({ matchId: match._id }).sort({ createdAt: -1 }).limit(1);
-      
       if (ultimosMensajes.length > 0) {
         const ultimo = ultimosMensajes[0];
         if (ultimo.createdAt < hace48Horas && ultimo.tipo !== 'ia_wingman') {
-          
-          const prompt = `Analiza este último mensaje de un chat de citas en Chile: "${ultimo.texto}". Escribe UNA sola oración amigable y corta, como un asistente que intenta revivir la charla mencionando de qué hablaban. Termina con una pregunta abierta.`;
-          const result = await model.generateContent(prompt);
-          const textoIA = result.response.text().trim();
-
-          await Mensaje.create({
-            matchId: match._id,
-            texto: `🤖 Wingman: ¡Oigan! La charla estaba buena. ${textoIA}`,
-            tipo: 'ia_wingman'
-          });
-
-          match.iaIntervino = true;
-          await match.save();
-          // Nota: Socket.io broadcast omitido al ejecutarse en background, los usuarios lo verán al abrir la app.
+          chatsParaProcesar.push({ id: match._id.toString(), texto: ultimo.texto });
         }
       }
     }
-    console.log('✅ IA Salva-chats finalizado.');
+
+    if (chatsParaProcesar.length === 0) {
+      console.log('✅ IA Salva-chats: Ningún chat necesita ser revivido hoy.');
+      return;
+    }
+
+    console.log(`🤖 Procesando ${chatsParaProcesar.length} chats en modo mayorista...`);
+
+    const prompt = `Analiza los siguientes mensajes finales de distintos chats de citas estancados. Para cada uno, escribe UNA sola oración amigable y corta que intente revivir la charla mencionando de qué hablaban, terminando con una pregunta abierta. Usa lenguaje relajado chileno.
+Devuelve EXACTAMENTE un array JSON válido con objetos que tengan "id" y "respuesta". Ejemplo:
+[{"id": "123", "respuesta": "¡Oye! Estaba buena la charla sobre eso. ¿Qué pasó al final?"}]
+
+Mensajes a analizar:
+${chatsParaProcesar.map(c => `ID: ${c.id} | Mensaje: "${c.texto}"`).join('\n')}
+`;
+
+    // Solicitamos JSON como salida estricta
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: "application/json" }
+    });
+    
+    const textoRespuesta = result.response.text().trim();
+    let respuestas = [];
+    try {
+      respuestas = JSON.parse(textoRespuesta);
+    } catch (parseError) {
+      console.error('Error parseando respuesta JSON de IA Salva-chats:', textoRespuesta);
+      return;
+    }
+
+    for (const res of respuestas) {
+      const matchDb = await Match.findById(res.id);
+      if (matchDb) {
+        await Mensaje.create({
+          matchId: matchDb._id,
+          texto: `🤖 Wingman: ${res.respuesta}`,
+          tipo: 'ia_wingman'
+        });
+        matchDb.iaIntervino = true;
+        await matchDb.save();
+      }
+    }
+    console.log(`✅ IA Salva-chats finalizado: ${respuestas.length} chats revividos.`);
   } catch (e) { console.log('Error Cron IA:', e); }
 };
 
 const runDailyScrape = async () => {
-  console.log("[Bot] Iniciando recopilación diaria secuencial con descansos de 5 minutos...");
+  console.log("[Bot] Iniciando recopilación diaria secuencial con descansos de 30 segundos...");
   
   for (const region of regiones) {
     console.log(`[Bot] Solicitando a Gemini para la región: ${region.nombre}...`);
     await fetchPanoramasParaRegion(region);
-    await new Promise(resolve => setTimeout(resolve, 300000)); 
+    await new Promise(resolve => setTimeout(resolve, 30000)); 
   }
 
   console.log("[Bot] Ejecutando Cahuín del Día...");
   await generarCahuinDelDia();
-  await new Promise(resolve => setTimeout(resolve, 300000));
+  await new Promise(resolve => setTimeout(resolve, 30000));
 
   console.log("[Bot] Ejecutando Salva-chats...");
   await ejecutarSalvaChats();
