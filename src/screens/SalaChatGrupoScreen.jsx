@@ -4,7 +4,7 @@ import { Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext'; 
-import { useGlobalAlert } from '../context/GlobalAlertContext';
+import CahuinModal from '../components/CahuinModal';
 import { FONTS, SPACING, RADIUS, SHADOWS } from '../utils/theme';
 import { panoramaService } from '../services/api';
 
@@ -24,7 +24,8 @@ export default function SalaChatGrupoScreen({ route, navigation }) {
   
   const { usuario } = useAuth();
   const { COLORS } = useTheme();
-  const { avisar } = useGlobalAlert();
+  const [modalInfo, setModalInfo] = useState(null);
+  const avisar = (title, message, extra = {}) => setModalInfo({ title, message, ...extra });
   const styles = getStyles(COLORS);
   
   const isCreador = panorama.creador?._id === usuario?._id;
