@@ -577,49 +577,38 @@ export default function HomeScreen({ navigation }) {
 
           <LinearGradient colors={['transparent', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.95)']} style={styles.bottomGradient}>
             <View style={styles.infoScrollWrap}>
-              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 }} scrollEnabled={isTopCard}>
-                <View style={styles.nombreRow}>
-                  <Text style={styles.nombre}>{p.nombre}<Text style={styles.edad}>, {p.edad}</Text></Text>
-                  {p.verificado && <MaterialCommunityIcons name="check-decagram" size={26} color="#3B82F6" style={{ marginLeft: 8 }} />}
+              <View style={{ paddingBottom: 120 }}>
+                <View style={[styles.nombreRow, { justifyContent: 'space-between' }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <Text style={styles.nombre} numberOfLines={1}>{p.nombre}<Text style={styles.edad}>, {p.edad}</Text></Text>
+                    {p.verificado && <MaterialCommunityIcons name="check-decagram" size={26} color="#3B82F6" style={{ marginLeft: 8 }} />}
+                  </View>
+                  <TouchableOpacity 
+                    disabled={!isTopCard}
+                    onPress={() => navigation.navigate('OtroPerfil', { usuario: p, origen: 'radar' })}
+                    style={{ padding: 4 }}
+                  >
+                    <Ionicons name="arrow-up-circle" size={36} color="#FFF" />
+                  </TouchableOpacity>
                 </View>
+
                 {(p.arquetipoCahuinero || p.arquetipo?.nombre) && (
                   <View style={[styles.arquetipoChip, { backgroundColor: p.arquetipo?.color || COLORS.primario }]}>
                     <Text style={styles.arquetipoTexto}>{p.arquetipoCahuinero || p.arquetipo?.nombre}</Text>
                   </View>
                 )}
-                <Text style={styles.bioTexto}>{p.descripcion || p.biografia || 'En busca de buenas vibras y algo piola.'}</Text>
+                
+                <Text style={styles.bioTexto} numberOfLines={2}>{p.descripcion || p.biografia || 'En busca de buenas vibras y algo piola.'}</Text>
                 
                 {renderLifestylePills(p, true)}
                 
                 {(p.profesion || p.universidad) && (
                   <View style={styles.metaRow}>
-                    {p.profesion && <View style={styles.metaChip}><Ionicons name="briefcase-outline" size={14} color="#FFF" /><Text style={styles.metaText}>{p.profesion}</Text></View>}
-                    {p.universidad && <View style={styles.metaChip}><Ionicons name="school-outline" size={14} color="#FFF" /><Text style={styles.metaText}>{p.universidad}</Text></View>}
+                    {p.profesion && <View style={styles.metaChip}><Ionicons name="briefcase-outline" size={14} color="#FFF" /><Text style={styles.metaText} numberOfLines={1}>{p.profesion}</Text></View>}
+                    {p.universidad && <View style={styles.metaChip}><Ionicons name="school-outline" size={14} color="#FFF" /><Text style={styles.metaText} numberOfLines={1}>{p.universidad}</Text></View>}
                   </View>
                 )}
-
-                {p.audioRompehielos && (
-                  <View style={{ backgroundColor: 'rgba(168, 85, 247, 0.2)', padding: 12, borderRadius: 15, flexDirection: 'row', alignItems: 'center', marginVertical: 10 }}>
-                    <TouchableOpacity onPress={() => toggleAudio(p.audioRompehielos)} disabled={!isTopCard} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#A855F7', alignItems: 'center', justifyContent: 'center' }}>
-                      <Ionicons name={isPlaying ? "pause" : "play"} size={22} color="#FFF" />
-                    </TouchableOpacity>
-                    <View style={{ marginLeft: 12, flex: 1 }}>
-                      <Text style={{ color: '#A855F7', fontWeight: 'bold', fontSize: 15 }}>Mi Voz 🎤</Text>
-                      <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 2 }}>{isPlaying ? "Reproduciendo..." : "Toca para escuchar mi saludo"}</Text>
-                    </View>
-                  </View>
-                )}
-
-                {interesesPerfil.length > 0 && (
-                  <View style={styles.chipsWrap}>
-                    {interesesPerfil.map((interes, idx) => (
-                      <View key={idx} style={styles.interesChip}>
-                        <Text style={styles.interesText}>{interes}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </ScrollView>
+              </View>
             </View>
           </LinearGradient>
         </ImageBackground>
