@@ -19,6 +19,7 @@ import { useTheme } from '../context/ThemeContext';
 import { userService, matchService } from '../services/api';
 import CahuinModal from '../components/CahuinModal';
 import CahuinTextField from '../components/CahuinTextField';
+import FullProfileViewer from '../components/FullProfileViewer';
 import { FONTS, RADIUS, SHADOWS, SPACING } from '../utils/theme';
 
 const MOTIVOS_REPORTE = [
@@ -248,178 +249,44 @@ export default function OtroPerfilScreen({ route, navigation }) {
         <Ionicons name="flag" size={22} color="#FFF" />
       </TouchableOpacity>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} bounces={false}>
-        
-        <View style={styles.contenedorFoto}>
-          <Image source={{ uri: fotosGaleria[fotoIndex] }} style={styles.fotoPrincipal} />
-          {fotosGaleria.length > 1 && (
-            <View style={styles.barrasContainer}>
-              {fotosGaleria.map((_, i) => (
-                <View key={i} style={[styles.barraFoto, { backgroundColor: i === fotoIndex ? '#FFF' : 'rgba(255,255,255,0.35)' }]} />
-              ))}
+      <FullProfileViewer perfil={perfil} compatibilidad={null}>
+        <View style={styles.nglBox}>
+          <View style={styles.nglHeader}>
+            <Text style={styles.nglEmoji}>?</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.nglTitulo}>Preguntale algo a {perfil.nombre}</Text>
+              <Text style={styles.nglSubtitulo}>Cahuín lo manda sin mostrar tu nombre. Si responde, puede publicarlo aquí.</Text>
             </View>
-          )}
-          <TouchableOpacity style={styles.zonaTactilIzq} onPress={() => { Haptics.selectionAsync(); if (fotoIndex > 0) setFotoIndex(fotoIndex - 1); }} />
-          <TouchableOpacity style={styles.zonaTactilDer} onPress={() => { Haptics.selectionAsync(); if (fotoIndex < fotosGaleria.length - 1) setFotoIndex(fotoIndex + 1); }} />
-          {cargando ? <View style={styles.overlayCarga}><ActivityIndicator size="large" color={COLORS.primario} /></View> : null}
+          </View>
+          <View style={styles.nglInputRow}>
+            <CahuinTextField
+              icon="help-circle-outline"
+              containerStyle={{ flex: 1 }}
+              placeholder="Ej: Cual fue tu peor cita?"
+              value={preguntaAnonima}
+              onChangeText={setPreguntaAnonima}
+            />
+            <TouchableOpacity style={styles.btnEnviarNGL} onPress={enviarPreguntaAnonima} disabled={enviandoPregunta}>
+              {enviandoPregunta ? <ActivityIndicator color="#FFF" /> : <Ionicons name="send" size={18} color="#FFF" />}
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <View style={styles.infoContainer}>
-          <View style={styles.perfilHeader}>
-            <Text style={styles.nombre}>{perfil.nombre}<Text style={{fontSize: 22, color: COLORS.textMuted}}>, {perfil.edad}</Text></Text>
-            {perfil.verificado ? <MaterialCommunityIcons name="check-decagram" size={24} color="#3B82F6" style={{ marginLeft: 6 }} /> : null}
-          </View>
-
-          <View style={styles.metaRow}>
-            {(perfil.arquetipoCahuinero || perfil.arquetipo?.nombre) && (
-              <View style={[styles.metaChip, { backgroundColor: perfil.arquetipo?.color || COLORS.primario }]}>
-                <Text style={styles.metaChipTextLight}>{perfil.arquetipoCahuinero || perfil.arquetipo?.nombre}</Text>
-              </View>
-            )}
-            {perfil.profesion && (
-              <View style={styles.metaChipNeutral}>
-                <Ionicons name="briefcase-outline" size={14} color={COLORS.textMuted} />
-                <Text style={styles.metaChipText}>{perfil.profesion}</Text>
-              </View>
-            )}
-            {perfil.universidad && (
-              <View style={styles.metaChipNeutral}>
-                <Ionicons name="school-outline" size={14} color={COLORS.textMuted} />
-                <Text style={styles.metaChipText}>{perfil.universidad}</Text>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.ubicacionRow}>
-            <Ionicons name="location-sharp" size={16} color={COLORS.gris} />
-            <Text style={styles.ciudad}>{perfil.ciudad || 'Chile'}, {perfil.region}</Text>
-          </View>
-          
+        {preguntasPublicas && preguntasPublicas.length > 0 ? (
           <View style={styles.seccion}>
-            <Text style={styles.bioTexto}>{perfil.descripcion || perfil.biografia || 'En busca de buenas vibras y algo piola.'}</Text>
+            <View style={styles.seccionHeader}>
+              <Ionicons name="chatbubble-ellipses-outline" size={20} color={COLORS.primario} />
+              <Text style={styles.seccionTitulo}>Preguntas que respondió</Text>
+            </View>
+            {preguntasPublicas.map((item) => (
+              <View key={item._id} style={styles.qaCard}>
+                <Text style={styles.qaQuestion}>{item.pregunta}</Text>
+                <Text style={styles.qaAnswer}>{item.respuesta}</Text>
+              </View>
+            ))}
           </View>
-
-          {tieneDisponibilidad && (
-            <View style={styles.seccion}>
-              <View style={styles.seccionHeader}>
-                <Ionicons name="calendar-outline" size={24} color={COLORS.primario} />
-                <Text style={styles.seccionTitulo}>Disponibilidad</Text>
-              </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingVertical: 10 }}>
-                {diasDisponibilidad.map(d => {
-                   const iso = d.toISOString();
-                   const selected = (perfil.fechasDisponibles || []).includes(iso);
-                   const diaNombre = d.toLocaleDateString('es-ES', { weekday: 'short' });
-                   const diaNum = d.getDate();
-                   return (
-                     <View 
-                       key={iso} 
-                       style={[styles.dayBox, selected && styles.dayBoxSelected, { borderColor: selected ? COLORS.primario : COLORS.border, backgroundColor: selected ? COLORS.primario : COLORS.tarjeta }]} 
-                     >
-                       <Text style={[styles.dayName, { color: selected ? '#FFF' : COLORS.textMuted }]}>{diaNombre.toUpperCase()}</Text>
-                       <Text style={[styles.dayNum, { color: selected ? '#FFF' : COLORS.textPrimary }]}>{diaNum}</Text>
-                     </View>
-                   );
-                })}
-              </ScrollView>
-            </View>
-          )}
-
-          {renderLifestylePills(perfil)}
-          
-          {perfil.audioRompehielos && (
-            <View style={styles.seccion}>
-              <View style={styles.seccionHeader}>
-                <Ionicons name="mic-circle" size={24} color="#A855F7" />
-                <Text style={[styles.seccionTitulo, { color: '#A855F7' }]}>Mi Voz</Text>
-              </View>
-              <View style={{ backgroundColor: 'rgba(168, 85, 247, 0.1)', padding: 15, borderRadius: 15, flexDirection: 'row', alignItems: 'center' }}>
-                <TouchableOpacity onPress={toggleAudio} style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#A855F7', alignItems: 'center', justifyContent: 'center' }}>
-                  <Ionicons name={isPlaying ? "pause" : "play"} size={24} color="#FFF" />
-                </TouchableOpacity>
-                <View style={{ marginLeft: 15, flex: 1 }}>
-                  <Text style={{ color: '#A855F7', fontWeight: 'bold', fontSize: 16 }}>Audio Rompehielos</Text>
-                  <Text style={{ color: COLORS.textMuted, fontSize: 13, marginTop: 2 }}>{isPlaying ? "Reproduciendo..." : "Escucha su saludo"}</Text>
-                </View>
-              </View>
-            </View>
-          )}
-
-          {interesesPerfil.length > 0 && (
-            <View style={styles.seccion}>
-              <View style={styles.seccionHeader}>
-                <Ionicons name="heart-circle-outline" size={20} color={COLORS.primario} />
-                <Text style={styles.seccionTitulo}>Intereses</Text>
-              </View>
-              <View style={styles.lsWrap}>
-                {interesesPerfil.map((interes, idx) => (
-                  <View key={idx} style={styles.interesChip}>
-                    <Text style={styles.interesText}>{interes}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-
-          <View style={styles.nglBox}>
-            <View style={styles.nglHeader}>
-              <Text style={styles.nglEmoji}>?</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.nglTitulo}>Preguntale algo a {perfil.nombre}</Text>
-                <Text style={styles.nglSubtitulo}>Cahuín lo manda sin mostrar tu nombre. Si responde, puede publicarlo aquí.</Text>
-              </View>
-            </View>
-            <View style={styles.nglInputRow}>
-              <CahuinTextField
-                icon="help-circle-outline"
-                containerStyle={{ flex: 1 }}
-                placeholder="Ej: Cual fue tu peor cita?"
-                value={preguntaAnonima}
-                onChangeText={setPreguntaAnonima}
-              />
-              <TouchableOpacity style={styles.btnEnviarNGL} onPress={enviarPreguntaAnonima} disabled={enviandoPregunta}>
-                {enviandoPregunta ? <ActivityIndicator color="#FFF" /> : <Ionicons name="send" size={18} color="#FFF" />}
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {preguntasPublicas.length > 0 ? (
-            <View style={styles.seccion}>
-              <View style={styles.seccionHeader}>
-                <Ionicons name="chatbubble-ellipses-outline" size={20} color={COLORS.primario} />
-                <Text style={styles.seccionTitulo}>Preguntas que respondió</Text>
-              </View>
-              {preguntasPublicas.map((item) => (
-                <View key={item._id} style={styles.qaCard}>
-                  <Text style={styles.qaQuestion}>{item.pregunta}</Text>
-                  <Text style={styles.qaAnswer}>{item.respuesta}</Text>
-                </View>
-              ))}
-            </View>
-          ) : null}
-
-          {((perfil.musica && perfil.musica.length > 0) || perfil.cancion?.nombre) ? (
-            <View style={styles.seccion}>
-              <View style={styles.seccionHeader}>
-                <Ionicons name="musical-notes-outline" size={20} color={COLORS.primario} />
-                <Text style={styles.seccionTitulo}>Gustos musicales</Text>
-              </View>
-              {perfil.cancion?.nombre ? (
-                <View style={styles.cancionDestacada}>
-                  <Image source={{ uri: perfil.cancion.foto }} style={styles.cancionFoto} />
-                  <View style={styles.cancionInfo}>
-                    <Text style={styles.cancionLabel}>Ultima cancion escuchada</Text>
-                    <Text style={styles.cancionNombre}>{perfil.cancion.nombre}</Text>
-                  </View>
-                  <Ionicons name="musical-note" size={24} color={COLORS.primario} />
-                </View>
-              ) : null}
-            </View>
-          ) : null}
-
-          <View style={{ height: 120 }} />
-        </View>
-      </ScrollView>
+        ) : null}
+      </FullProfileViewer>
 
       {/* Floating Action Bar */}
       {!route.params?.hideActions && (

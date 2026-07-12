@@ -1,23 +1,50 @@
-import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
-// 1. Corregido: Importamos SHADOWS (con S)
+import React, { useState } from 'react';
+import { View, Text, Image, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { COLORS, FONTS, RADIUS, SPACING, SHADOWS } from '../utils/theme'; 
 import useCompatibilidad, { emojiCompatibilidad } from '../hooks/useCompatibilidad';
 import { useAuth } from '../context/AuthContext';
+import * as Haptics from 'expo-haptics';
+
+const { width } = Dimensions.get('window');
 
 export default function PerfilCard({ perfil, onLike, onPass, onSuperLike }) {
   const { usuario } = useAuth();
   const { calcular } = useCompatibilidad(usuario);
   const compatibilidad = calcular(perfil);
+  const [fotoIndex, setFotoIndex] = useState(0);
+
+  const fotos = perfil.fotos?.length > 0 ? perfil.fotos : [perfil.foto || `https://picsum.photos/seed/${perfil._id}/400/500`];
 
   // Unimos los intereses (nuestro modelo real) con los que pide el sistema de compatibilidad
   const etiquetas = perfil.intereses?.length > 0 ? perfil.intereses : (perfil.gastronomia || []);
 
+  const changePhoto = (direction) => {
+    Haptics.selectionAsync();
+    if (direction === 'next' && fotoIndex < fotos.length - 1) {
+      setFotoIndex(fotoIndex + 1);
+    } else if (direction === 'prev' && fotoIndex > 0) {
+      setFotoIndex(fotoIndex - 1);
+    }
+  };
+
   return (
-    // 2. Corregido: Usamos SHADOWS.medium que sí existe
     <View style={[styles.card, SHADOWS.medium]}> 
-      <Image source={{ uri: perfil.foto || `https://picsum.photos/seed/${perfil._id}/400/500` }}
-        style={styles.foto} resizeMode="cover" />
+      <View style={styles.fotoContainer}>
+        <Image source={{ uri: fotos[fotoIndex] }} style={styles.foto} resizeMode="cover" />
+        
+        {/* Barras de paginación */}
+        {fotos.length > 1 && (
+          <View style={styles.barrasContainer}>
+            {fotos.map((_, i) => (
+              <View key={i} style={[styles.barraFoto, { backgroundColor: i === fotoIndex ? '#FFF' : 'rgba(255,255,255,0.4)' }]} />
+            ))}
+          </View>
+        )}
+        
+        {/* Zonas táctiles invisibles para cambiar de foto */}
+        <TouchableOpacity style={styles.zonaTactilIzq} onPress={() => changePhoto('prev')} activeOpacity={1} />
+        <TouchableOpacity style={styles.zonaTactilDer} onPress={() => changePhoto('next')} activeOpacity={1} />
+      </View>
 
       {perfil.verificado && (
         <View style={styles.verificadoBadge}>
@@ -62,10 +89,15 @@ export default function PerfilCard({ perfil, onLike, onPass, onSuperLike }) {
 // 3. Corregido: Traducimos todos los colores inventados a los que realmente existen
 const styles = StyleSheet.create({
   card: { width:'92%', borderRadius: RADIUS['2xl'], backgroundColor: COLORS.tarjeta, overflow:'hidden', alignSelf:'center' },
-  foto: { width:'100%', height: 420 },
-  verificadoBadge: { position:'absolute', top: SPACING[4], left: SPACING[4], backgroundColor: COLORS.like, borderRadius: 50, paddingHorizontal: SPACING[3], paddingVertical: SPACING[1] },
+  fotoContainer: { width: '100%', height: 420 },
+  foto: { width:'100%', height: '100%' },
+  barrasContainer: { position: 'absolute', top: 10, left: 10, right: 10, flexDirection: 'row', gap: 4, zIndex: 5 },
+  barraFoto: { flex: 1, height: 4, borderRadius: 2 },
+  zonaTactilIzq: { position: 'absolute', top: 0, bottom: 0, left: 0, width: '40%', zIndex: 4 },
+  zonaTactilDer: { position: 'absolute', top: 0, bottom: 0, right: 0, width: '60%', zIndex: 4 },
+  verificadoBadge: { position:'absolute', top: SPACING[6], left: SPACING[4], backgroundColor: COLORS.like, borderRadius: 50, paddingHorizontal: SPACING[3], paddingVertical: SPACING[1], zIndex: 5 },
   verificadoText: { color:'#fff', fontSize:11, fontFamily: FONTS.bodyBold },
-  compatBadge: { position:'absolute', top: SPACING[4], right: SPACING[4], backgroundColor:'rgba(0,0,0,0.65)', borderRadius: 50, paddingHorizontal: SPACING[3], paddingVertical: SPACING[1] },
+  compatBadge: { position:'absolute', top: SPACING[6], right: SPACING[4], backgroundColor:'rgba(0,0,0,0.65)', borderRadius: 50, paddingHorizontal: SPACING[3], paddingVertical: SPACING[1], zIndex: 5 },
   compatText: { color:'#fff', fontSize:11, fontFamily: FONTS.bodyBold },
   infoContainer: { padding: SPACING[5], paddingBottom: SPACING[2] },
   nombreRow: { flexDirection:'row', justifyContent:'space-between', alignItems:'baseline', marginBottom: SPACING[2] },

@@ -33,6 +33,7 @@ import AppleMusicSelectorModal from '../components/AppleMusicSelectorModal';
 import GenericSelectorModal from '../components/GenericSelectorModal';
 import HobbiesSelectorModal from '../components/HobbiesSelectorModal';
 import JuegosSelectorModal from '../components/JuegosSelectorModal';
+import FullProfileViewer from '../components/FullProfileViewer';
 
 export default function EditarPerfilScreen({ navigation }) {
   const { usuario, actualizarUsuario } = useAuth();
@@ -99,6 +100,42 @@ export default function EditarPerfilScreen({ navigation }) {
 
   const [mostrarEdad, setMostrarEdad] = useState(usuario?.mostrarEdad !== false);
   const [mostrarDistancia, setMostrarDistancia] = useState(usuario?.mostrarDistancia !== false);
+
+  const currentPreviewProfile = {
+    ...usuario,
+    nombre: nombre || usuario?.nombre || 'Yo',
+    fotos: fotosGaleria,
+    foto: fotosGaleria[0] || '',
+    descripcion: descripcion,
+    ciudad,
+    prompts,
+    peliculasFavoritas,
+    seriesFavoritas,
+    juegosFavoritos,
+    hobbies,
+    artistasSpotify,
+    cancion,
+    audioRompehielos,
+    queBuscas,
+    pronombres,
+    genero,
+    orientacionSexual,
+    mostrarGenero,
+    mostrarOrientacion,
+    altura,
+    idiomas: typeof idiomas === 'string' ? idiomas.split(',').map(s=>s.trim()) : idiomas,
+    centroEstudios,
+    trabajo,
+    zodiaco,
+    nivelEscolaridad,
+    mapaValores: { ...usuario?.mapaValores, planesHijos },
+    personalidad,
+    estiloComunicacion,
+    recibirAmor,
+    habitos: { mascotas, beber, fumar, ejercicio, alimentacion, redesSociales, habitosSueno, carrete, vacaciones, transporte },
+    mostrarEdad,
+    mostrarDistancia
+  };
 
   const [modalMovies, setModalMovies] = useState(false);
   const [modalSeries, setModalSeries] = useState(false);
@@ -463,116 +500,7 @@ export default function EditarPerfilScreen({ navigation }) {
 
       {/* ── VISTA PREVIA ── */}
       {activeTab === 'vistaprevia' ? (
-        <ScrollView style={styles.previewScroll} showsVerticalScrollIndicator={false}>
-          <View style={styles.publicCard}>
-            <Image source={{ uri: fotoPrincipal }} style={styles.publicImage} />
-            <View style={styles.publicOverlay}>
-              <Text style={styles.publicName}>{usuario?.nombre}, {mostrarEdad ? (usuario?.edad || 18) : ''}</Text>
-              <View style={styles.publicLocationRow}>
-                <Ionicons name="location" size={15} color="#FFF" />
-                <Text style={styles.publicLocation}>{ciudad || 'Tu ciudad'} {mostrarDistancia ? '· a 2 km' : ''}</Text>
-              </View>
-            </View>
-          </View>
-          <View style={styles.previewContent}>
-            
-            <View style={styles.pillsContainer}>
-              {hobbies.map(h => renderPill(h.icon, h.nombre))}
-              {mostrarGenero && renderPill("person", genero)}
-              {mostrarOrientacion && renderPill("heart", orientacionSexual)}
-              {renderPill("school", centroEstudios)}
-              {renderPill("briefcase", trabajo)}
-              {renderPill("book", nivelEscolaridad)}
-              {renderPill("moon", zodiaco)}
-              {renderPill("people", planesHijos)}
-              {renderPill("finger-print", personalidad)}
-              {renderPill("chatbubbles", estiloComunicacion)}
-              {renderPill("heart", recibirAmor)}
-              {renderPill("paw", mascotas)}
-              {renderPill("wine", beber)}
-              {renderPill("flame", fumar)}
-              {renderPill("barbell", ejercicio)}
-              {renderPill("restaurant", alimentacion)}
-              {renderPill("phone-portrait", redesSociales)}
-              {renderPill("bed", habitosSueno)}
-              {renderPill("musical-notes", carrete)}
-              {renderPill("airplane", vacaciones)}
-              {renderPill("bus", transporte)}
-              {queBuscas ? (
-                renderPill("eye", queBuscas)
-              ) : null}
-              {renderPill("person", pronombres)}
-              {renderPill("resize", altura ? `${altura} cm` : '')}
-              {renderPill("language", idiomas)}
-            </View>
-
-            {descripcion ? <Text style={styles.publicBio}>{descripcion}</Text> : null}
-            
-            {cancion && cancion.nombre && (
-              <View style={styles.previewSection}>
-                <Text style={styles.previewSectionTitle}>Mi himno musical</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Image source={{ uri: cancion.foto }} style={{ width: 50, height: 50, borderRadius: 8, marginRight: 12 }} />
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: COLORS.textPrimary }}>{cancion.nombre}</Text>
-                </View>
-              </View>
-            )}
-
-            {prompts.map((p, idx) => (
-              <View key={idx} style={styles.previewPrompt}>
-                <Text style={styles.previewPromptQ}>{p.pregunta}</Text>
-                <Text style={styles.previewPromptA}>{p.respuesta}</Text>
-              </View>
-            ))}
-
-            {peliculasFavoritas.length > 0 && (
-              <View style={styles.previewSection}>
-                <Text style={styles.previewSectionTitle}>Películas que me gustan</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
-                  {peliculasFavoritas.map(m => (
-                    <Image key={m.id} source={{ uri: m.poster }} style={styles.previewMoviePoster} />
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-
-            {seriesFavoritas.length > 0 && (
-              <View style={styles.previewSection}>
-                <Text style={styles.previewSectionTitle}>Series que me gustan</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
-                  {seriesFavoritas.map(m => (
-                    <Image key={m.id} source={{ uri: m.poster }} style={styles.previewMoviePoster} />
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-
-            {juegosFavoritos.length > 0 && (
-              <View style={styles.previewSection}>
-                <Text style={styles.previewSectionTitle}>Juegos que me gustan</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
-                  {juegosFavoritos.map(m => (
-                    <Image key={m.id} source={{ uri: m.poster }} style={styles.previewMoviePoster} />
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-
-            {artistasSpotify.length > 0 && (
-              <View style={styles.previewSection}>
-                <Text style={styles.previewSectionTitle}>Artistas favoritos</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
-                  {artistasSpotify.map(a => (
-                    <View key={a.id} style={{ alignItems: 'center' }}>
-                      <Image source={{ uri: a.foto }} style={styles.previewArtistImage} />
-                      <Text style={styles.previewArtistName}>{a.nombre}</Text>
-                    </View>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-          </View>
-        </ScrollView>
+        <FullProfileViewer perfil={currentPreviewProfile} isPreview={true} />
       ) : (
         /* ── EDITAR ── */
         <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 100 }}>
