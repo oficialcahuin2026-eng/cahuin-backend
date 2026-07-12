@@ -131,6 +131,9 @@ io.on('connection', (socket) => {
       io.emit('statsRegiones', conectadosPorRegion);
     }
     console.log('❌ Celular desconectado del chat'); 
+  });
+});
+
 const PORT = process.env.PORT || 5000;
 
 const iniciarServidor = async () => {
