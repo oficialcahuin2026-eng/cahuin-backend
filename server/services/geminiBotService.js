@@ -25,17 +25,17 @@ const assignDefaultImage = (clasificacion) => {
   return "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80";
 };
 
+// Helper para obtener una API key aleatoria si hay múltiples configuradas (separadas por coma)
+const getRandomApiKey = () => {
+  const envKey = process.env.GEMINI_API_KEY;
+  if (!envKey) return null;
+  const keys = envKey.split(',').map(k => k.trim()).filter(k => k.length > 0);
+  if (keys.length === 0) return null;
+  return keys[Math.floor(Math.random() * keys.length)];
+};
+
 // Función para procesar una región y guardar sus resultados
 const fetchPanoramasParaRegion = async (region) => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    console.error("GEMINI_API_KEY no configurada.");
-    return;
-  }
-  const genAI = new GoogleGenerativeAI(apiKey);
-  // Usaremos gemini-flash-latest 
-  const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
-
   const prompt = `Actúa como un investigador experto en la agenda oficial y local de panoramas en ${region.nombre}, Chile. Tu objetivo es elaborar una guía exhaustiva, ultra detallada y completa de absolutamente todos los eventos —musicales, culturales, deportivos, gastronómicos, ferias, festivales, shows en vivo, celebraciones municipales y actividades en bares, hoteles, restaurantes, discotecas y cualquier otro local— que se realizarán en las comunas de la ${region.nombre} durante el día siguiente.
 
 Directrices de búsqueda:
@@ -74,6 +74,11 @@ IMPORTANTE: Responde ÚNICAMENTE con la tabla Markdown. No incluyas texto antes 
 
   while (retries > 0 && !success) {
     try {
+      const currentApiKey = getRandomApiKey();
+      if (!currentApiKey) throw new Error("GEMINI_API_KEY no configurada");
+      const genAI = new GoogleGenerativeAI(currentApiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+
       const result = await model.generateContent(prompt);
       const text = result.response.text();
       await parseAndSavePanoramas(text, region.nombre, region.nombreCorto);
@@ -177,8 +182,9 @@ const Mensaje = require("../models/Mensaje");
 const generarCahuinDelDia = async () => {
   console.log('🗣️ Generando Cahuín del Día con Gemini...');
   try {
-    if (!process.env.GEMINI_API_KEY) return;
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const apiKey = getRandomApiKey();
+    if (!apiKey) return;
+    const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
     
     const prompt = `Escribe un enunciado polémico, divertido o interesante sobre citas, amor, costumbres chilenas o vida cotidiana que sirva como "Cahuín del Día" para que usuarios de una app de citas en Chile voten "De acuerdo" o "Ni cagando". Debe ser de máximo 2 oraciones, con un tono relajado y chileno (pero sin exagerar). Ejemplo: "Mandar reels cuenta como lenguaje del amor." Responde SOLO con el enunciado, sin comillas.`;
@@ -200,8 +206,9 @@ const generarCahuinDelDia = async () => {
 const ejecutarSalvaChats = async () => {
   console.log('🤖 IA Salva-chats: Revisando conversaciones estancadas...');
   try {
-    if (!process.env.GEMINI_API_KEY) return;
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const apiKey = getRandomApiKey();
+    if (!apiKey) return;
+    const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
     
     const hace48Horas = new Date(Date.now() - 48 * 60 * 60 * 1000);
