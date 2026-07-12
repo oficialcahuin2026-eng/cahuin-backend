@@ -131,23 +131,6 @@ io.on('connection', (socket) => {
       io.emit('statsRegiones', conectadosPorRegion);
     }
     console.log('❌ Celular desconectado del chat'); 
-  });
-});
-
-// Cronjob: Todos los domingos a las 23:59pm se reinicia 'likesSemana' para la competencia semanal
-cron.schedule('59 23 * * 0', async () => {
-  try {
-    const User = require('./models/User');
-    await User.updateMany({}, { $set: { likesSemana: 0 } });
-    console.log('🌟 Competencia Semanal Reiniciada: likesSemana puestos a 0');
-  } catch (error) {
-    console.error('Error al reiniciar likesSemana:', error);
-  }
-}, {
-  scheduled: true,
-  timezone: "America/Santiago"
-});
-
 const PORT = process.env.PORT || 5000;
 
 const iniciarServidor = async () => {
