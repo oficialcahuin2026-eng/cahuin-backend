@@ -1,5 +1,5 @@
-const { Client, Storage, ID, InputFile } = require('node-appwrite');
-
+const { Client, Storage, ID } = require('node-appwrite');
+const { InputFile } = require('node-appwrite/file');
 let storage = null;
 let client = null;
 let isConfigured = false;
