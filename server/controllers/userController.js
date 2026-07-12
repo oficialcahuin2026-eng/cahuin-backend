@@ -749,3 +749,22 @@ exports.subirFotoBase64 = async (req, res) => {
     res.status(500).json({ message: 'Error interno al subir la foto' });
   }
 };
+
+exports.eliminarCuenta = async (req, res) => {
+  try {
+    const { motivo } = req.body;
+    const usuario = await User.findById(req.user._id);
+    if (!usuario) return res.status(404).json({ message: 'No encontrado' });
+
+    usuario.cuentaPausada = true;
+    const eliminacionDate = new Date();
+    eliminacionDate.setDate(eliminacionDate.getDate() + 7);
+    usuario.cuentaEliminadaEn = eliminacionDate;
+    usuario.motivoEliminacion = motivo || 'No especificado';
+    
+    await usuario.save();
+    res.json({ message: 'Cuenta programada para eliminación' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error eliminando cuenta' });
+  }
+};

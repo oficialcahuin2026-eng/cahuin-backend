@@ -298,6 +298,7 @@ export default function SalaChatGrupoScreen({ route, navigation }) {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+      <CahuinModal visible={!!modalInfo} {...modalInfo} onClose={() => setModalInfo(null)} />
     </SafeAreaView>
   );
 }

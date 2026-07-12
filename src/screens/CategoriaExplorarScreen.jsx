@@ -18,6 +18,7 @@ import { getCategoriaExplorar } from '../data/explorarCategorias';
 import { FONTS, SHADOWS, SPACING } from '../utils/theme';
 import { GradientButton, ScreenScaffold, SoftIcon } from '../components/CahuinUI';
 import CahuinModal from '../components/CahuinModal';
+import PreferenciasModal from '../components/PreferenciasModal';
 
 const fotoFallback = 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=85';
 
@@ -34,6 +35,7 @@ export default function CategoriaExplorarScreen({ navigation, route }) {
   const [perfiles, setPerfiles] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [refrescando, setRefrescando] = useState(false);
+  const [showPreferencias, setShowPreferencias] = useState(false);
   const [accionandoId, setAccionandoId] = useState(null);
   const [modalInfo, setModalInfo] = useState(null);
 
@@ -205,7 +207,7 @@ export default function CategoriaExplorarScreen({ navigation, route }) {
           <SoftIcon name="sparkles" bg={COLORS.softRed} color={COLORS.primario} size={70} rounded={35} iconSize={32} />
           <Text style={styles.emptyTitle}>No hay perfiles por ahora</Text>
           <Text style={styles.emptyText}>Prueba ampliar tu distancia en Preferencias o unirte a otra comunidad.</Text>
-          <TouchableOpacity style={[styles.secondaryButton, { borderColor: categoria.color }]} onPress={() => navigation.navigate('Preferencias')}>
+          <TouchableOpacity style={[styles.secondaryButton, { borderColor: categoria.color }]} onPress={() => setShowPreferencias(true)}>
             <Text style={[styles.secondaryButtonText, { color: categoria.color }]}>Editar preferencias</Text>
           </TouchableOpacity>
         </View>
@@ -261,6 +263,14 @@ export default function CategoriaExplorarScreen({ navigation, route }) {
         tone={modalInfo?.tone}
         details={modalInfo?.details}
         onClose={() => setModalInfo(null)}
+      />
+      <PreferenciasModal
+        visible={showPreferencias}
+        onClose={() => setShowPreferencias(false)}
+        onSave={() => {
+          setShowPreferencias(false);
+          cargarPerfiles();
+        }}
       />
     </ScreenScaffold>
   );
