@@ -390,7 +390,11 @@ export default function EditarPerfilScreen({ navigation }) {
                         }
                       ]}
                     >
-                      <Text style={{fontSize: 24}}>{item.icon || '📌'}</Text>
+                      {item.icon ? (
+                        <Ionicons name={item.icon} size={24} color={COLORS.textPrimary} />
+                      ) : (
+                        <Text style={{fontSize: 24}}>📌</Text>
+                      )}
                     </View>
                   );
                 }

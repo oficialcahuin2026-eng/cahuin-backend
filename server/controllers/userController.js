@@ -734,16 +734,21 @@ exports.subirFotoBase64 = async (req, res) => {
     const cloudinary = require('../config/cloudinary');
     
     if (appwrite.isConfigured) {
-      const buffer = Buffer.from(base64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
-      const fileId = appwrite.ID.unique();
-      const input = appwrite.InputFile.fromBuffer(buffer, 'foto.jpg');
-      const response = await appwrite.storage.createFile(appwrite.getBucketId(), fileId, input);
-      const url = `${appwrite.getEndpoint()}/storage/buckets/${appwrite.getBucketId()}/files/${response.$id}/view?project=${appwrite.getProjectId()}`;
-      res.json({ fotoUrl: url });
-    } else {
-      const result = await cloudinary.uploader.upload(imageToUpload, { folder: 'cahuin_perfiles' });
-      res.json({ fotoUrl: result.secure_url });
+      try {
+        const buffer = Buffer.from(base64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+        const fileId = appwrite.ID.unique();
+        const input = appwrite.InputFile.fromBuffer(buffer, 'foto.jpg', buffer.length); // Añadido buffer.length por si node-appwrite lo requiere
+        const response = await appwrite.storage.createFile(appwrite.getBucketId(), fileId, input);
+        const url = `${appwrite.getEndpoint()}/storage/buckets/${appwrite.getBucketId()}/files/${response.$id}/view?project=${appwrite.getProjectId()}`;
+        return res.json({ fotoUrl: url });
+      } catch (appwriteErr) {
+        console.error('Error con Appwrite, cayendo a Cloudinary:', appwriteErr.message);
+        // Fallback a cloudinary
+      }
     }
+    
+    const result = await cloudinary.uploader.upload(imageToUpload, { folder: 'cahuin_perfiles' });
+    res.json({ fotoUrl: result.secure_url });
   } catch (error) {
     console.error('Error subiendo foto base64:', error);
     res.status(500).json({ message: 'Error interno al subir la foto' });
