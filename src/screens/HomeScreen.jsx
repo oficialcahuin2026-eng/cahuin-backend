@@ -575,9 +575,9 @@ export default function HomeScreen({ navigation }) {
             </>
           )}
 
-          <LinearGradient colors={['transparent', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.95)']} style={styles.bottomGradient}>
-            <View style={styles.infoScrollWrap}>
-              <View style={{ paddingBottom: 120 }}>
+          <LinearGradient pointerEvents="box-none" colors={['transparent', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.95)']} style={styles.bottomGradient}>
+            <View pointerEvents="box-none" style={styles.infoScrollWrap}>
+              <View pointerEvents="box-none" style={{ paddingBottom: 120 }}>
                 <View style={[styles.nombreRow, { justifyContent: 'space-between' }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                     <Text style={styles.nombre} numberOfLines={1}>{p.nombre}<Text style={styles.edad}>, {p.edad}</Text></Text>
@@ -750,8 +750,8 @@ const getStyles = (COLORS, isDarkMode) => StyleSheet.create({
   iaButton: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
 
   // ── Zonas táctiles ──
-  zonaTactilIzq: { position: 'absolute', top: 120, bottom: 0, left: 0, width: '50%', zIndex: 10 },
-  zonaTactilDer: { position: 'absolute', top: 120, bottom: 0, right: 0, width: '50%', zIndex: 10 },
+  zonaTactilIzq: { position: 'absolute', top: 120, bottom: 200, left: 0, width: '50%', zIndex: 10 },
+  zonaTactilDer: { position: 'absolute', top: 120, bottom: 200, right: 0, width: '50%', zIndex: 10 },
 
   // ── Dark mode bottom section ──
   bottomGradient: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%', justifyContent: 'flex-end', borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
