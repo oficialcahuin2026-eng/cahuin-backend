@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ScrollView, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, ScrollView, SafeAreaView, Platform, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { FONTS, RADIUS, SHADOWS } from '../utils/theme';
 import CahuinTextField from './CahuinTextField';
@@ -190,7 +190,7 @@ export default function HobbiesSelectorModal({ visible, onClose, selectedHobbies
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg, paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 }}>
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose}>
             <Ionicons name="close" size={28} color={COLORS.textPrimary} />
