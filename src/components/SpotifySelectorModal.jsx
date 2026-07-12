@@ -18,12 +18,12 @@ export default function SpotifySelectorModal({ visible, onClose, selectedArtists
     }
     setLoading(true);
     try {
-      const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(text)}&entity=musicArtist&limit=20`);
+      const res = await fetch(`https://api.deezer.com/search/artist?q=${encodeURIComponent(text)}`);
       const data = await res.json();
-      const mapped = (data.results || []).map(a => ({
-        id: a.artistId.toString(),
-        nombre: a.artistName,
-        foto: `https://ui-avatars.com/api/?name=${encodeURIComponent(a.artistName)}&size=200&background=1DB954&color=fff&bold=true`
+      const mapped = (data.data || []).slice(0, 20).map(a => ({
+        id: a.id.toString(),
+        nombre: a.name,
+        foto: a.picture_medium || `https://ui-avatars.com/api/?name=${encodeURIComponent(a.name)}&size=200&background=1DB954&color=fff&bold=true`
       }));
       setResults(mapped);
     } catch (error) {
