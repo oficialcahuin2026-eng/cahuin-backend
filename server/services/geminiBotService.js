@@ -216,17 +216,17 @@ const ejecutarSalvaChats = async () => {
 };
 
 const runDailyScrape = async () => {
-  console.log("[Bot] Iniciando recopilación diaria secuencial...");
+  console.log("[Bot] Iniciando recopilación diaria secuencial con descansos de 5 minutos...");
   
   for (const region of regiones) {
     console.log(`[Bot] Solicitando a Gemini para la región: ${region.nombre}...`);
     await fetchPanoramasParaRegion(region);
-    await new Promise(resolve => setTimeout(resolve, 10000)); 
+    await new Promise(resolve => setTimeout(resolve, 300000)); 
   }
 
   console.log("[Bot] Ejecutando Cahuín del Día...");
   await generarCahuinDelDia();
-  await new Promise(resolve => setTimeout(resolve, 10000));
+  await new Promise(resolve => setTimeout(resolve, 300000));
 
   console.log("[Bot] Ejecutando Salva-chats...");
   await ejecutarSalvaChats();
