@@ -225,11 +225,19 @@ exports.descubrir = async (req, res) => {
     }
 
     if (!isMaster) {
+      // Filtrar por lo que busco
       if (miUsuario.preferencia === 'Hombres') {
         query.genero = 'Hombre';
       } else if (miUsuario.preferencia === 'Mujeres') {
         query.genero = 'Mujer';
       }
+
+      // Filtrar para asegurar que los perfiles también me busquen a mí
+      let miGeneroParaBusqueda = 'Todxs';
+      if (miUsuario.genero === 'Hombre') miGeneroParaBusqueda = 'Hombres';
+      else if (miUsuario.genero === 'Mujer') miGeneroParaBusqueda = 'Mujeres';
+      
+      query.preferencia = { $in: [miGeneroParaBusqueda, 'Todxs'] };
     }
 
     if (miUsuario.tipoApego === 'Evitativo') query.tipoApego = { $ne: 'Evitativo' };
