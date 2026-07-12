@@ -15,16 +15,18 @@ import WebShell from './src/web/WebShell';
 import { ClerkProvider } from '@clerk/clerk-expo';
 import * as SecureStore from 'expo-secure-store';
 import * as WebBrowser from 'expo-web-browser';
-import mobileAds from 'react-native-google-mobile-ads';
+// import mobileAds from 'react-native-google-mobile-ads';
 
 WebBrowser.maybeCompleteAuthSession();
 
 // Inicializar Google AdMob para producción
+/*
 mobileAds()
   .initialize()
   .then(adapterStatuses => {
     console.log('AdMob inicializado:', adapterStatuses);
   });
+*/
 
 // 2. Crear el "Caché de Tokens" para que la sesión se quede guardada en el celular
 const tokenCache = {
