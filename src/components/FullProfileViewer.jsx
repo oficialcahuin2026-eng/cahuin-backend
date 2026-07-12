@@ -133,7 +133,7 @@ export default function FullProfileViewer({ perfil, isPreview = false, compatibi
           </View>
         </View>
 
-        {perfil.bio ? <Text style={styles.bio}>{perfil.bio}</Text> : null}
+        {(perfil.descripcion || perfil.bio || perfil.biografia) ? <Text style={styles.bio}>{perfil.descripcion || perfil.bio || perfil.biografia}</Text> : null}
 
         {/* Rompehielos (Prompts) */}
         {perfil.prompts && perfil.prompts.length > 0 && (
@@ -213,7 +213,7 @@ export default function FullProfileViewer({ perfil, isPreview = false, compatibi
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -SPACING[4] }} contentContainerStyle={{ paddingHorizontal: SPACING[4], gap: SPACING[3] }}>
                 {perfil[campo].map((item, idx) => (
                   <View key={idx} style={styles.mediaCard}>
-                    <Image source={{ uri: item.foto }} style={styles.mediaImage} />
+                    <Image source={{ uri: item.poster || item.foto }} style={styles.mediaImage} />
                   </View>
                 ))}
               </ScrollView>
