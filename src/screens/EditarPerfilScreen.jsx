@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
@@ -170,14 +171,22 @@ export default function EditarPerfilScreen({ navigation }) {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 5],
-      quality: 0.8,
-      base64: true
+      quality: 1, // We will compress it better with Manipulator
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      const b64 = result.assets[0].base64;
-      setModalInfo({ title: 'Subiendo...', message: 'Subiendo tu foto...', emoji: '⏳' });
+      setModalInfo({ title: 'Optimizando...', message: 'Comprimiendo imagen sin perder calidad...', emoji: '✨' });
       try {
+        // Magia: Comprimir y redimensionar la imagen para que pese poquísimo (ej. < 200kb)
+        const manipResult = await ImageManipulator.manipulateAsync(
+          result.assets[0].uri,
+          [{ resize: { width: 800 } }], // 800px de ancho es perfecto para móviles
+          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+        );
+
+        const b64 = manipResult.base64;
+        
+        setModalInfo({ title: 'Subiendo...', message: 'Subiendo tu foto...', emoji: '⏳' });
         const respuesta = await userService.subirFotoBase64(b64);
         if (respuesta.fotoUrl) {
           const nuevasFotos = [...fotosGaleria];
@@ -186,6 +195,7 @@ export default function EditarPerfilScreen({ navigation }) {
           setModalInfo(null);
         }
       } catch (err) {
+        console.log('Error manipulando/subiendo foto:', err);
         setModalInfo({ title: 'Error', message: 'No se pudo subir la foto.', emoji: '😥' });
       }
     }
