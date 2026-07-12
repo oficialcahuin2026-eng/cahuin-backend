@@ -69,12 +69,31 @@ ${region.comunas.map(c => '• ' + c).join('\n')}
 
 IMPORTANTE: Responde ÚNICAMENTE con la tabla Markdown. No incluyas texto antes ni después de la tabla.`;
 
-  try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    await parseAndSavePanoramas(text, region.nombre, region.nombreCorto);
-  } catch (error) {
-    console.error(`[Bot] Error obteniendo panoramas de ${region.nombre}:`, error.message);
+  let retries = 3;
+  let success = false;
+
+  while (retries > 0 && !success) {
+    try {
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
+      await parseAndSavePanoramas(text, region.nombre, region.nombreCorto);
+      success = true;
+    } catch (error) {
+      retries--;
+      const isRateLimitOrServerDown = error.message.includes("503") || error.message.includes("429") || error.message.includes("quota");
+      
+      if (isRateLimitOrServerDown && retries > 0) {
+        console.error(`[Bot] Congestión en Gemini para ${region.nombre} (Error ${error.message.substring(0, 40)}...). Reintentando en 15s. Intentos restantes: ${retries}`);
+        await new Promise(resolve => setTimeout(resolve, 15000));
+      } else {
+        console.error(`[Bot] Error final obteniendo panoramas de ${region.nombre}:`, error.message);
+        break;
+      }
+    }
+  }
+
+  if (!success) {
+    console.error(`[Bot] ❌ Se saltó la región ${region.nombre} por demasiados errores de Gemini hoy.`);
   }
 };
 
