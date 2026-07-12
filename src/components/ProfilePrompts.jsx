@@ -5,19 +5,19 @@ import { useTheme } from '../context/ThemeContext';
 import { FONTS, RADIUS, SHADOWS, SPACING } from '../utils/theme';
 
 const AVAILABLE_PROMPTS = [
-  "Mi fin de semana es para...",
-  "Suelo llegar...",
-  "Mi noche de sábado ideal es...",
-  "Mi domingo normal es para...",
-  "Mi estrategia de salida es...",
-  "Soy el tipo de persona que...",
-  "Prefiero...",
-  "Mi teléfono siempre está con...",
-  "Puedes encontrarme...",
-  "Me gusta vestirme...",
-  "La mejor manera de conquistarme es...",
-  "Un dato curioso sobre mi es...",
-  "No puedo vivir sin..."
+  "Mi finde siempre es para...",
+  "A los carretes suelo llegar...",
+  "Un sábado por la noche apañaría a...",
+  "El domingo pa' mi es pa'...",
+  "Mi técnica pa' irme piola es...",
+  "Soy de los que siempre...",
+  "Si me dan a elegir, prefiero...",
+  "Mi celular siempre está lleno de...",
+  "Un finde me podí encontrar en...",
+  "Me visto más bien...",
+  "Me ganái el corazón si...",
+  "Un cahuín o dato freak sobre mí es...",
+  "No podría vivir sin..."
 ];
 
 export default function ProfilePrompts({ prompts = [], onChange, COLORS }) {

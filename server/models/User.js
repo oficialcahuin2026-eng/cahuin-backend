@@ -100,6 +100,13 @@ const userSchema = new mongoose.Schema({
   mostrarArquetipo: { type: Boolean, default: true },
   audioRompehielos: { type: String, default: null },
 
+  filtrosAvanzados: {
+    alturaMin: { type: Number, default: 140 },
+    alturaMax: { type: Number, default: 220 },
+    fumar: { type: String, default: '' },
+    zodiaco: { type: String, default: '' }
+  },
+
   likesRecibidos: { type: Number, default: 0 },
   viaje: { ciudadDestino: { type: String, default: '' }, fechaInicio: { type: Date, default: null }, fechaFin: { type: Date, default: null } },
   cuentaPausada: { type: Boolean, default: false },

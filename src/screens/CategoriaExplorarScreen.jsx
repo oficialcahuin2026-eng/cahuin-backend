@@ -204,8 +204,8 @@ export default function CategoriaExplorarScreen({ navigation, route }) {
         <View style={styles.emptyCard}>
           <SoftIcon name="sparkles" bg={COLORS.softRed} color={COLORS.primario} size={70} rounded={35} iconSize={32} />
           <Text style={styles.emptyTitle}>No hay perfiles por ahora</Text>
-          <Text style={styles.emptyText}>Prueba ampliar tu distancia en Editar Perfil o unirte a otra comunidad.</Text>
-          <TouchableOpacity style={[styles.secondaryButton, { borderColor: categoria.color }]} onPress={() => navigation.navigate('EditarPerfil')}>
+          <Text style={styles.emptyText}>Prueba ampliar tu distancia en Preferencias o unirte a otra comunidad.</Text>
+          <TouchableOpacity style={[styles.secondaryButton, { borderColor: categoria.color }]} onPress={() => navigation.navigate('Preferencias')}>
             <Text style={[styles.secondaryButtonText, { color: categoria.color }]}>Editar preferencias</Text>
           </TouchableOpacity>
         </View>

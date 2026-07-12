@@ -223,6 +223,13 @@ exports.descubrir = async (req, res) => {
 
     if (miUsuario.tipoApego === 'Evitativo') query.tipoApego = { $ne: 'Evitativo' };
 
+    if (miUsuario.isPremium && miUsuario.filtrosAvanzados) {
+      if (miUsuario.filtrosAvanzados.alturaMin && miUsuario.filtrosAvanzados.alturaMin > 140) query.altura = { ...query.altura, $gte: miUsuario.filtrosAvanzados.alturaMin };
+      if (miUsuario.filtrosAvanzados.alturaMax && miUsuario.filtrosAvanzados.alturaMax < 220) query.altura = { ...query.altura, $lte: miUsuario.filtrosAvanzados.alturaMax };
+      if (miUsuario.filtrosAvanzados.fumar) query['habitos.fumar'] = miUsuario.filtrosAvanzados.fumar;
+      if (miUsuario.filtrosAvanzados.zodiaco) query.signoZodiacal = miUsuario.filtrosAvanzados.zodiaco;
+    }
+
     if (categoria && CATEGORIAS_EXPLORAR[categoria]) {
       const config = CATEGORIAS_EXPLORAR[categoria];
       const condicionesCategoria = [{ categoriasExplorar: categoria }];
