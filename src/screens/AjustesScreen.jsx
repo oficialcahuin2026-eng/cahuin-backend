@@ -154,6 +154,40 @@ export default function AjustesScreen({ navigation }) {
     }
   };
 
+  const eliminarCuentaDefinitivo = async (motivo) => {
+    setModalInfo(null);
+    try {
+      await userService.eliminarCuenta(motivo);
+      avisar('Cuenta programada para eliminación', 'Tienes una semana pa\' arrepentirte y volver a iniciar sesión sin perder tus cahuines, panoramas y matches. Si no volví\', tu cuenta y mensajes se borran pa\' siempre. ¡Cuídate harto!', {
+        emoji: '👋',
+        tone: 'danger',
+        actions: [{
+          label: 'Cerrar sesión',
+          onPress: () => {
+            setModalInfo(null);
+            logout();
+          }
+        }]
+      });
+    } catch (error) {
+      avisar('Error', 'Hubo un problema procesando tu solicitud.', { emoji: '⚠️', tone: 'danger' });
+    }
+  };
+
+  const mostrarEncuestaEliminacion = () => {
+    avisar('¿Por qué te vas?', 'Queremos mejorar. Cuéntanos por qué eliminas tu cuenta:', {
+      emoji: '🥺',
+      tone: 'danger',
+      actions: [
+        { label: 'Ya conocí a alguien', variant: 'secondary', onPress: () => eliminarCuentaDefinitivo('Conocí a alguien') },
+        { label: 'No encontré a nadie', variant: 'secondary', onPress: () => eliminarCuentaDefinitivo('No encontré a nadie') },
+        { label: 'La app tiene errores', variant: 'secondary', onPress: () => eliminarCuentaDefinitivo('App tiene errores') },
+        { label: 'Otro motivo', variant: 'secondary', onPress: () => eliminarCuentaDefinitivo('Otro') },
+        { label: 'Cancelar', onPress: () => setModalInfo(null) },
+      ]
+    });
+  };
+
   const eliminarCuenta = () => {
     avisar('Eliminar cuenta', 'Esta acción borrará tus matches, mensajes y fotos para siempre. ¿Estás seguro?', {
       emoji: '🗑️',
@@ -163,13 +197,7 @@ export default function AjustesScreen({ navigation }) {
         {
           label: 'Eliminar',
           color: '#F0444F',
-          onPress: () => {
-            setModalInfo(null);
-            avisar('Cahuín', 'Para eliminar tu cuenta, escribe a soporte@cahuin.cl desde tu correo registrado.', {
-              emoji: '📩',
-              accent: COLORS.primario,
-            });
-          },
+          onPress: mostrarEncuestaEliminacion,
         },
       ],
     });

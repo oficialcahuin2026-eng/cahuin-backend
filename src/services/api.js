@@ -112,6 +112,7 @@ export const userService = {
   guardarArquetipo: (arquetipo)     => api.post('/users/me/arquetipo', { arquetipo }),
   getTrending:      (params)        => api.get('/users/trending', { params }),
   togglePausaCuenta:()              => api.post('/users/me/pausa', {}),
+  eliminarCuenta:   (motivo)        => api.post('/users/me/eliminar-cuenta', { motivo }),
   enviarPreguntaAnonima: (id, texto) => api.post(`/users/${id}/preguntas`, { texto }),
   getMisPreguntasAnonimas: () => api.get('/users/me/preguntas'),
   responderPreguntaAnonima: (id, respuesta, visibleEnPerfil = true) => api.post(`/users/preguntas/${id}/responder`, { respuesta, visibleEnPerfil }),

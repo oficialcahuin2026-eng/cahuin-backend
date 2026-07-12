@@ -81,6 +81,17 @@ exports.getMiPerfil = async (req, res) => {
     if (!usuario) return res.status(404).json({ message: 'Usuario no encontrado' });
 
     const hoy = new Date();
+
+    if (usuario.cuentaEliminadaEn) {
+      if (hoy > usuario.cuentaEliminadaEn) {
+        return res.status(403).json({ message: 'Tu cuenta ha sido eliminada permanentemente.' });
+      } else {
+        usuario.cuentaPausada = false;
+        usuario.cuentaEliminadaEn = null;
+        usuario.motivoEliminacion = null;
+      }
+    }
+
     const ultima = usuario.ultimaConexion || new Date();
 
     if (usuario.fechaNacimiento) {

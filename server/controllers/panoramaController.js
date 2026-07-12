@@ -249,6 +249,11 @@ exports.abandonarGrupo = async (req, res) => {
     const panorama = await Panorama.findById(id);
     if (!panorama) return res.status(404).json({ message: 'No encontrado' });
 
+    if (panorama.creador.toString() === req.user._id.toString()) {
+      await Panorama.findByIdAndDelete(id);
+      return res.json({ message: 'Panorama eliminado exitosamente' });
+    }
+
     panorama.participantes = panorama.participantes.filter(uid => uid.toString() !== req.user._id.toString());
     panorama.mensajesGrupo.push({ remitente: req.user._id, texto: 'Abandonó el panorama.', tipo: 'sistema' });
     await panorama.save();

@@ -99,6 +99,9 @@ const userSchema = new mongoose.Schema({
   arquetipoCahuinero: { type: String, default: null },
   mostrarArquetipo: { type: Boolean, default: true },
   audioRompehielos: { type: String, default: null },
+  cuentaPausada: { type: Boolean, default: false },
+  cuentaEliminadaEn: { type: Date, default: null },
+  motivoEliminacion: { type: String, default: null },
 
   filtrosAvanzados: {
     alturaMin: { type: Number, default: 140 },

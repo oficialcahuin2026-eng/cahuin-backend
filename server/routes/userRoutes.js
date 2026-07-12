@@ -20,6 +20,7 @@ router.get('/descubrir', proteger, userController.descubrir);
 router.post('/me/verificar', proteger, userController.verificarPerfil);
 router.post('/me/arquetipo', proteger, userController.guardarArquetipo);
 router.post('/me/pausa', proteger, userController.togglePausaCuenta);
+router.post('/me/eliminar-cuenta', proteger, userController.eliminarCuenta);
 router.post('/me/boost', proteger, userController.activarBoost);
 router.post('/me/racha-swipes/continuar', proteger, userController.continuarRachaSwipes);
 

@@ -4,6 +4,7 @@ import { Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext'; 
+import { useGlobalAlert } from '../context/GlobalAlertContext';
 import { FONTS, SPACING, RADIUS, SHADOWS } from '../utils/theme';
 import { panoramaService } from '../services/api';
 
@@ -23,6 +24,7 @@ export default function SalaChatGrupoScreen({ route, navigation }) {
   
   const { usuario } = useAuth();
   const { COLORS } = useTheme();
+  const { avisar } = useGlobalAlert();
   const styles = getStyles(COLORS);
   
   const isCreador = panorama.creador?._id === usuario?._id;
@@ -127,13 +129,21 @@ export default function SalaChatGrupoScreen({ route, navigation }) {
   };
 
   const abandonar = async () => {
-    Alert.alert('¿Seguro?', isCreador ? '¿Eliminar este panorama?' : '¿Abandonar este panorama?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: isCreador ? 'Eliminar' : 'Abandonar', style: 'destructive', onPress: async () => {
-        await panoramaService.abandonar(panorama._id);
-        navigation.goBack();
-      }}
-    ]);
+    avisar('¿Seguro?', isCreador ? '¿Eliminar este panorama?' : '¿Abandonar este panorama?', {
+      emoji: '🗑️',
+      tone: 'danger',
+      actions: [
+        { label: 'Cancelar', variant: 'secondary', color: COLORS.primario, onPress: () => {} },
+        { 
+          label: isCreador ? 'Eliminar' : 'Abandonar', 
+          color: '#F0444F', 
+          onPress: async () => {
+            await panoramaService.abandonar(panorama._id);
+            navigation.goBack();
+          }
+        }
+      ]
+    });
   };
 
   const renderMensaje = ({ item, index }) => {
