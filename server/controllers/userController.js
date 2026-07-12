@@ -56,12 +56,20 @@ const subirFotoPerfil = (file) => new Promise(async (resolve, reject) => {
   if (appwrite.isConfigured) {
     try {
       const fileId = appwrite.ID.unique();
-      const input = appwrite.InputFile.fromBuffer(file.buffer, file.originalname || 'foto.jpg');
+      const input = appwrite.InputFile.fromBuffer(file.buffer, file.originalname || 'foto.jpg', file.buffer.length);
       const response = await appwrite.storage.createFile(appwrite.getBucketId(), fileId, input);
       const url = `${appwrite.getEndpoint()}/storage/buckets/${appwrite.getBucketId()}/files/${response.$id}/view?project=${appwrite.getProjectId()}`;
       resolve(url);
     } catch (e) {
-      reject(e);
+      console.error('Error con Appwrite en subirFotoPerfil, cayendo a Cloudinary:', e.message);
+      const stream = cloudinary.uploader.upload_stream(
+        { folder: 'cahuin_perfiles', resource_type: 'image', transformation: [{ width: 800, height: 1000, crop: 'limit' }] },
+        (error, result) => {
+          if (error) return reject(error);
+          resolve(result.secure_url);
+        }
+      );
+      Readable.from(file.buffer).pipe(stream);
     }
   } else {
     const stream = cloudinary.uploader.upload_stream(
@@ -546,12 +554,12 @@ exports.getTrending = async (req, res) => {
     }
     
     let topPerfiles = await User.find(query)
-      .sort({ likesRecibidos: -1 }).limit(10).select('nombre foto edad ciudad likesRecibidos arquetipoCahuinero fotos');
+      .sort({ likesSemana: -1, likesRecibidos: -1 }).limit(100).select('nombre foto edad ciudad likesSemana likesRecibidos arquetipoCahuinero fotos');
       
     if (topPerfiles.length === 0 && scope !== 'nacional') {
       delete query.region;
       topPerfiles = await User.find(query)
-        .sort({ likesRecibidos: -1 }).limit(10).select('nombre foto edad ciudad likesRecibidos arquetipoCahuinero fotos');
+        .sort({ likesSemana: -1, likesRecibidos: -1 }).limit(100).select('nombre foto edad ciudad likesSemana likesRecibidos arquetipoCahuinero fotos');
     }
       
     // Fix: if they don't have foto but have fotos[0], map it properly for the frontend
@@ -560,6 +568,8 @@ exports.getTrending = async (req, res) => {
       if (!obj.foto && obj.fotos && obj.fotos.length > 0) {
         obj.foto = obj.fotos[0];
       }
+      // Aseguramos que retorne likesRecibidos como el total de la semana para que la UI lo pinte igual
+      obj.likesRecibidos = obj.likesSemana || obj.likesRecibidos || 0;
       return obj;
     });
 

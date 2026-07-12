@@ -83,7 +83,7 @@ exports.darLike = async (req, res) => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
     const usuarioActualizado = await actualizarRachaSwipes(remitenteId);
-    await User.findByIdAndUpdate(receptorId, { $inc: { likesRecibidos: 1 } });
+    await User.findByIdAndUpdate(receptorId, { $inc: { likesRecibidos: 1, likesSemana: 1 } });
 
     const hayLikeDeVuelta = await Match.findOne({
       remitente: receptorId, receptor: remitenteId, tipo: { $in: ['like', 'superlike'] }
@@ -148,7 +148,7 @@ exports.darSuperLike = async (req, res) => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
     const usuarioActualizado = await actualizarRachaSwipes(req.user._id);
-    await User.findByIdAndUpdate(req.params.id, { $inc: { likesRecibidos: 3 } });
+    await User.findByIdAndUpdate(req.params.id, { $inc: { likesRecibidos: 3, likesSemana: 3 } });
     const hayLikeDeVuelta = await Match.findOne({
       remitente: req.params.id, receptor: req.user._id, tipo: { $in: ['like', 'superlike'] }
     });

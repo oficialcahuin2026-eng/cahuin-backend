@@ -111,6 +111,7 @@ const userSchema = new mongoose.Schema({
   },
 
   likesRecibidos: { type: Number, default: 0 },
+  likesSemana: { type: Number, default: 0 },
   viaje: { ciudadDestino: { type: String, default: '' }, fechaInicio: { type: Date, default: null }, fechaFin: { type: Date, default: null } },
   cuentaPausada: { type: Boolean, default: false },
 
