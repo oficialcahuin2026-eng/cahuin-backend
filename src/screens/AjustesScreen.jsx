@@ -101,6 +101,28 @@ export default function AjustesScreen({ navigation }) {
     }
   };
 
+  const toggleSetting = async (field, currentValue, isPremium = false) => {
+    const plan = usuario?.premiumPlan || 'free';
+    const hasPremium = plan === 'a_fondo' || plan === 'gold' || plan === 'platinum';
+    
+    if (isPremium && !hasPremium) {
+      avisar('Función Premium', 'Esta función es exclusiva para suscriptores Cahuín VIP o A Fondo.', {
+        emoji: '👑',
+        tone: 'premium',
+        actions: [{ label: 'Ver Planes', color: COLORS.primario, onPress: () => { setModalInfo(null); navigation.navigate('Premium'); } }]
+      });
+      return;
+    }
+
+    try {
+      const nuevoEstado = !currentValue;
+      const res = await userService.actualizar({ [field]: nuevoEstado });
+      actualizarUsuario(res.usuario);
+    } catch {
+      avisar('Error', 'No se pudo guardar el ajuste.', { emoji: '🌶️', tone: 'danger' });
+    }
+  };
+
   const togglePausaCuenta = async () => {
     const accion = usuario?.cuentaPausada ? 'Reactivar' : 'Pausar';
     avisar(`${accion} cuenta`, '¿Seguro que quieres hacer esto?', {
@@ -241,6 +263,18 @@ export default function AjustesScreen({ navigation }) {
             </LinearGradient>
           </View>
 
+          <SettingsSection title="CUENTA" COLORS={COLORS} isDarkMode={isDarkMode}>
+            <SettingsRow
+              COLORS={COLORS} isDarkMode={isDarkMode}
+              icon="person-outline" iconColor="#3B82F6"
+              bg={isDarkMode ? "rgba(59,130,246,0.15)" : "#EFF6FF"}
+              title="Mi cuenta"
+              subtitle={usuario?.email || usuario?.telefono || 'Ingresaste con Apple/Google'}
+              onPress={() => avisar('Cuenta', 'Por seguridad, para cambiar tu método de acceso debes contactar a soporte.', { emoji: '🔒', tone: 'primary' })}
+              isLast
+            />
+          </SettingsSection>
+
           <SettingsSection title="VISIBILIDAD Y UBICACIÓN" COLORS={COLORS} isDarkMode={isDarkMode}>
             <SettingsRow
               COLORS={COLORS} isDarkMode={isDarkMode}
@@ -298,11 +332,73 @@ export default function AjustesScreen({ navigation }) {
             />
           </SettingsSection>
 
+          <SettingsSection title="NOTIFICACIONES" COLORS={COLORS} isDarkMode={isDarkMode}>
+            <SettingsRow
+              COLORS={COLORS} isDarkMode={isDarkMode}
+              icon="heart" iconColor="#F0444F"
+              bg={isDarkMode ? "rgba(240,68,79,0.15)" : "#FFE4E6"}
+              title="Nuevos Matches"
+              control={<Switch value={usuario?.notifMatches !== false} onValueChange={(val) => toggleSetting('notifMatches', !val)} trackColor={{ true: '#F0444F', false: COLORS.border }} thumbColor="#FFF" />}
+            />
+            <SettingsRow
+              COLORS={COLORS} isDarkMode={isDarkMode}
+              icon="chatbubbles" iconColor="#8B5CF6"
+              bg={isDarkMode ? "rgba(139,92,246,0.15)" : "#F4ECFF"}
+              title="Mensajes Nuevos"
+              control={<Switch value={usuario?.notifMensajes !== false} onValueChange={(val) => toggleSetting('notifMensajes', !val)} trackColor={{ true: '#8B5CF6', false: COLORS.border }} thumbColor="#FFF" />}
+            />
+            <SettingsRow
+              COLORS={COLORS} isDarkMode={isDarkMode}
+              icon="notifications" iconColor="#F59E0B"
+              bg={isDarkMode ? "rgba(245,158,11,0.15)" : "#FEF3C7"}
+              title="Promociones y Súper Likes"
+              control={<Switch value={usuario?.notifPromos !== false} onValueChange={(val) => toggleSetting('notifPromos', !val)} trackColor={{ true: '#F59E0B', false: COLORS.border }} thumbColor="#FFF" />}
+              isLast
+            />
+          </SettingsSection>
+
           <SettingsSection title="ACTIVIDAD Y PREMIUM" COLORS={COLORS} isDarkMode={isDarkMode}>
             <SettingsRow
               COLORS={COLORS} isDarkMode={isDarkMode}
-              icon="analytics"
-              iconColor="#F472B6"
+              icon="star" iconColor="#F59E0B"
+              bg={isDarkMode ? "rgba(245,158,11,0.15)" : "#FEF3C7"}
+              title="Mi Suscripción"
+              subtitle={usuario?.premiumPlan === 'a_fondo' ? 'Cahuín A Fondo (Activo)' : usuario?.premiumPlan === 'gold' ? 'Cahuín VIP (Activo)' : 'Plan Gratuito'}
+              onPress={() => navigation.navigate('Premium')}
+            />
+            <SettingsRow
+              COLORS={COLORS} isDarkMode={isDarkMode}
+              icon="flash" iconColor="#8B5CF6"
+              bg={isDarkMode ? "rgba(139,92,246,0.15)" : "#F4ECFF"}
+              title="Mis Súper Likes y Boosts"
+              subtitle={`${usuario?.superLikes || 0} Súper Likes · ${usuario?.boosts || 0} Boosts`}
+              onPress={() => navigation.navigate('Premium')}
+            />
+            <SettingsRow
+              COLORS={COLORS} isDarkMode={isDarkMode}
+              icon="eye-off" iconColor="#6B7280"
+              bg={isDarkMode ? "rgba(107,114,128,0.15)" : "#F3F4F6"}
+              title="Modo Incógnito"
+              subtitle="Solo te verán a quienes des Like"
+              control={<Switch value={usuario?.modoIncognito || false} onValueChange={(val) => toggleSetting('modoIncognito', !val, true)} trackColor={{ true: '#6B7280', false: COLORS.border }} thumbColor="#FFF" />}
+            />
+            <SettingsRow
+              COLORS={COLORS} isDarkMode={isDarkMode}
+              icon="hourglass-outline" iconColor="#3B82F6"
+              bg={isDarkMode ? "rgba(59,130,246,0.15)" : "#EFF6FF"}
+              title="Ocultar Edad"
+              control={<Switch value={usuario?.ocultarEdad || false} onValueChange={(val) => toggleSetting('ocultarEdad', !val, true)} trackColor={{ true: '#3B82F6', false: COLORS.border }} thumbColor="#FFF" />}
+            />
+            <SettingsRow
+              COLORS={COLORS} isDarkMode={isDarkMode}
+              icon="location-outline" iconColor="#10B981"
+              bg={isDarkMode ? "rgba(16,185,129,0.15)" : "#ECFDF5"}
+              title="Ocultar Distancia"
+              control={<Switch value={usuario?.ocultarDistancia || false} onValueChange={(val) => toggleSetting('ocultarDistancia', !val, true)} trackColor={{ true: '#10B981', false: COLORS.border }} thumbColor="#FFF" />}
+            />
+            <SettingsRow
+              COLORS={COLORS} isDarkMode={isDarkMode}
+              icon="analytics" iconColor="#F472B6"
               bg={isDarkMode ? "rgba(244,114,182,0.15)" : "#FCE7F3"}
               title="Analytics de perfil"
               subtitle={`${analytics?.vistasSemana || 0} vistas esta semana · foto top ${analytics?.segundosFotoTop || 0}s`}
@@ -310,8 +406,7 @@ export default function AjustesScreen({ navigation }) {
             />
             <SettingsRow
               COLORS={COLORS} isDarkMode={isDarkMode}
-              icon="flame"
-              iconColor="#F0444F"
+              icon="flame" iconColor="#F0444F"
               bg={isDarkMode ? "rgba(240,68,79,0.15)" : "#FFE4E6"}
               title="Racha diaria de swipes"
               subtitle={`${usuario?.rachaSwipesDias || 0} días · ${usuario?.boostGratisDisponibles || 0} boosts gratis`}
@@ -324,7 +419,22 @@ export default function AjustesScreen({ navigation }) {
             />
           </SettingsSection>
 
-          <SettingsSection title="LEGAL Y SEGURIDAD" COLORS={COLORS} isDarkMode={isDarkMode}>
+          <SettingsSection title="PRIVACIDAD Y SEGURIDAD" COLORS={COLORS} isDarkMode={isDarkMode}>
+            <SettingsRow
+              COLORS={COLORS} isDarkMode={isDarkMode}
+              icon="eye-off-outline" iconColor="#EF4444"
+              bg={isDarkMode ? "rgba(239,68,68,0.15)" : "#FEE2E2"}
+              title="Contactos Bloqueados"
+              onPress={() => avisar('Próximamente', 'Aquí podrás gestionar tus contactos bloqueados.', { emoji: '🚧', tone: 'danger' })}
+            />
+            <SettingsRow
+              COLORS={COLORS} isDarkMode={isDarkMode}
+              icon="checkmark-done" iconColor="#3B82F6"
+              bg={isDarkMode ? "rgba(59,130,246,0.15)" : "#EFF6FF"}
+              title="Confirmaciones de Lectura"
+              subtitle="Tus matches sabrán si leíste sus mensajes"
+              control={<Switch value={usuario?.confirmacionLectura !== false} onValueChange={(val) => toggleSetting('confirmacionLectura', !val)} trackColor={{ true: '#3B82F6', false: COLORS.border }} thumbColor="#FFF" />}
+            />
             <SettingsRow COLORS={COLORS} isDarkMode={isDarkMode} icon="document-text" iconColor="#9CA3AF" bg={isDarkMode ? "rgba(156,163,175,0.15)" : "#F3F4F6"} title="Términos y Condiciones" onPress={() => abrirDocumento(URL_TERMINOS)} />
             <SettingsRow COLORS={COLORS} isDarkMode={isDarkMode} icon="lock-closed" iconColor="#9CA3AF" bg={isDarkMode ? "rgba(156,163,175,0.15)" : "#F3F4F6"} title="Política de Privacidad" onPress={() => abrirDocumento(URL_PRIVACIDAD)} />
             <SettingsRow COLORS={COLORS} isDarkMode={isDarkMode} icon="shield-checkmark" iconColor="#9CA3AF" bg={isDarkMode ? "rgba(156,163,175,0.15)" : "#F3F4F6"} title="Estándares de Seguridad Infantil" onPress={() => abrirDocumento(URL_SEGURIDAD)} />
