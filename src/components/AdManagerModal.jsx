@@ -1,9 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { RewardedAd, RewardedAdEventType, TestIds } from 'react-native-google-mobile-ads';
+import Constants from 'expo-constants';
 
-// IMPORTANTE: Reemplazar TestIds.REWARDED por tu ID real de AdMob cuando pases a producción.
-const adUnitId = __DEV__ ? TestIds.REWARDED : TestIds.REWARDED; 
+const isExpoGo = Constants.executionEnvironment === 'storeClient';
+
+let RewardedAd, RewardedAdEventType, TestIds;
+
+if (!isExpoGo) {
+  try {
+    const ads = require('react-native-google-mobile-ads');
+    RewardedAd = ads.RewardedAd;
+    RewardedAdEventType = ads.RewardedAdEventType;
+    TestIds = ads.TestIds;
+  } catch (e) {
+    console.warn('No se pudo cargar el módulo de AdMob', e);
+  }
+}
+
+// IMPORTANTE: Reemplazar por tu ID real de AdMob cuando pases a producción.
+const adUnitId = !isExpoGo && TestIds ? TestIds.REWARDED : 'test';
 
 export default function AdManagerModal({ visible, requiredAdsCount = 1, onAdFinished, onClose }) {
   const [loadingText, setLoadingText] = useState('Cargando anuncio...');
@@ -19,6 +34,14 @@ export default function AdManagerModal({ visible, requiredAdsCount = 1, onAdFini
       onAdFinished();
       onClose();
       return;
+    }
+
+    if (isExpoGo || !RewardedAd) {
+      setLoadingText(`Modo Expo Go: Saltando anuncio ${adsWatched + 1}...`);
+      const timer = setTimeout(() => {
+        setAdsWatched(prev => prev + 1);
+      }, 1500);
+      return () => clearTimeout(timer);
     }
 
     setLoadingText(`Cargando anuncio ${adsWatched + 1} de ${requiredAdsCount}...`);
