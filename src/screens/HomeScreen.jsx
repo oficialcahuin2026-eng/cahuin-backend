@@ -320,7 +320,7 @@ export default function HomeScreen({ navigation }) {
   };
 
   const deshacerUltimo = () => {
-    const cantAds = usuario?.isPremium ? 0 : 1;
+    const cantAds = usuario?.isPremium ? 0 : 2;
     iniciarAnuncioYEjecutar(deshacerUltimoReal, cantAds);
   };
 
@@ -336,10 +336,10 @@ export default function HomeScreen({ navigation }) {
       registrarSuperLike();
       forceSwipe('up');
     } else {
-      const cantAds = isAFondo || isPiola ? 1 : 2;
+      const cantAds = isAFondo || isPiola ? 1 : 3;
       avisar('Super Like', 'Destaca tu perfil con una estrella azul vibrante.', {
         tone: 'premium',
-        details: isAFondo ? `Super Likes diarios agotados (${maxFree}/${maxFree})` : (isPiola ? `Super Likes diarios agotados (${maxFree}/${maxFree})` : 'Cuesta 2 anuncios'),
+        details: isAFondo ? `Super Likes diarios agotados (${maxFree}/${maxFree})` : (isPiola ? `Super Likes diarios agotados (${maxFree}/${maxFree})` : 'Cuesta 3 anuncios'),
         actions: [
           { 
             label: 'Comprar Cahuin Premium', 
@@ -369,11 +369,11 @@ export default function HomeScreen({ navigation }) {
     const isAFondo = plan === 'a_fondo' || plan === 'gold' || plan === 'platinum';
     const isPiola = plan === 'piola';
 
-    const cantAds = isAFondo ? 0 : (isPiola ? 1 : 2);
+    const cantAds = isAFondo ? 0 : (isPiola ? 1 : 3);
 
     avisar('Modo Destacado', 'Aparece primero en el radar de tu ciudad durante 30 minutos.', {
       tone: 'premium',
-      details: isAFondo ? 'Incluido en tu plan A Fondo' : (isPiola ? 'Para ti solo cuesta 1 anuncio' : 'Cuesta 2 anuncios'),
+      details: isAFondo ? 'Incluido en tu plan A Fondo' : (isPiola ? 'Para ti solo cuesta 1 anuncio' : 'Cuesta 3 anuncios'),
       actions: [
         ...(isAFondo ? [] : [{ 
           label: 'Comprar Cahuin Premium', 

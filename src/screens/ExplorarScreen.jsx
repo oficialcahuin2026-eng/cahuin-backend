@@ -134,13 +134,13 @@ export default function ExplorarScreen({ navigation }) {
           },
         },
         ...(!tienePiola ? [{
-          label: 'Ver 1 Anuncio',
+          label: 'Ver 2 Anuncios',
           icon: 'play',
           variant: 'secondary',
           color: COLORS.primario,
           onPress: () => {
             setModalInfo(null);
-            iniciarAnuncioYEjecutar(ejecutarRuletaBackend, 1);
+            iniciarAnuncioYEjecutar(ejecutarRuletaBackend, 2);
           }
         }] : [])
       ]
