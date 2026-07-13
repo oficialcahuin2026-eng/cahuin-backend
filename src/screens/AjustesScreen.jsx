@@ -441,6 +441,35 @@ export default function AjustesScreen({ navigation }) {
             <SettingsRow COLORS={COLORS} isDarkMode={isDarkMode} icon="trash-bin" iconColor="#9CA3AF" bg={isDarkMode ? "rgba(156,163,175,0.15)" : "#F3F4F6"} title="Eliminación de cuenta y datos" onPress={() => abrirDocumento(URL_ELIMINACION)} isLast />
           </SettingsSection>
 
+          <SettingsSection title="SOPORTE Y AYUDA" COLORS={COLORS} isDarkMode={isDarkMode}>
+            <SettingsRow
+              COLORS={COLORS} isDarkMode={isDarkMode}
+              icon="help-circle-outline" iconColor="#8B5CF6"
+              bg={isDarkMode ? "rgba(139,92,246,0.15)" : "#F4ECFF"}
+              title="Centro de Ayuda"
+              onPress={() => avisar('Próximamente', 'Nuestro centro de ayuda está en construcción.', { emoji: '🏗️', tone: 'primary' })}
+            />
+            <SettingsRow
+              COLORS={COLORS} isDarkMode={isDarkMode}
+              icon="mail-outline" iconColor="#10B981"
+              bg={isDarkMode ? "rgba(16,185,129,0.15)" : "#ECFDF5"}
+              title="Contáctanos"
+              onPress={() => {
+                Linking.openURL('mailto:oficialcahuin2026@gmail.com?subject=Soporte%20Cahuin').catch(() => {
+                  avisar('Error', 'No pudimos abrir tu aplicación de correo.', { emoji: '✉️', tone: 'danger' });
+                });
+              }}
+            />
+            <SettingsRow
+              COLORS={COLORS} isDarkMode={isDarkMode}
+              icon="book-outline" iconColor="#F59E0B"
+              bg={isDarkMode ? "rgba(245,158,11,0.15)" : "#FEF3C7"}
+              title="Reglas de la Comunidad"
+              onPress={() => abrirDocumento(URL_SEGURIDAD)}
+              isLast
+            />
+          </SettingsSection>
+
           <View style={styles.dangerZone}>
             <TouchableOpacity style={styles.logoutButton} onPress={logout}>
               <Ionicons name="log-out-outline" size={20} color={COLORS.textPrimary} />

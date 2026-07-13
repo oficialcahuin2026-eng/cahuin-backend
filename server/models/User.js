@@ -133,7 +133,20 @@ const userSchema = new mongoose.Schema({
   swipesHoy: { type: Number, default: 0 },
   ultimoSwipeFecha: { type: Date, default: Date.now },
   esDemo: { type: Boolean, default: false },
-  demoKey: { type: String, default: '' }
+  demoKey: { type: String, default: '' },
+
+  // Nuevos campos de Ajustes
+  notifMatches: { type: Boolean, default: true },
+  notifMensajes: { type: Boolean, default: true },
+  notifPromos: { type: Boolean, default: true },
+  confirmacionLectura: { type: Boolean, default: true },
+  modoIncognito: { type: Boolean, default: false },
+  mostrarEdad: { type: Boolean, default: true },
+  mostrarDistancia: { type: Boolean, default: true },
+  
+  // Recompensas Premium
+  superLikes: { type: Number, default: 0 },
+  boosts: { type: Number, default: 0 }
 
 }, { timestamps: true });
 

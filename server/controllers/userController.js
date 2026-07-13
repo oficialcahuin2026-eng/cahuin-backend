@@ -122,6 +122,42 @@ exports.getMiPerfil = async (req, res) => {
       usuario.premiumHasta = null;
     }
 
+    if (usuario.isPremium) {
+      const ultimaEntrega = usuario.ultimaEntregaPremium;
+      let necesitaEntrega = false;
+      
+      if (!ultimaEntrega) {
+        necesitaEntrega = true;
+      } else {
+        const unaSemana = 7 * 24 * 60 * 60 * 1000;
+        if (hoy.getTime() - new Date(ultimaEntrega).getTime() >= unaSemana) {
+          necesitaEntrega = true;
+        }
+      }
+
+      if (necesitaEntrega) {
+        const esAFondo = ['a_fondo', 'gold', 'platinum'].includes(usuario.premiumPlan);
+        const esPiola = ['piola', 'plus'].includes(usuario.premiumPlan);
+        
+        let superLikesSemana = 0;
+        let boostsSemana = 0;
+        
+        if (esAFondo) {
+          superLikesSemana = 30;
+          boostsSemana = 30;
+        } else if (esPiola) {
+          superLikesSemana = 10;
+          boostsSemana = 10;
+        }
+        
+        if (superLikesSemana > 0 || boostsSemana > 0) {
+          usuario.superLikes = (usuario.superLikes || 0) + superLikesSemana;
+          usuario.boosts = (usuario.boosts || 0) + boostsSemana;
+          usuario.ultimaEntregaPremium = hoy;
+        }
+      }
+    }
+
     const diaHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
     const diaUltima = new Date(ultima.getFullYear(), ultima.getMonth(), ultima.getDate());
     const diffTiempo = diaHoy.getTime() - diaUltima.getTime();
