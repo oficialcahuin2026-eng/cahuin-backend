@@ -219,10 +219,6 @@ export default function HistoriasCulturalesScreen({ navigation }) {
             <Ionicons name="chatbubble-outline" size={22} color={COLORS.textPrimary} />
             <Text style={styles.actionText}>{comentarios.length}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.joinButton} onPress={() => sumarse(item._id)}>
-            <Ionicons name="sparkles" size={17} color={COLORS.primario} />
-            <Text style={styles.joinText}>Me sumo</Text>
-          </TouchableOpacity>
         </View>
 
         {comentarios.slice(-2).map((comentario) => (
@@ -241,8 +237,8 @@ export default function HistoriasCulturalesScreen({ navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
           <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.title}>Historias culturales</Text>
-        <Text style={styles.subtitle}>Sube una foto o momento de tu región. Dura 24 horas, se puede reaccionar y comentar.</Text>
+        <Text style={styles.title}>Historias</Text>
+        <Text style={styles.subtitle}>¿Qué está pasando en tu región? Sube un cahuín, un panorama o algo choro. Dura 24 hrs y luego desaparece.</Text>
         <TouchableOpacity style={styles.createButton} onPress={() => setModal(true)}>
           <Ionicons name="camera" size={21} color="#FFF" />
           <Text style={styles.createText}>Subir historia</Text>
@@ -255,7 +251,7 @@ export default function HistoriasCulturalesScreen({ navigation }) {
           keyExtractor={(item) => item._id}
           contentContainerStyle={styles.list}
           renderItem={renderHistoria}
-          ListEmptyComponent={<Text style={styles.empty}>Todavía no hay historias cerca. Publica la primera.</Text>}
+          ListEmptyComponent={<Text style={styles.empty}>Todavía no hay cahuines ni historias en tu región. ¡Sé el primero en contar algo!</Text>}
         />
       )}
 

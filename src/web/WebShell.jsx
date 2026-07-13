@@ -381,7 +381,7 @@ function RadarDesktop({ profile, COLORS, onNext }) {
 
 function ExplorarDesktop({ COLORS, cahuinDia }) {
   const cards = [
-    ['Historias culturales', 'Sube momentos de tu región por 24 horas.', 'camera', '#F0444F'],
+    ['Historias', '¿Qué está pasando en tu región? Sube un cahuín por 24 hrs.', 'camera', '#F0444F'],
     ['Cahuín del Día', cahuinDia?.pregunta || 'Mandar reels cuenta como lenguaje del amor.', 'flame', '#F59E0B'],
     ['Botella digital', 'Lanza un cahuín sin match y espera respuesta.', 'water', '#38BDF8'],
     ['Top Cahuines', 'Perfiles populares de tu zona.', 'trophy', '#FFD166'],
