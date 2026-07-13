@@ -103,10 +103,10 @@ export default function AjustesScreen({ navigation }) {
 
   const toggleSetting = async (field, currentValue, isPremium = false) => {
     const plan = usuario?.premiumPlan || 'free';
-    const hasPremium = plan === 'a_fondo' || plan === 'gold' || plan === 'platinum';
+    const hasPremium = plan === 'a_fondo' || plan === 'gold' || plan === 'platinum' || plan === 'piola' || plan === 'plus';
     
     if (isPremium && !hasPremium) {
-      avisar('Función Premium', 'Esta función es exclusiva para suscriptores Cahuín VIP o A Fondo.', {
+      avisar('Función Premium', 'Esta función es exclusiva para suscriptores Cahuín Piola o A Fondo.', {
         emoji: '👑',
         tone: 'premium',
         actions: [{ label: 'Ver Planes', color: COLORS.primario, onPress: () => { setModalInfo(null); navigation.navigate('Premium'); } }]
@@ -363,7 +363,7 @@ export default function AjustesScreen({ navigation }) {
               icon="star" iconColor="#F59E0B"
               bg={isDarkMode ? "rgba(245,158,11,0.15)" : "#FEF3C7"}
               title="Mi Suscripción"
-              subtitle={usuario?.premiumPlan === 'a_fondo' ? 'Cahuín A Fondo (Activo)' : usuario?.premiumPlan === 'gold' ? 'Cahuín VIP (Activo)' : 'Plan Gratuito'}
+              subtitle={usuario?.premiumPlan === 'a_fondo' ? 'Cahuín A Fondo (Activo)' : (usuario?.premiumPlan === 'piola' || usuario?.premiumPlan === 'gold') ? 'Cahuín Piola (Activo)' : 'Plan Gratuito'}
               onPress={() => navigation.navigate('Premium')}
             />
             <SettingsRow
@@ -387,14 +387,14 @@ export default function AjustesScreen({ navigation }) {
               icon="hourglass-outline" iconColor="#3B82F6"
               bg={isDarkMode ? "rgba(59,130,246,0.15)" : "#EFF6FF"}
               title="Ocultar Edad"
-              control={<Switch value={usuario?.ocultarEdad || false} onValueChange={(val) => toggleSetting('ocultarEdad', !val, true)} trackColor={{ true: '#3B82F6', false: COLORS.border }} thumbColor="#FFF" />}
+              control={<Switch value={usuario?.mostrarEdad === false} onValueChange={(val) => toggleSetting('mostrarEdad', val, true)} trackColor={{ true: '#3B82F6', false: COLORS.border }} thumbColor="#FFF" />}
             />
             <SettingsRow
               COLORS={COLORS} isDarkMode={isDarkMode}
               icon="location-outline" iconColor="#10B981"
               bg={isDarkMode ? "rgba(16,185,129,0.15)" : "#ECFDF5"}
               title="Ocultar Distancia"
-              control={<Switch value={usuario?.ocultarDistancia || false} onValueChange={(val) => toggleSetting('ocultarDistancia', !val, true)} trackColor={{ true: '#10B981', false: COLORS.border }} thumbColor="#FFF" />}
+              control={<Switch value={usuario?.mostrarDistancia === false} onValueChange={(val) => toggleSetting('mostrarDistancia', val, true)} trackColor={{ true: '#10B981', false: COLORS.border }} thumbColor="#FFF" />}
             />
             <SettingsRow
               COLORS={COLORS} isDarkMode={isDarkMode}

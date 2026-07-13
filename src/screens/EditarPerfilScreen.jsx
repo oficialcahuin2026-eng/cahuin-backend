@@ -679,11 +679,35 @@ export default function EditarPerfilScreen({ navigation }) {
             <Text style={styles.sectionTitle}>Controla tu perfil</Text>
             <View style={styles.rowItemSwitch}>
               <Text style={styles.rowLabel}>No mostrar mi edad</Text>
-              <Switch value={!mostrarEdad} onValueChange={(val) => setMostrarEdad(!val)} trackColor={{ true: COLORS.primario }} />
+              <Switch 
+                value={!mostrarEdad} 
+                onValueChange={() => {
+                  const plan = usuario?.premiumPlan || 'free';
+                  const hasPremium = plan === 'a_fondo' || plan === 'gold' || plan === 'platinum' || plan === 'piola' || plan === 'plus';
+                  if (!hasPremium) {
+                    setModalInfo({ title: 'Función Premium', message: 'Esta función es exclusiva para suscriptores Cahuín Piola o A Fondo.', emoji: '👑', tone: 'premium', actions: [{ label: 'Ver Planes', color: COLORS.primario, onPress: () => { setModalInfo(null); navigation.navigate('Premium'); } }, { label: 'Cancelar', onPress: () => setModalInfo(null) }] });
+                    return;
+                  }
+                  setMostrarEdad(!mostrarEdad);
+                }} 
+                trackColor={{ true: COLORS.primario }} 
+              />
             </View>
             <View style={styles.rowItemSwitch}>
               <Text style={styles.rowLabel}>No mostrar mi distancia</Text>
-              <Switch value={!mostrarDistancia} onValueChange={(val) => setMostrarDistancia(!val)} trackColor={{ true: COLORS.primario }} />
+              <Switch 
+                value={!mostrarDistancia} 
+                onValueChange={() => {
+                  const plan = usuario?.premiumPlan || 'free';
+                  const hasPremium = plan === 'a_fondo' || plan === 'gold' || plan === 'platinum' || plan === 'piola' || plan === 'plus';
+                  if (!hasPremium) {
+                    setModalInfo({ title: 'Función Premium', message: 'Esta función es exclusiva para suscriptores Cahuín Piola o A Fondo.', emoji: '👑', tone: 'premium', actions: [{ label: 'Ver Planes', color: COLORS.primario, onPress: () => { setModalInfo(null); navigation.navigate('Premium'); } }, { label: 'Cancelar', onPress: () => setModalInfo(null) }] });
+                    return;
+                  }
+                  setMostrarDistancia(!mostrarDistancia);
+                }} 
+                trackColor={{ true: COLORS.primario }} 
+              />
             </View>
             <View style={styles.rowItemSwitch}>
               <Text style={styles.rowLabel}>Mostrar mi género</Text>
