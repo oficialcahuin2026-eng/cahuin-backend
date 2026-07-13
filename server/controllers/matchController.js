@@ -117,6 +117,7 @@ exports.darLike = async (req, res) => {
 
     res.json({ message: 'Like enviado', usuario: usuarioActualizado });
   } catch (error) { console.error(error); res.status(500).json({ message: 'Error' }); }
+};
 // ─────────────────────────────────────────────
 // RETROCEDER (Deshacer último swipe)
 // ─────────────────────────────────────────────
