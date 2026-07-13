@@ -52,7 +52,6 @@ import { FONTS, SHADOWS, SPACING } from '../utils/theme';
 const emptyPanoramas = require('../assets/illustrations/empty-panoramas.png');
 
 const REGIONES_CHILE = [
-  'Todas',
   'Arica y Parinacota', 'Tarapacá', 'Antofagasta', 'Atacama', 'Coquimbo',
   'Valparaíso', 'Metropolitana', "O'Higgins", 'Maule', 'Ñuble',
   'Bío Bío', 'Araucanía', 'Los Ríos', 'Los Lagos', 'Aysén', 'Magallanes',
