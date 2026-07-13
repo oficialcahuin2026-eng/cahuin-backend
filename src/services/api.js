@@ -137,7 +137,7 @@ export const matchService = {
   responderRompehielo: (id, respuestas) => api.post(`/matches/${id}/rompehielo`, { respuestas }),
   generarRelampago:    ()   => api.post('/matches/relampago/generar', {}), 
   salvarRelampago:     (id) => api.post(`/matches/relampago/${id}/salvar`, {}),
-  deshacerUltimoDislike: () => api.post('/matches/deshacer-dislike', {}),
+  retroceder: () => api.post('/matches/retroceder', {}),
   jugarRuletaCiega: () => api.post('/matches/ruleta-ciega', {}),
   revelarse:        (id) => api.post(`/matches/${id}/revelarse`, {})
 };

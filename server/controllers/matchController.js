@@ -117,6 +117,36 @@ exports.darLike = async (req, res) => {
 
     res.json({ message: 'Like enviado', usuario: usuarioActualizado });
   } catch (error) { console.error(error); res.status(500).json({ message: 'Error' }); }
+// ─────────────────────────────────────────────
+// RETROCEDER (Deshacer último swipe)
+// ─────────────────────────────────────────────
+exports.retroceder = async (req, res) => {
+  try {
+    if (!req.user.isPremium) {
+      return res.status(403).json({ message: 'Retroceder es una función exclusiva de Cahuín Premium.' });
+    }
+
+    // Busca el último match/descarte que hizo el usuario en las últimas 24 horas
+    const hace24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const ultimoSwipe = await Match.findOne({ remitente: req.user._id, createdAt: { $gte: hace24h } }).sort({ createdAt: -1 });
+
+    if (!ultimoSwipe) {
+      return res.status(404).json({ message: 'No hay perfiles recientes para retroceder.' });
+    }
+
+    // Eliminar la acción
+    await Match.findByIdAndDelete(ultimoSwipe._id);
+
+    // Obtener el perfil para devolverlo al cliente
+    const perfilRecuperado = await User.findById(ultimoSwipe.receptor).select('-password');
+
+    res.json({
+      message: '¡Pillín! Te devolvimos el perfil.',
+      perfil: perfilRecuperado
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al intentar retroceder.' });
+  }
 };
 
 // ─────────────────────────────────────────────
@@ -129,8 +159,8 @@ exports.darSuperLike = async (req, res) => {
     const origen = req.body.origen || 'radar';
     const esPica = origen === 'pica';
 
-    if (!req.user.isPremium) {
-      return res.status(403).json({ message: 'Los Superlikes son exclusivos de los planes Premium.' });
+    if ((req.user.superLikes || 0) <= 0) {
+      return res.status(403).json({ message: 'No tienes Súper Likes disponibles. ¡Actualízate a Cahuín Premium para recibir más cada semana!' });
     }
 
     const inicioHoy = new Date(); inicioHoy.setHours(0, 0, 0, 0);
@@ -139,8 +169,10 @@ exports.darSuperLike = async (req, res) => {
       const picaSuperlikesHoy = await Match.countDocuments({
         remitente: remitenteId, tipo: 'superlike', origen: 'pica', createdAt: { $gte: inicioHoy }
       });
-      if (picaSuperlikesHoy >= 1) return res.status(403).json({ message: 'Cahuín Piola incluye solo 1 Superlike diario en La Pica. Pasa a Cahuín A Fondo para Superlikes infinitos.' });
+      if (picaSuperlikesHoy >= 1) return res.status(403).json({ message: 'Cahuín Piola incluye solo 1 Superlike diario en La Pica. Pasa a Cahuín A Fondo para más.' });
     }
+
+    await User.findByIdAndUpdate(req.user._id, { $inc: { superLikes: -1 } });
 
     await Match.findOneAndUpdate(
       { remitente: remitenteId, receptor: receptorId },

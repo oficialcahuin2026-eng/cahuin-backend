@@ -7,6 +7,7 @@ router.use(proteger);
 
 // Likes / dislikes
 router.post('/like/:id',      matchController.darLike);
+router.post('/retroceder', matchController.retroceder);
 router.post('/superlike/:id', matchController.darSuperLike);
 router.post('/pass/:id',      matchController.pasar);
 router.post('/',              matchController.darLikeODislike);

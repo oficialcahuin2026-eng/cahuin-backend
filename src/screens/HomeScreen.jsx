@@ -302,7 +302,7 @@ export default function HomeScreen({ navigation }) {
     if (procesandoAccion) return;
     setProcesandoAccion(true);
     try {
-      const data = await matchService.deshacerUltimoDislike();
+      const data = await matchService.retroceder();
       if (data?.perfil) {
         setPerfiles((prev) => {
           const copia = [...prev];
@@ -503,8 +503,8 @@ export default function HomeScreen({ navigation }) {
       <TouchableOpacity style={styles.actionBtnSmallWrap} onPress={activarBoost}>
         <View style={[styles.actionBtnSmall, { backgroundColor: 'rgba(139,92,246,0.3)' }]}>
           <Ionicons name="flash" size={24} color="#8B5CF6" />
-          {usuario?.boostGratisDisponibles > 0 && (
-            <View style={styles.boostBadge}><Text style={styles.boostBadgeText}>{usuario.boostGratisDisponibles}</Text></View>
+          {((usuario?.boostGratisDisponibles || 0) + (usuario?.boosts || 0)) > 0 && (
+            <View style={styles.boostBadge}><Text style={styles.boostBadgeText}>{(usuario?.boostGratisDisponibles || 0) + (usuario?.boosts || 0)}</Text></View>
           )}
         </View>
       </TouchableOpacity>

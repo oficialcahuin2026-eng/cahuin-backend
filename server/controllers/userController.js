@@ -303,8 +303,14 @@ exports.descubrir = async (req, res) => {
 
     const usuarios = await User.find(query);
 
+    // Identificar quiénes me dieron Súper Like
+    const superLikesHaciaMi = await Match.find({ receptor: req.user._id, tipo: 'superlike' }).select('remitente');
+    const superLikerIds = superLikesHaciaMi.map(m => m.remitente.toString());
+
     usuarios.sort((a, b) => {
       let scoreA = 0; let scoreB = 0;
+      if (superLikerIds.includes(a._id.toString())) scoreA += 5000;
+      if (superLikerIds.includes(b._id.toString())) scoreB += 5000;
       if (a.boostActivoHasta && a.boostActivoHasta > new Date()) scoreA += 100;
       if (b.boostActivoHasta && b.boostActivoHasta > new Date()) scoreB += 100;
       if (a.ciudad === ciudadBusqueda) scoreA += 30;
@@ -328,10 +334,14 @@ exports.descubrir = async (req, res) => {
       const mismaCiudad = ciudadBusqueda && perfil.ciudad === ciudadBusqueda;
       const ubicacionCompatibleSinGps = dist === null && (mismaCiudad || mismaRegion);
 
-      if (isMaster || esVisitante || (dist !== null && dist <= limiteDistancia) || ubicacionCompatibleSinGps) {
+      // Si le dio super like a este usuario, lo incluimos pase lo que pase con la distancia (opcional)
+      const leDioSuperLike = superLikerIds.includes(perfil._id.toString());
+
+      if (isMaster || leDioSuperLike || esVisitante || (dist !== null && dist <= limiteDistancia) || ubicacionCompatibleSinGps) {
         const obj = perfil.toObject();
         obj.distanciaKm = esVisitante ? 'Modo Viajero' : (dist !== null ? dist : 'Cerca');
         obj.esVisitante = esVisitante;
+        if (leDioSuperLike) obj.leDioSuperLike = true;
         perfiles.push(obj);
       }
     }
@@ -671,21 +681,28 @@ exports.getAnalyticsPerfil = async (req, res) => {
 exports.activarBoost = async (req, res) => {
   try {
     const usuario = await User.findById(req.user._id);
-    if ((usuario.boostGratisDisponibles || 0) > 0) {
-      const boostHasta = new Date();
-      boostHasta.setMinutes(boostHasta.getMinutes() + 30);
-      usuario.boostGratisDisponibles -= 1;
-      usuario.boostActivoHasta = boostHasta;
-      await usuario.save();
-
-      return res.json({
-        usuario,
-        boostActivoHasta: boostHasta,
-        message: 'Usaste tu Boost gratis de racha por 30 minutos.'
-      });
+    
+    // Validar si ya hay un boost activo
+    if (usuario.boostActivoHasta && new Date(usuario.boostActivoHasta) > new Date()) {
+      return res.status(400).json({ message: 'Ya tienes un Boost activo.' });
     }
-    if (!tienePlan(usuario, PLAN_A_FONDO_O_SUPERIOR))
-      return res.status(403).json({ message: 'Modo Destacado es parte de Cahuin a Fondo.' });
+
+    let descontado = false;
+    let mensaje = '';
+
+    if ((usuario.boostGratisDisponibles || 0) > 0) {
+      usuario.boostGratisDisponibles -= 1;
+      descontado = true;
+      mensaje = 'Usaste tu Boost gratis por 30 minutos.';
+    } else if ((usuario.boosts || 0) > 0) {
+      usuario.boosts -= 1;
+      descontado = true;
+      mensaje = 'Usaste un Boost Premium por 30 minutos.';
+    }
+
+    if (!descontado) {
+      return res.status(403).json({ message: 'No tienes Boosts disponibles. ¡Actualízate a Cahuín A Fondo para recibir más!' });
+    }
 
     const boostHasta = new Date();
     boostHasta.setMinutes(boostHasta.getMinutes() + 30);
@@ -695,7 +712,7 @@ exports.activarBoost = async (req, res) => {
     res.json({
       usuario,
       boostActivoHasta: boostHasta,
-      message: 'Modo Destacado activado por 30 minutos en tu ciudad.'
+      message: mensaje
     });
   } catch (error) {
     res.status(500).json({ message: 'Error activando destacado' });

@@ -28,7 +28,7 @@ export default function PerfilCard({ perfil, onLike, onPass, onSuperLike }) {
   };
 
   return (
-    <View style={[styles.card, SHADOWS.medium]}> 
+    <View style={[styles.card, SHADOWS.medium, perfil.leDioSuperLike && styles.cardSuperLike]}> 
       <View style={styles.fotoContainer}>
         <Image source={{ uri: fotos[fotoIndex] }} style={styles.foto} resizeMode="cover" />
         
@@ -57,6 +57,11 @@ export default function PerfilCard({ perfil, onLike, onPass, onSuperLike }) {
       </View>
 
       <View style={styles.infoContainer}>
+        {perfil.leDioSuperLike && (
+          <View style={styles.superLikeBanner}>
+            <Text style={styles.superLikeBannerText}>⭐ ¡Este cahuín te tiró un Súper Like! Está súper interesadx en ti.</Text>
+          </View>
+        )}
         <View style={styles.nombreRow}>
           <Text style={styles.nombre}>{perfil.nombre}</Text>
           <Text style={styles.region}>📍 {perfil.ciudad || perfil.region}</Text>
@@ -88,7 +93,8 @@ export default function PerfilCard({ perfil, onLike, onPass, onSuperLike }) {
 
 // 3. Corregido: Traducimos todos los colores inventados a los que realmente existen
 const styles = StyleSheet.create({
-  card: { width:'92%', borderRadius: RADIUS['2xl'], backgroundColor: COLORS.tarjeta, overflow:'hidden', alignSelf:'center' },
+  card: { width:'92%', borderRadius: RADIUS['2xl'], backgroundColor: COLORS.tarjeta, overflow:'hidden', alignSelf:'center', borderWidth: 2, borderColor: 'transparent' },
+  cardSuperLike: { borderColor: COLORS.superlike, shadowColor: COLORS.superlike, shadowOpacity: 0.8, shadowRadius: 15, elevation: 10 },
   fotoContainer: { width: '100%', height: 420 },
   foto: { width:'100%', height: '100%' },
   barrasContainer: { position: 'absolute', top: 10, left: 10, right: 10, flexDirection: 'row', gap: 4, zIndex: 5 },
@@ -100,6 +106,8 @@ const styles = StyleSheet.create({
   compatBadge: { position:'absolute', top: SPACING[6], right: SPACING[4], backgroundColor:'rgba(0,0,0,0.65)', borderRadius: 50, paddingHorizontal: SPACING[3], paddingVertical: SPACING[1], zIndex: 5 },
   compatText: { color:'#fff', fontSize:11, fontFamily: FONTS.bodyBold },
   infoContainer: { padding: SPACING[5], paddingBottom: SPACING[2] },
+  superLikeBanner: { backgroundColor: 'rgba(59, 130, 246, 0.1)', padding: SPACING[2], borderRadius: RADIUS.md, marginBottom: SPACING[3], borderWidth: 1, borderColor: COLORS.superlike },
+  superLikeBannerText: { color: COLORS.superlike, fontSize: 13, fontFamily: FONTS.bodyBold, textAlign: 'center' },
   nombreRow: { flexDirection:'row', justifyContent:'space-between', alignItems:'baseline', marginBottom: SPACING[2] },
   nombre: { fontFamily: FONTS.display, fontSize:22, color: COLORS.textPrimary },
   region: { fontFamily: FONTS.body, fontSize:13, color: COLORS.textMuted },
