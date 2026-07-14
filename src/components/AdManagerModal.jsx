@@ -73,11 +73,20 @@ export default function AdManagerModal({ visible, requiredAdsCount = 1, onAdFini
 
       unsubError = ad.addAdEventListener(AdEventType.ERROR, (error) => {
         console.error('Error cargando el anuncio de AdMob', error);
-        setLoadingText(`Error al cargar el anuncio...`);
-        // Opcional: Podrías cerrarlo o mostrar un aviso.
-        setTimeout(() => {
-          onClose(); // cerramos para no dejarlo trabado
-        }, 2000);
+        
+        if (adsWatched > 0) {
+          // Regla generosa: Si ya vio al menos 1, le perdonamos los demás si Google falla
+          setLoadingText(`Anuncio no disponible. Avanzando por cortesía...`);
+          setTimeout(() => {
+            setAdsWatched(prev => prev + 1);
+          }, 1500);
+        } else {
+          // Si falló en el primero (0 vistos), no hay cortesía
+          setLoadingText(`Sin anuncios disponibles por ahora. Intenta más tarde.`);
+          setTimeout(() => {
+            onClose(); 
+          }, 2000);
+        }
       });
 
       ad.load();
