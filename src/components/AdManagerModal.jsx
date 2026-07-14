@@ -17,8 +17,8 @@ if (!isExpoGo) {
   }
 }
 
-// IMPORTANTE: Reemplazar por tu ID real de AdMob cuando pases a producción.
-const adUnitId = !isExpoGo && TestIds ? TestIds.REWARDED : 'test';
+// IMPORTANTE: ID real de producción de AdMob.
+const adUnitId = !isExpoGo ? 'ca-app-pub-9649235284758114/1860146658' : 'test';
 
 export default function AdManagerModal({ visible, requiredAdsCount = 1, onAdFinished, onClose }) {
   const [loadingText, setLoadingText] = useState('Cargando anuncio...');
