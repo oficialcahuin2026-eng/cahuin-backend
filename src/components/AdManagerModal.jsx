@@ -4,13 +4,14 @@ import Constants from 'expo-constants';
 
 const isExpoGo = Constants.executionEnvironment === 'storeClient';
 
-let RewardedAd, RewardedAdEventType, TestIds;
+let RewardedAd, RewardedAdEventType, AdEventType, TestIds;
 
 if (!isExpoGo) {
   try {
     const ads = require('react-native-google-mobile-ads');
     RewardedAd = ads.RewardedAd;
     RewardedAdEventType = ads.RewardedAdEventType;
+    AdEventType = ads.AdEventType;
     TestIds = ads.TestIds;
   } catch (e) {
     console.warn('No se pudo cargar el módulo de AdMob', e);
@@ -66,14 +67,17 @@ export default function AdManagerModal({ visible, requiredAdsCount = 1, onAdFini
         // Se ganó la recompensa
       });
 
-      unsubClosed = ad.addAdEventListener(RewardedAdEventType.CLOSED, () => {
+      unsubClosed = ad.addAdEventListener(AdEventType.CLOSED, () => {
         setAdsWatched(prev => prev + 1);
       });
 
-      // Manejo de errores (por si no hay conexión o falta compilar la app nativa)
-      unsubError = ad.addAdEventListener('error', (err) => {
-        console.warn('AdMob Error (saltando anuncio como fallback):', err);
-        setAdsWatched(prev => prev + 1);
+      unsubError = ad.addAdEventListener(AdEventType.ERROR, (error) => {
+        console.error('Error cargando el anuncio de AdMob', error);
+        setLoadingText(`Error al cargar el anuncio...`);
+        // Opcional: Podrías cerrarlo o mostrar un aviso.
+        setTimeout(() => {
+          onClose(); // cerramos para no dejarlo trabado
+        }, 2000);
       });
 
       ad.load();
