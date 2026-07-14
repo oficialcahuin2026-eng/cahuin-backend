@@ -37,14 +37,14 @@ export default function AdManagerModal({ visible, requiredAdsCount = 1, onAdFini
     }
 
     if (isExpoGo || !RewardedAd) {
-      setLoadingText(`Modo Expo Go: Saltando anuncio ${adsWatched + 1}...`);
+      setLoadingText(`Modo Expo Go: Saltando anuncio ${adsWatched + 1}/${requiredAdsCount}...`);
       const timer = setTimeout(() => {
         setAdsWatched(prev => prev + 1);
       }, 1500);
       return () => clearTimeout(timer);
     }
 
-    setLoadingText(`Cargando anuncio ${adsWatched + 1} de ${requiredAdsCount}...`);
+    setLoadingText(`Anuncio ${adsWatched + 1}/${requiredAdsCount} cargando...`);
 
     let ad = null;
     let unsubLoaded = null;
@@ -58,7 +58,7 @@ export default function AdManagerModal({ visible, requiredAdsCount = 1, onAdFini
       });
 
       unsubLoaded = ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
-        setLoadingText(`Anuncio ${adsWatched + 1} cargado...`);
+        setLoadingText(`Anuncio ${adsWatched + 1}/${requiredAdsCount} listo...`);
         ad.show();
       });
 
