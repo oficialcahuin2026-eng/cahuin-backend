@@ -107,7 +107,7 @@ export const userService = {
   getVistasPremium: ()              => api.get('/users/me/vistas'),
   getLikesRecibidos: ()             => api.get('/users/me/likes'),
   getAnalyticsPerfil: ()            => api.get('/users/me/analytics'),
-  activarBoost:      ()             => api.post('/users/me/boost', {}),
+  activarBoost:      (data = {})    => api.post('/users/me/boost', data),
   continuarRachaSwipes: ()          => api.post('/users/me/racha-swipes/continuar', {}),
   guardarArquetipo: (arquetipo)     => api.post('/users/me/arquetipo', { arquetipo }),
   getTrending:      (params)        => api.get('/users/trending', { params }),

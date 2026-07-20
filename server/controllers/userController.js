@@ -687,10 +687,14 @@ exports.activarBoost = async (req, res) => {
       return res.status(400).json({ message: 'Ya tienes un Boost activo.' });
     }
 
+    const { pagadoConAnuncios } = req.body || {};
     let descontado = false;
     let mensaje = '';
 
-    if ((usuario.boostGratisDisponibles || 0) > 0) {
+    if (pagadoConAnuncios) {
+      descontado = true;
+      mensaje = 'Activaste un Boost viendo anuncios por 30 minutos.';
+    } else if ((usuario.boostGratisDisponibles || 0) > 0) {
       usuario.boostGratisDisponibles -= 1;
       descontado = true;
       mensaje = 'Usaste tu Boost gratis por 30 minutos.';

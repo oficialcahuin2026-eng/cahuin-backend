@@ -199,11 +199,6 @@ export default function HomeScreen({ navigation }) {
 
   const iniciarRadarGPS = async () => {
     try {
-      if (usuario?.latitud && usuario?.longitud) {
-        cargarPerfilesConFiltros();
-        return;
-      }
-
       const { status } = await consultarPermisoUbicacion();
       if (status === 'granted') {
         const ubicacion = await obtenerCoordenadasActuales();
@@ -389,7 +384,7 @@ export default function HomeScreen({ navigation }) {
             setModalInfo(null);
             iniciarAnuncioYEjecutar(async () => {
               try {
-                const data = await userService.activarBoost();
+                const data = await userService.activarBoost({ pagadoConAnuncios: cantAds > 0 });
                 if (data?.usuario) actualizarUsuario(data.usuario);
                 avisar('Prendido', data?.message || 'Tu perfil queda destacado por 30 minutos.', { accent: '#8B5CF6' });
               } catch (error) {
