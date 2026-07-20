@@ -123,7 +123,8 @@ exports.darLike = async (req, res) => {
 // ─────────────────────────────────────────────
 exports.retroceder = async (req, res) => {
   try {
-    if (!req.user.isPremium) {
+    const { pagadoConAnuncios } = req.body || {};
+    if (!pagadoConAnuncios && !req.user.isPremium) {
       return res.status(403).json({ message: 'Retroceder es una función exclusiva de Cahuín Premium.' });
     }
 
@@ -428,9 +429,10 @@ exports.salvarRelampago = async (req, res) => {
 // ─────────────────────────────────────────────
 exports.deshacerUltimoDislike = async (req, res) => {
   try {
+    const { pagadoConAnuncios } = req.body || {};
     const miUsuario = await User.findById(req.user._id);
 
-    if (!tienePlan(miUsuario, PLAN_PIOLA_O_SUPERIOR))
+    if (!pagadoConAnuncios && !tienePlan(miUsuario, PLAN_PIOLA_O_SUPERIOR))
       return res.status(403).json({ message: 'Retroceder es parte de Cahuin Piola.' });
 
     const ultimoDislike = await Match.findOne({
@@ -453,9 +455,10 @@ exports.deshacerUltimoDislike = async (req, res) => {
 // ─────────────────────────────────────────────
 exports.jugarRuletaCiega = async (req, res) => {
   try {
+    const { pagadoConAnuncios } = req.body || {};
     const miUsuario = await User.findById(req.user._id);
 
-    if (!tienePlan(miUsuario, PLAN_PIOLA_O_SUPERIOR))
+    if (!pagadoConAnuncios && !tienePlan(miUsuario, PLAN_PIOLA_O_SUPERIOR))
       return res.status(403).json({ message: 'La Ruleta a Ciegas es parte de Cahuin Piola.' });
 
     // Busca candidatos PRIMERO

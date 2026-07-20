@@ -107,7 +107,7 @@ export default function HomeScreen({ navigation }) {
     }).start();
   };
 
-  const forceSwipe = (direction) => {
+  const forceSwipe = (direction, pagadoConAnuncios = false) => {
     if (procesandoAccion) return;
     setProcesandoAccion(true);
     const x = direction === 'right' ? SCREEN_WIDTH * 1.5 : (direction === 'left' ? -SCREEN_WIDTH * 1.5 : 0);
@@ -116,15 +116,14 @@ export default function HomeScreen({ navigation }) {
     Animated.timing(position, {
       toValue: { x, y },
       duration: SWIPE_OUT_DURATION,
-      useNativeDriver: false
-    }).start(() => onSwipeComplete(direction));
+    }).start(() => onSwipeComplete(direction, pagadoConAnuncios));
   };
 
-  const onSwipeComplete = (direction) => {
+  const onSwipeComplete = (direction, pagadoConAnuncios = false) => {
     position.setValue({ x: 0, y: 0 });
     const action = direction === 'right' ? 'like' : (direction === 'up' ? 'superlike' : 'dislike');
     setProcesandoAccion(false);
-    procesarInteraccion(action);
+    procesarInteraccion(action, pagadoConAnuncios);
   };
 
   const actionsRef = useRef({ forceSwipe, resetPosition });
@@ -249,7 +248,7 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  const procesarInteraccion = async (tipo) => {
+  const procesarInteraccion = async (tipo, pagadoConAnuncios = false) => {
     stopAudio();
     if (perfilActual >= perfiles.length) return;
     const perfilVisto = perfiles[perfilActual];
@@ -277,7 +276,7 @@ export default function HomeScreen({ navigation }) {
           setMatchCelebrado(perfilVisto);
         }
       } else if (tipo === 'superlike') {
-        const data = await matchService.darSuperLike(perfilVisto._id);
+        const data = await matchService.darSuperLike(perfilVisto._id, 'radar', pagadoConAnuncios);
         if (data?.usuario) actualizarUsuario(data.usuario);
         if (data?.esMatch) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -293,11 +292,11 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  const deshacerUltimoReal = async () => {
+  const deshacerUltimoReal = async (pagadoConAnuncios = false) => {
     if (procesandoAccion) return;
     setProcesandoAccion(true);
     try {
-      const data = await matchService.retroceder();
+      const data = await matchService.retroceder({ pagadoConAnuncios });
       if (data?.perfil) {
         setPerfiles((prev) => {
           const copia = [...prev];
@@ -350,7 +349,7 @@ export default function HomeScreen({ navigation }) {
               setModalInfo(null); 
               iniciarAnuncioYEjecutar(() => {
                 registrarSuperLike();
-                forceSwipe('up');
+                forceSwipe('up', cantAds > 0);
               }, cantAds); 
             } 
           }

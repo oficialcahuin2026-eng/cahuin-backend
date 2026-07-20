@@ -122,7 +122,7 @@ export const userService = {
 
 export const matchService = {
   darLike:        (id, origen = 'radar') => api.post(`/matches/like/${id}`, { origen }),
-  darSuperLike:   (id, origen = 'radar') => api.post(`/matches/superlike/${id}`, { origen }),
+  darSuperLike:   (id, origen = 'radar', pagadoConAnuncios = false) => api.post(`/matches/superlike/${id}`, { origen, pagadoConAnuncios }),
   pasar:          (id) => api.post(`/matches/pass/${id}`, {}),
   darDislike:     (id) => api.post(`/matches/pass/${id}`, {}),
   getMisMatches: async () => {
@@ -137,8 +137,8 @@ export const matchService = {
   responderRompehielo: (id, respuestas) => api.post(`/matches/${id}/rompehielo`, { respuestas }),
   generarRelampago:    ()   => api.post('/matches/relampago/generar', {}), 
   salvarRelampago:     (id) => api.post(`/matches/relampago/${id}/salvar`, {}),
-  retroceder: () => api.post('/matches/retroceder', {}),
-  jugarRuletaCiega: () => api.post('/matches/ruleta-ciega', {}),
+  retroceder:          (data = {}) => api.post('/matches/retroceder', data),
+  jugarRuletaCiega:    (data = {}) => api.post('/matches/ruleta-ciega', data),
   revelarse:        (id) => api.post(`/matches/${id}/revelarse`, {})
 };
 

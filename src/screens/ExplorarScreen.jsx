@@ -140,18 +140,18 @@ export default function ExplorarScreen({ navigation }) {
           color: COLORS.primario,
           onPress: () => {
             setModalInfo(null);
-            iniciarAnuncioYEjecutar(ejecutarRuletaBackend, 2);
+            iniciarAnuncioYEjecutar(() => ejecutarRuletaBackend(true), 2);
           }
         }] : [])
       ]
     );
   };
 
-  const ejecutarRuletaBackend = async () => {
+  const ejecutarRuletaBackend = async (pagadoConAnuncios = false) => {
     setModalInfo(null);
     setCargandoRuleta(true);
     try {
-      const data = await matchService.jugarRuletaCiega();
+      const data = await matchService.jugarRuletaCiega({ pagadoConAnuncios });
       avisar('Match ciego', data?.message || 'Ve a tus conversaciones. Tienes 1 hora para descubrir quien es.', '🎡', [], { accent: COLORS.primario });
     } catch (error) {
       avisar('Ruleta a Ciegas', error.message || 'No se pudo contactar a nadie en este momento.', '🎭', [], { tone: 'warning' });
