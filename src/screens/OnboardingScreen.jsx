@@ -312,7 +312,7 @@ export default function OnboardingScreen() {
                   {titleWithAccent('De dónde ', 'eres?')}
                   <Text style={styles.subtitle}>Activa tu ubicación para conectar con gente y panoramas en tu misma zona. Si viajas, se actualizará.</Text>
                   
-                  {Platform.OS !== 'web' && (
+                  {Platform.OS !== 'web' && (!ciudad || !region) && (
                     <TouchableOpacity 
                       style={[styles.bigInputModern, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#F0444F', borderWidth: 0, marginTop: 20 }]} 
                       onPress={obtenerUbicacion}
@@ -324,6 +324,23 @@ export default function OnboardingScreen() {
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                           <Ionicons name="location" size={24} color="#FFF" />
                           <Text style={{ color: '#FFF', fontSize: 18, fontWeight: '700' }}>Activar ubicación</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  )}
+
+                  {Platform.OS !== 'web' && ciudad && region && (
+                    <TouchableOpacity 
+                      style={[styles.bigInputModern, { justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(240, 68, 79, 0.1)', borderWidth: 1, borderColor: '#F0444F', marginTop: 20 }]} 
+                      onPress={obtenerUbicacion}
+                      disabled={cargandoUbicacion}
+                    >
+                      {cargandoUbicacion ? (
+                        <ActivityIndicator color="#F0444F" />
+                      ) : (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                          <Ionicons name="checkmark-circle" size={24} color="#F0444F" />
+                          <Text style={{ color: '#F0444F', fontSize: 18, fontWeight: '700' }}>{ciudad}, {region}</Text>
                         </View>
                       )}
                     </TouchableOpacity>
