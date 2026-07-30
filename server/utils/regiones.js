@@ -1,84 +1,20 @@
 const regiones = [
-  { 
-    nombre: "Arica y Parinacota", 
-    nombreCorto: "Arica y Parinacota",
-    comunas: ["Arica", "Camarones", "Putre", "General Lagos", "Villa Frontera", "San Miguel de Azapa", "Poconchile", "Molinos", "Chapisca", "Sora", "Las Maitas", "Alto de Ramírez", "Caleta Vítor"]
-  },
-  { 
-    nombre: "Tarapacá", 
-    nombreCorto: "Tarapacá",
-    comunas: ["Iquique", "Alto Hospicio", "Pozo Almonte", "Pica", "Huara", "Camiña", "Colchane", "Mocha", "La Tirana", "Cariquima", "Isluga", "Cancosa", "Mamiña"]
-  },
-  { 
-    nombre: "Antofagasta", 
-    nombreCorto: "Antofagasta",
-    comunas: ["Antofagasta", "Calama", "Tocopilla", "Mejillones", "Taltal", "San Pedro de Atacama", "María Elena", "Sierra Gorda", "Ollagüe", "Salar del Carmen", "La Chimba", "Cobija", "Paposo"]
-  },
-  { 
-    nombre: "Atacama", 
-    nombreCorto: "Atacama",
-    comunas: ["Copiapó", "Caldera", "Tierra Amarilla", "Chañaral", "Diego de Almagro", "Vallenar", "Huasco", "Freirina", "Alto del Carmen", "El Salvador"]
-  },
-  { 
-    nombre: "Coquimbo", 
-    nombreCorto: "Coquimbo",
-    comunas: ["La Serena", "Coquimbo", "Ovalle", "Illapel", "Los Vilos", "Salamanca", "Vicuña", "Monte Patria", "Combarbalá", "Andacollo", "Punitaqui", "Canela", "Río Hurtado", "Paihuano", "La Higuera", "Tongoy", "El Palqui"]
-  },
-  { 
-    nombre: "Valparaíso", 
-    nombreCorto: "Valparaíso",
-    comunas: ["Valparaíso", "Viña del Mar", "Quilpué", "Villa Alemana", "Concón", "San Antonio", "Quillota", "San Felipe", "Los Andes", "La Calera", "Limache", "La Ligua", "San Esteban", "Olmué", "Quintero", "Puchuncaví", "Casablanca", "Nogales", "Hijuelas", "La Cruz", "Papudo", "Zapallar", "Petorca", "Cabildo", "Cartagena", "El Quisco", "El Tabo", "Santo Domingo", "Catemu", "Llay-Llay", "Panquehue", "Putaendo", "Santa María", "Juan Fernández", "Isla de Pascua (Hanga Roa)", "Algarrobo", "Mirasol", "El Yeco", "Ventanas", "Placilla de Peñuelas", "Reñaca", "Peñablanca", "El Belloto"]
-  },
-  { 
-    nombre: "Metropolitana de Santiago", 
-    nombreCorto: "Metropolitana",
-    comunas: ["Santiago", "Puente Alto", "Maipú", "La Florida", "San Bernardo", "Las Condes", "Peñalolén", "Pudahuel", "La Pintana", "El Bosque", "Ñuñoa", "Cerro Navia", "Recoleta", "Renca", "Conchalí", "La Granja", "Estación Central", "Quilicura", "Providencia", "Pedro Aguirre Cerda", "Lo Espejo", "Macul", "Lo Prado", "Quinta Normal", "San Joaquín", "La Reina", "San Ramón", "Melipilla", "La Cisterna", "Vitacura", "Colina", "Lampa", "Tiltil", "Pirque", "San José de Maipo", "Buin", "Calera de Tango", "Paine", "Alhué", "Curacaví", "María Pinto", "San Pedro", "Padre Hurtado", "Peñaflor", "Talagante", "El Monte", "Isla de Maipo", "Chicureo", "Chamisero", "Valle Grande", "Ciudad del Valle", "Bajos de San Agustín", "Alto Jahuel", "La Obra", "Las Vertientes"]
-  },
-  { 
-    nombre: "Libertador General Bernardo O'Higgins", 
-    nombreCorto: "O'Higgins",
-    comunas: ["Rancagua", "San Fernando", "Rengo", "Machalí", "Santa Cruz", "Pichilemu", "San Vicente de Tagua Tagua", "Graneros", "Mostazal", "Requínoa", "Codegua", "Coinco", "Coltauco", "Doñihue", "Las Cabras", "Malloa", "Olivar", "Peumo", "Pichidegua", "Quinta de Tilcoco", "Chépica", "Chimbarongo", "Nancagua", "Palmilla", "Peralillo", "Placilla", "Pumanque", "La Estrella", "Litueche", "Marchigüe", "Navidad", "Paredones", "Lo Miranda", "Gultro", "Los Lirios", "Punta Diamante", "La Punta"]
-  },
-  { 
-    nombre: "Maule", 
-    nombreCorto: "Maule",
-    comunas: ["Talca", "Curicó", "Linares", "Constitución", "Cauquenes", "Molina", "San Javier", "Parral", "San Clemente", "Longaví", "Maule", "Rauco", "Romeral", "Teno", "Colbún", "Retiro", "Villa Alegre", "Yerbas Buenas", "Hualañé", "Licantén", "Sagrada Familia", "Empedrado", "Curepto", "Pelarco", "Pencahue", "Río Claro", "San Rafael", "Vichuquén", "Chanco", "Pelluhue"]
-  },
-  { 
-    nombre: "Ñuble", 
-    nombreCorto: "Ñuble",
-    comunas: ["Chillán", "Chillán Viejo", "San Carlos", "Coihueco", "Bulnes", "Yungay", "Quillón", "San Ignacio", "El Carmen", "Quirihue", "Cobquecura", "Coelemu", "Ninhue", "Portezuelo", "Ránquil", "Trehuaco", "Pemuco", "Pinto", "Ñiquén", "San Fabián", "San Nicolás"]
-  },
-  { 
-    nombre: "Biobío", 
-    nombreCorto: "Bío Bío",
-    comunas: ["Concepción", "Talcahuano", "Los Ángeles", "Coronel", "San Pedro de la Paz", "Chiguayante", "Hualpén", "Penco", "Tomé", "Lota", "Hualqui", "Santa Juana", "Lebu", "Arauco", "Cañete", "Curanilahue", "Los Álamos", "Contulmo", "Cabrero", "Monte Águila", "Mulchén", "Nacimiento", "Santa Bárbara", "Yumbel", "Florida", "Huépil", "Laraquete"]
-  },
-  { 
-    nombre: "La Araucanía", 
-    nombreCorto: "Araucanía",
-    comunas: ["Temuco", "Padre Las Casas", "Angol", "Villarrica", "Victoria", "Lautaro", "Nueva Imperial", "Pucón", "Pitrufquén", "Collipulli", "Loncoche", "Traiguén", "Curacautín", "Carahue", "Gorbea", "Purén", "Cunco", "Renaico", "Vilcún", "Freire", "Cholchol", "Teodoro Schmidt", "Toltén", "Galvarino", "Lumaco", "Saavedra", "Ercilla", "Los Sauces", "Melipeuco", "Perquenco", "Curarrehue", "Lonquimay"]
-  },
-  { 
-    nombre: "Los Ríos", 
-    nombreCorto: "Los Ríos",
-    comunas: ["Valdivia", "La Unión", "Río Bueno", "Panguipulli", "Lanco", "Corral", "Los Lagos", "Paillaco", "San José de la Mariquina", "Máfil", "Futrono", "Lago Ranco"]
-  },
-  { 
-    nombre: "Los Lagos", 
-    nombreCorto: "Los Lagos",
-    comunas: ["Puerto Montt", "Osorno", "Puerto Varas", "Castro", "Ancud", "Quellón", "Frutillar", "Calbuco", "Fresia", "Los Muermos", "Llanquihue", "Maullín", "Chonchi", "Curaco de Vélez", "Dalcahue", "Puqueldón", "Queilén", "Quemchi", "Quinchao", "Puerto Octay", "Purranque", "Puyehue", "Río Negro", "San Juan de la Costa", "San Pablo", "Chaitén", "Futaleufú", "Hualaihué", "Palena", "Alerce", "Llanquihue (ciudad)", "Alerce (localidad)"]
-  },
-  { 
-    nombre: "Aysén del General Carlos Ibáñez del Campo", 
-    nombreCorto: "Aysén",
-    comunas: ["Coyhaique", "Puerto Aysén", "Cisnes", "Chile Chico", "Cochrane", "Río Ibáñez", "Guaitecas", "Lago Verde", "Tortel", "O'Higgins"]
-  },
-  { 
-    nombre: "Magallanes y de la Antártica Chilena", 
-    nombreCorto: "Magallanes",
-    comunas: ["Punta Arenas", "Puerto Natales", "Porvenir", "Puerto Williams", "San Gregorio", "Laguna Blanca", "Río Verde", "Cabo de Hornos", "Torres del Paine", "Timaukel", "Primavera", "Villa Las Estrellas", "Puerto Edén"]
-  }
+  { nombre: "Arica y Parinacota", nombreCorto: "Arica y Parinacota", comunas: ["Arica", "Camarones", "General Lagos", "Putre", "San Miguel de Azapa", "Codpa", "Socoroma", "Visviri", "Villa Frontera", "Poconchile", "Molinos", "Chapisca", "Sora", "Las Maitas", "Alto de Ramírez", "Caleta Vítor"] },
+  { nombre: "Tarapacá", nombreCorto: "Tarapacá", comunas: ["Alto Hospicio", "Camiña", "Colchane", "Huara", "Iquique", "Pica", "Pozo Almonte", "La Tirana", "Tarapacá", "Pisagua", "Mamiña", "Mocha", "Cariquima", "Isluga", "Cancosa"] },
+  { nombre: "Antofagasta", nombreCorto: "Antofagasta", comunas: ["Antofagasta", "Calama", "María Elena", "Mejillones", "Ollagüe", "San Pedro de Atacama", "Sierra Gorda", "Taltal", "Tocopilla", "Chuquicamata", "Baquedano", "Toconao", "Paposo", "Salar del Carmen", "La Chimba", "Cobija"] },
+  { nombre: "Atacama", nombreCorto: "Atacama", comunas: ["Alto del Carmen", "Caldera", "Chañaral", "Copiapó", "Diego de Almagro", "Freirina", "Huasco", "Tierra Amarilla", "Vallenar", "El Salvador", "Bahía Inglesa", "San Félix"] },
+  { nombre: "Coquimbo", nombreCorto: "Coquimbo", comunas: ["Andacollo", "Canela", "Combarbalá", "Coquimbo", "Illapel", "La Higuera", "La Serena", "Los Vilos", "Monte Patria", "Ovalle", "Paihuano", "Punitaqui", "Río Hurtado", "Salamanca", "Vicuña", "Tongoy", "Guanaqueros", "Pichidangui", "Pisco Elqui", "El Palqui"] },
+  { nombre: "Valparaíso", nombreCorto: "Valparaíso", comunas: ["Algarrobo", "Cabildo", "Calle Larga", "Cartagena", "Casablanca", "Catemu", "Concón", "El Quisco", "El Tabo", "Hijuelas", "Isla de Pascua (Hanga Roa)", "Juan Fernández", "La Calera", "La Cruz", "La Ligua", "Limache", "Llaillay", "Los Andes", "Nogales", "Olmué", "Panquehue", "Papudo", "Petorca", "Puchuncaví", "Putaendo", "Quillota", "Quilpué", "Quintero", "Rinconada", "San Antonio", "San Esteban", "San Felipe", "Santa María", "Santo Domingo", "Valparaíso", "Villa Alemana", "Viña del Mar", "Zapallar", "Reñaca", "Maitencillo", "Horcón", "Laguna Verde", "Peñablanca", "Mirasol", "El Yeco", "Ventanas", "Placilla de Peñuelas", "El Belloto"] },
+  { nombre: "Metropolitana de Santiago", nombreCorto: "Metropolitana", comunas: ["Alhué", "Buin", "Calera de Tango", "Cerrillos", "Cerro Navia", "Colina", "Conchalí", "Curacaví", "El Bosque", "El Monte", "Estación Central", "Huechuraba", "Independencia", "Isla de Maipo", "La Cisterna", "La Florida", "La Granja", "La Pintana", "La Reina", "Lampa", "Las Condes", "Lo Barnechea", "Lo Espejo", "Lo Prado", "Macul", "Maipú", "María Pinto", "Melipilla", "Ñuñoa", "Padre Hurtado", "Paine", "Pedro Aguirre Cerda", "Peñaflor", "Peñalolén", "Pirque", "Providencia", "Pudahuel", "Puente Alto", "Quilicura", "Quinta Normal", "Recoleta", "Renca", "San Bernardo", "San Joaquín", "San José de Maipo", "San Miguel", "San Pedro", "San Ramón", "Santiago", "Talagante", "Tiltil", "Vitacura", "San Alfonso", "Pomaire", "Batuco", "Malloco", "Hospital", "Chicureo", "Chamisero", "Valle Grande", "Ciudad del Valle", "Bajos de San Agustín", "Alto Jahuel", "La Obra", "Las Vertientes"] },
+  { nombre: "Libertador General Bernardo O'Higgins", nombreCorto: "O'Higgins", comunas: ["Chépica", "Chimbarongo", "Codegua", "Coinco", "Coltauco", "Doñihue", "Graneros", "La Estrella", "Las Cabras", "Litueche", "Lolol", "Machalí", "Malloa", "Marchigüe", "Mostazal", "Nancagua", "Navidad", "Olivar", "Palmilla", "Paredones", "Peralillo", "Peumo", "Pichidegua", "Pichilemu", "Placilla", "Pumanque", "Quinta de Tilcoco", "Rancagua", "Rengo", "Requínoa", "San Fernando", "San Vicente de Tagua Tagua", "Santa Cruz", "Coya", "Pelequén", "Bucalemu", "Lo Miranda", "Rosario", "Gultro", "Los Lirios", "Punta Diamante", "La Punta"] },
+  { nombre: "Maule", nombreCorto: "Maule", comunas: ["Cauquenes", "Chanco", "Colbún", "Constitución", "Curepto", "Curicó", "Empedrado", "Hualañé", "Licantén", "Linares", "Longaví", "Maule", "Molina", "Parral", "Pelarco", "Pelluhue", "Pencahue", "Rauco", "Retiro", "Río Claro", "Romeral", "Sagrada Familia", "San Clemente", "San Javier", "San Rafael", "Talca", "Teno", "Vichuquén", "Villa Alegre", "Yerbas Buenas", "Sarmiento", "Los Niches", "Iloca", "Llico", "Putú", "Vilches"] },
+  { nombre: "Ñuble", nombreCorto: "Ñuble", comunas: ["Bulnes", "Chillán", "Chillán Viejo", "Cobquecura", "Coelemu", "Coihueco", "El Carmen", "Ninhue", "Ñiquén", "Pemuco", "Pinto", "Portezuelo", "Quillón", "Quirihue", "Ránquil", "San Carlos", "San Fabián", "San Ignacio", "San Nicolás", "Treguaco", "Yungay", "Las Trancas", "Recinto", "Buchupureo", "San Gregorio"] },
+  { nombre: "Biobío", nombreCorto: "Bío Bío", comunas: ["Alto Biobío", "Antuco", "Arauco", "Cabrero", "Cañete", "Chiguayante", "Concepción", "Contulmo", "Coronel", "Curanilahue", "Florida", "Hualpén", "Hualqui", "Laja", "Lebu", "Los Álamos", "Los Ángeles", "Lota", "Mulchén", "Nacimiento", "Negrete", "Penco", "Quilaco", "Quilleco", "San Pedro de la Paz", "San Rosendo", "Santa Bárbara", "Santa Juana", "Talcahuano", "Tirúa", "Tomé", "Tucapel", "Yumbel", "Dichato", "Lirquén", "Monte Águila", "Ralco", "Laraquete", "Huépil"] },
+  { nombre: "La Araucanía", nombreCorto: "Araucanía", comunas: ["Angol", "Carahue", "Cholchol", "Collipulli", "Cunco", "Curacautín", "Curarrehue", "Ercilla", "Freire", "Galvarino", "Gorbea", "Lautaro", "Loncoche", "Lonquimay", "Los Sauces", "Lumaco", "Melipeuco", "Nueva Imperial", "Padre Las Casas", "Perquenco", "Pitrufquén", "Pucón", "Purén", "Renaico", "Saavedra", "Temuco", "Teodoro Schmidt", "Toltén", "Traiguén", "Victoria", "Vilcún", "Villarrica", "Labranza", "Lican Ray", "Capitán Pastene", "Cherquenco", "Queule", "Icalma"] },
+  { nombre: "Los Ríos", nombreCorto: "Los Ríos", comunas: ["Corral", "Futrono", "La Unión", "Lago Ranco", "Lanco", "Los Lagos", "Máfil", "San José de la Mariquina", "Paillaco", "Panguipulli", "Río Bueno", "Valdivia", "Niebla", "Coñaripe", "Neltume", "Liquiñe", "Mehuín", "Choshuenco"] },
+  { nombre: "Los Lagos", nombreCorto: "Los Lagos", comunas: ["Ancud", "Calbuco", "Castro", "Chaitén", "Chonchi", "Cochamó", "Curaco de Vélez", "Dalcahue", "Fresia", "Frutillar", "Futaleufú", "Hualaihué", "Llanquihue", "Los Muermos", "Maullín", "Osorno", "Palena", "Puerto Montt", "Puerto Octay", "Puerto Varas", "Puqueldón", "Purranque", "Puyehue", "Queilén", "Quellón", "Quemchi", "Quinchao", "Río Negro", "San Juan de la Costa", "San Pablo", "Alerce", "Ensenada", "Hornopirén", "Puelo", "Cucao", "Entre Lagos"] },
+  { nombre: "Aysén del General Carlos Ibáñez del Campo", nombreCorto: "Aysén", comunas: ["Aysén", "Chile Chico", "Cisnes", "Cochrane", "Coyhaique", "Guaitecas", "Lago Verde", "O'Higgins", "Río Ibáñez", "Tortel", "Puerto Chacabuco", "Puerto Tranquilo", "Puyuhuapi", "La Junta", "Balmaceda", "Melinka"] },
+  { nombre: "Magallanes y de la Antártica Chilena", nombreCorto: "Magallanes", comunas: ["Antártica", "Cabo de Hornos", "Laguna Blanca", "Natales", "Porvenir", "Primavera", "Punta Arenas", "Río Verde", "San Gregorio", "Timaukel", "Torres del Paine", "Puerto Williams", "Cerro Sombrero", "Villa Tehuelches", "Puerto Edén", "Villa Las Estrellas"] }
 ];
 
 module.exports = regiones;

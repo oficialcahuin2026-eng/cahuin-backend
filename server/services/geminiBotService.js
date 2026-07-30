@@ -36,38 +36,35 @@ const getRandomApiKey = () => {
 
 // Función para procesar una región y guardar sus resultados
 const fetchPanoramasParaRegion = async (region) => {
-  const prompt = `Actúa como un investigador experto en la agenda oficial y local de panoramas en ${region.nombre}, Chile. Tu objetivo es elaborar una guía exhaustiva, ultra detallada y completa de absolutamente todos los eventos —musicales, culturales, deportivos, gastronómicos, ferias, festivales, shows en vivo, celebraciones municipales y actividades en bares, hoteles, restaurantes, discotecas y cualquier otro local— que se realizarán en las comunas de la ${region.nombre} durante el día siguiente.
+  const prompt = `Actúa como un investigador experto en la agenda oficial y local de panoramas en ${region.nombre}, Chile. Tu objetivo es elaborar una guía exhaustiva, ultra detallada y verificable de absolutamente todos los eventos que se realizarán en las comunas de la ${region.nombre} durante el día siguiente.
 
 Directrices de búsqueda:
-Tipos de eventos y clasificación:
-Música: conciertos, festivales, shows en vivo en estadios, teatros, bares, discotecas y casinos.
-Comedia: stand-up, espectáculos humorísticos en teatros, bares y centros culturales.
-Cultura: obras de teatro, danza, exposiciones, cine, ferias literarias, actividades en centros culturales y universidades.
-Deporte: partidos oficiales (fútbol, básquetbol, tenis, etc.), torneos, maratones, campeonatos locales y nacionales.
-Gastronomía: ferias costumbristas, festivales de comida, muestras culinarias en restaurantes, hoteles y plazas.
-Ferias y otros panoramas oficiales/locales: celebraciones municipales, fiestas regionales, actividades en hoteles, bares y discotecas.
+Tipos de eventos y clasificación (incluyendo pero no limitándose a):
+Música: conciertos, tocatas, batallas de rap, peñas, bandas tributo, K-pop dance, orquestas, karaoke, batucadas.
+Comedia y Artes: stand-up, teatro, danza, ferias literarias, exposiciones.
+Entretenimiento y Niños: circos, parques, cuentacuentos, shows de magia, teatro infantil/bebés, estrenos de cine, autocines.
+Cultura Geek y Nicho: convenciones anime, cómics, cosplay, e-sports, torneos TCG, juegos de rol, Expo Tattoo, tuning.
+Deporte y Recreación: partidos oficiales, maratones, cicletadas furiosas, skate, lucha libre, trekking.
+Mundo Rural y Huaso: rodeos, carreras a la chilena, rayuela, domaduras, trillas, ferias agrícolas.
+Universidades y Educación: ferias científicas, hackathons, fiestas mechonas, tocatas de facultad, kermesses.
+Economía y Gastronomía: ferias costumbristas, food trucks, catas, showrooms, ropa vintage, remates.
+Comunidad, Solidaridad y 3ra Edad: completadas, bingos, malones, mateadas, clubes de adulto mayor, asambleas, voluntariados, fiestas patronales.
+Alternativo, Bienestar y Disidencias: fiestas tecno/rave, eventos LGBTQ+ (ballroom, transformismo), ferias feministas, temazcales, ceremonias de cacao, sonoterapia, yoga.
 
-Tipos de recintos a incluir:
-Grandes recintos: estadios, arenas, centros de eventos masivos.
-Teatros y centros culturales.
-Hotelería y casinos.
-Escenas locales: bares, restaurantes, discotecas.
+Tipos de recintos a incluir: Estadios, arenas, medialunas, teatros, museos, universidades, colegios, hoteles, casinos, carpas, bares, discotecas, plazas, juntas de vecinos, gimnasios, playas, cerros, ferias libres.
 
-Fuentes de información:
-Sitios oficiales, Instagram, Facebook, páginas municipales, productoras locales y medios regionales.
+RESTRICCIÓN ANTI-ALUCINACIÓN (CRÍTICO):
+Bajo ninguna circunstancia inventes eventos. Todo debe ser 100% real y verificable. Si en una comuna no hay eventos para el día de mañana, simplemente omítela.
 
-Formato de presentación:
-Presenta la información en una tabla Markdown con EXACTAMENTE las siguientes columnas (incluye la cabecera exacta):
-| Día | Evento | Lugar y Ciudad | Clasificación | Descripción |
+Formato de presentación (Tabla Markdown EXACTA):
+| Hora | Evento | Lugar/Comuna | Categoría | Público | Precio | Organizador | Enlace/Fuente |
 
-Restricción temporal crítica:
-Asegúrate de que todos los datos correspondan única y exclusivamente al día siguiente (mañana).
-Filtra y descarta cualquier evento de días anteriores o posteriores.
+Restricción temporal crítica: Solo eventos del día siguiente (mañana). Descarta fechas pasadas o futuras.
 
-Busca meticulosamente en las siguientes comunas de la ${region.nombre}:
-${region.comunas.map(c => '• ' + c).join('\n')}
+Busca meticulosamente en las comunas y localidades de:
+• ${region.comunas.join(', ')}
 
-IMPORTANTE: Responde ÚNICAMENTE con la tabla Markdown. No incluyas texto antes ni después de la tabla.`;
+IMPORTANTE: Responde ÚNICAMENTE con la tabla Markdown. No incluyas texto antes ni después.`;
 
   let retries = 3;
   let success = false;
@@ -81,6 +78,9 @@ IMPORTANTE: Responde ÚNICAMENTE con la tabla Markdown. No incluyas texto antes 
 
       const result = await model.generateContent(prompt);
       const text = result.response.text();
+      console.log("=== RAW GEMINI OUTPUT ===");
+      console.log(text);
+      console.log("=========================");
       await parseAndSavePanoramas(text, region.nombre, region.nombreCorto);
       success = true;
     } catch (error) {
@@ -123,14 +123,18 @@ const parseAndSavePanoramas = async (markdown, regionName, regionCorto) => {
   // Ignorar cabeceras (índices 0 y 1)
   for (let i = 2; i < lines.length; i++) {
     const columns = lines[i].split('|').map(c => c.trim());
-    if (columns.length < 6) continue; // Formato incorrecto o línea de relleno
+    if (columns.length < 9) continue; // Formato incorrecto o línea de relleno
 
-    // markdown format: | Día | Evento | Lugar y Ciudad | Clasificación | Descripción |
-    // index 0 is empty (before first |), index 1 = Día, index 2 = Evento, etc.
+    // | Hora | Evento | Lugar/Comuna | Categoría | Público | Precio | Organizador | Enlace/Fuente |
+    // index 0 = vacio, index 1 = Hora, 2 = Evento, 3 = Lugar, 4 = Categoría, 5 = Público, 6 = Precio, 7 = Organizador, 8 = Enlace
+    const hora = columns[1];
     const evento = columns[2];
     const lugar = columns[3];
     const clasificacion = columns[4];
-    const descripcion = columns[5];
+    const publico = columns[5];
+    const precio = columns[6];
+    const organizador = columns[7];
+    const enlace = columns[8];
 
     if (!evento || evento.includes("---")) continue;
 
@@ -144,16 +148,23 @@ const parseAndSavePanoramas = async (markdown, regionName, regionCorto) => {
     const norm = clasificacion.toLowerCase();
     if (norm.includes('música') || norm.includes('musica')) emoji = '🎵';
     else if (norm.includes('comedia')) emoji = '😂';
-    else if (norm.includes('cultura')) emoji = '🎭';
-    else if (norm.includes('deporte')) emoji = '⚽';
-    else if (norm.includes('gastronom')) emoji = '🍔';
+    else if (norm.includes('cultura') || norm.includes('arte')) emoji = '🎭';
+    else if (norm.includes('deporte') || norm.includes('skate') || norm.includes('trekking')) emoji = '⚽';
+    else if (norm.includes('gastronom') || norm.includes('comida') || norm.includes('food')) emoji = '🍔';
+    else if (norm.includes('geek') || norm.includes('anime') || norm.includes('cosplay') || norm.includes('esports')) emoji = '👾';
+    else if (norm.includes('rural') || norm.includes('huaso') || norm.includes('rodeo')) emoji = '🐴';
+    else if (norm.includes('niños') || norm.includes('infantil') || norm.includes('circo')) emoji = '🧸';
+    else if (norm.includes('bienestar') || norm.includes('yoga') || norm.includes('lgbt') || norm.includes('rave')) emoji = '✨';
     else if (norm.includes('feria')) emoji = '🎪';
+    else if (norm.includes('universidad') || norm.includes('educación')) emoji = '🎓';
+
+    const descripcionExtra = `⏰ Hora: ${hora}\n🎟️ Precio: ${precio}\n👥 Público: ${publico}\n🏷️ Categoría: ${clasificacion}\n🏢 Organizador: ${organizador}\n🔗 Enlace/Fuente: ${enlace}`;
 
     try {
       await Panorama.create({
         creador: systemUser._id,
         titulo: evento,
-        descripcion: descripcion,
+        descripcion: descripcionExtra,
         fecha: fecha,
         lugar: lugar,
         region: regionCorto, // Usar el nombre corto exacto que espera la App (ej: "Araucanía")
