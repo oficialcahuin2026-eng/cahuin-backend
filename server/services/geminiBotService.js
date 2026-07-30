@@ -158,7 +158,18 @@ const parseAndSavePanoramas = async (markdown, regionName, regionCorto) => {
     else if (norm.includes('feria')) emoji = '🎪';
     else if (norm.includes('universidad') || norm.includes('educación')) emoji = '🎓';
 
-    const descripcionExtra = `⏰ Hora: ${hora}\n🎟️ Precio: ${precio}\n👥 Público: ${publico}\n🏷️ Categoría: ${clasificacion}\n🏢 Organizador: ${organizador}\n🔗 Enlace/Fuente: ${enlace}`;
+    let enlaceFormateado = enlace;
+    if (enlace && enlace.toLowerCase() !== "no disponible" && !enlace.includes("---")) {
+      let enlaceLimpio = enlace.replace(/\[.*?\]\((.*?)\)/, '$1').trim(); // Si Gemini envía markdown [texto](url)
+      enlaceLimpio = enlaceLimpio.replace(/<|>/g, '');
+      const urlMatch = enlaceLimpio.match(/(https?:\/\/[^\s]+)/);
+      if (urlMatch) {
+        enlaceFormateado = urlMatch[1];
+      } else if (enlaceLimpio.includes('.')) {
+        enlaceFormateado = `https://${enlaceLimpio}`;
+      }
+    }
+    const descripcionExtra = `⏰ Hora: ${hora}\n🎟️ Precio: ${precio}\n👥 Público: ${publico}\n🏷️ Categoría: ${clasificacion}\n🏢 Organizador: ${organizador}\n🔗 Enlace/Fuente: ${enlaceFormateado}`;
 
     try {
       await Panorama.create({
@@ -173,6 +184,7 @@ const parseAndSavePanoramas = async (markdown, regionName, regionCorto) => {
         categoria: clasificacion,
         emoji: emoji,
         imagen: imagen,
+        externalUrl: enlaceFormateado.startsWith('http') ? enlaceFormateado : undefined,
         participantes: [],
         solicitudes: [],
         mensajesGrupo: [],
