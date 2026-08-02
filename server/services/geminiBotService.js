@@ -42,9 +42,14 @@ const fetchPanoramasParaRegion = async (region) => {
   const hoyStr = hoy.toISOString().split('T')[0];
   const mañanaStr = mañana.toISOString().split('T')[0];
 
+  const listaComunas = region.comunas.map(c => `• ${c}`).join('\n');
+
   const prompt = `Actúa como un investigador experto en la agenda oficial y local de panoramas en ${region.nombre}, Chile.
 ATENCIÓN: Hoy es ${hoyStr}. "Mañana" es ${mañanaStr}. Estamos en el año ${hoy.getFullYear()}.
-Tu objetivo es elaborar una guía exhaustiva, ultra detallada y verificable de absolutamente todos los eventos que se realizarán en las comunas de la ${region.nombre} durante el día de mañana (${mañanaStr}), Y TAMBIÉN los eventos futuros más relevantes y masivos (conciertos, festivales, partidos, convenciones, etc.) que estén confirmados para ocurrir durante los próximos 6 a 12 meses a partir de hoy.
+Tu objetivo es elaborar una guía exhaustiva, ultra detallada y verificable de absolutamente todos los eventos que se realizarán durante el día de mañana (${mañanaStr}), Y TAMBIÉN los eventos futuros más relevantes y masivos (conciertos, festivales, partidos, convenciones, etc.) que estén confirmados para ocurrir durante los próximos 6 a 12 meses a partir de hoy.
+
+Asegúrate de investigar y abarcar las siguientes comunas y localidades de la región:
+${listaComunas}
 
 Directrices de búsqueda y categorización:
 REGLA ESTRICTA DE CATEGORÍAS: Clasifica CADA evento usando ÚNICA Y EXCLUSIVAMENTE una de estas 7 categorías (usa la palabra exacta, sin agregar nada más):

@@ -8,12 +8,12 @@ const run = async () => {
   const today = new Date();
   today.setHours(0,0,0,0);
   
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  const dayAfterTomorrow = new Date(today);
+  dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
 
-  const panoramas = await Panorama.find({ fecha: { $gte: tomorrow } }).sort({ fecha: 1 }).limit(10);
+  const panoramas = await Panorama.find({ fecha: { $gte: dayAfterTomorrow } }).sort({ fecha: 1 });
 
-  console.log(`\n=== PRÓXIMOS 10 EVENTOS ===`);
+  console.log(`\n=== EVENTOS FUTUROS (después de mañana) ===`);
   for (let p of panoramas) {
     console.log(`- ${p.fecha ? p.fecha.toISOString().split('T')[0] : 'Sin fecha'}: ${p.titulo} (${p.region})`);
   }
