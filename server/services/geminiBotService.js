@@ -54,7 +54,7 @@ RESTRICCIÓN ANTI-ALUCINACIÓN (CRÍTICO):
 Bajo ninguna circunstancia inventes eventos. Todo debe ser 100% real y verificable. Si en una comuna no hay eventos para el día de mañana, simplemente omítela.
 
 Formato de presentación (Tabla Markdown EXACTA):
-| Fecha (YYYY-MM-DD) | Hora | Evento | Lugar/Comuna | Categoría | Público | Precio | Organizador | Enlace/Fuente |
+| Fecha (YYYY-MM-DD) | Hora | Evento | Descripción (Breve de 1 a 2 líneas) | Lugar/Comuna | Categoría | Público | Precio | Organizador | Enlace/Fuente |
 
 Restricción temporal crítica: Eventos del día de mañana, y además eventos futuros importantes dentro de los próximos 6-12 meses. Descarta eventos que ya pasaron.
 
@@ -71,7 +71,7 @@ IMPORTANTE: Responde ÚNICAMENTE con la tabla Markdown. No incluyas texto antes 
       const currentApiKey = getRandomApiKey();
       if (!currentApiKey) throw new Error("GEMINI_API_KEY no configurada");
       const genAI = new GoogleGenerativeAI(currentApiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
       const result = await model.generateContent(prompt);
       const text = result.response.text();
@@ -122,19 +122,20 @@ const parseAndSavePanoramas = async (markdown, regionName, regionCorto) => {
     const columns = lines[i].split('|').map(c => c.trim());
     if (columns.length < 9) continue; // Formato incorrecto o línea de relleno
 
-    // | Fecha | Hora | Evento | Lugar/Comuna | Categoría | Público | Precio | Organizador | Enlace/Fuente |
-    // index 0 = vacio, index 1 = Fecha, 2 = Hora, 3 = Evento, 4 = Lugar, 5 = Categoría, 6 = Público, 7 = Precio, 8 = Organizador, 9 = Enlace
-    if (columns.length < 10) continue; // Formato incorrecto o línea de relleno
+    // | Fecha | Hora | Evento | Descripción | Lugar/Comuna | Categoría | Público | Precio | Organizador | Enlace/Fuente |
+    // index 0 = vacio, index 1 = Fecha, 2 = Hora, 3 = Evento, 4 = Descripción, 5 = Lugar, 6 = Categoría, 7 = Público, 8 = Precio, 9 = Organizador, 10 = Enlace
+    if (columns.length < 11) continue; // Formato incorrecto o línea de relleno
 
     const fechaStr = columns[1];
     const hora = columns[2];
     const evento = columns[3];
-    const lugar = columns[4];
-    const clasificacion = columns[5];
-    const publico = columns[6];
-    const precio = columns[7];
-    const organizador = columns[8];
-    const enlace = columns[9];
+    const resumen = columns[4];
+    const lugar = columns[5];
+    const clasificacion = columns[6];
+    const publico = columns[7];
+    const precio = columns[8];
+    const organizador = columns[9];
+    const enlace = columns[10];
 
     if (!evento || evento.includes("---")) continue;
 
@@ -169,7 +170,7 @@ const parseAndSavePanoramas = async (markdown, regionName, regionCorto) => {
         enlaceFormateado = `https://${enlaceLimpio}`;
       }
     }
-    const descripcionExtra = `⏰ Hora: ${hora}\n🎟️ Precio: ${precio}\n👥 Público: ${publico}\n🏷️ Categoría: ${clasificacion}\n🏢 Organizador: ${organizador}\n🔗 Enlace/Fuente: ${enlaceFormateado}`;
+    const descripcionExtra = `${resumen}\n\n⏰ Hora: ${hora}\n🎟️ Precio: ${precio}\n👥 Público: ${publico}\n🏷️ Categoría: ${clasificacion}\n🏢 Organizador: ${organizador}\n🔗 Enlace/Fuente: ${enlaceFormateado}`;
 
     try {
       // ANTI-DUPLICACIÓN INTELIGENTE (UPSERT):
