@@ -19,6 +19,7 @@ const run = async () => {
     await new Promise(resolve => setTimeout(resolve, 10000));
   }
 
+
   console.log("\nFinished force scraping!");
   process.exit(0);
 };

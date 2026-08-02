@@ -36,30 +36,27 @@ const getRandomApiKey = () => {
 
 // Función para procesar una región y guardar sus resultados
 const fetchPanoramasParaRegion = async (region) => {
-  const prompt = `Actúa como un investigador experto en la agenda oficial y local de panoramas en ${region.nombre}, Chile. Tu objetivo es elaborar una guía exhaustiva, ultra detallada y verificable de absolutamente todos los eventos que se realizarán en las comunas de la ${region.nombre} durante el día siguiente.
+  const prompt = `Actúa como un investigador experto en la agenda oficial y local de panoramas en ${region.nombre}, Chile. Tu objetivo es elaborar una guía exhaustiva, ultra detallada y verificable de absolutamente todos los eventos que se realizarán en las comunas de la ${region.nombre} durante el día de mañana, Y TAMBIÉN los eventos futuros más relevantes y masivos (conciertos, festivales, partidos de fútbol importantes, convenciones, etc.) que estén confirmados para ocurrir durante los próximos 6 a 12 meses.
 
-Directrices de búsqueda:
-Tipos de eventos y clasificación (incluyendo pero no limitándose a):
-Música: conciertos, tocatas, batallas de rap, peñas, bandas tributo, K-pop dance, orquestas, karaoke, batucadas.
-Comedia y Artes: stand-up, teatro, danza, ferias literarias, exposiciones.
-Entretenimiento y Niños: circos, parques, cuentacuentos, shows de magia, teatro infantil/bebés, estrenos de cine, autocines.
-Cultura Geek y Nicho: convenciones anime, cómics, cosplay, e-sports, torneos TCG, juegos de rol, Expo Tattoo, tuning.
-Deporte y Recreación: partidos oficiales, maratones, cicletadas furiosas, skate, lucha libre, trekking.
-Mundo Rural y Huaso: rodeos, carreras a la chilena, rayuela, domaduras, trillas, ferias agrícolas.
-Universidades y Educación: ferias científicas, hackathons, fiestas mechonas, tocatas de facultad, kermesses.
-Economía y Gastronomía: ferias costumbristas, food trucks, catas, showrooms, ropa vintage, remates.
-Comunidad, Solidaridad y 3ra Edad: completadas, bingos, malones, mateadas, clubes de adulto mayor, asambleas, voluntariados, fiestas patronales.
-Alternativo, Bienestar y Disidencias: fiestas tecno/rave, eventos LGBTQ+ (ballroom, transformismo), ferias feministas, temazcales, ceremonias de cacao, sonoterapia, yoga.
+Directrices de búsqueda y categorización:
+REGLA ESTRICTA DE CATEGORÍAS: Clasifica CADA evento usando ÚNICA Y EXCLUSIVAMENTE una de estas 7 categorías (usa la palabra exacta, sin agregar nada más):
+1. Música (para conciertos, fiestas, tocatas, DJ, K-pop)
+2. Cultura (para exposiciones, teatro, danza, anime, convenciones)
+3. Deporte (para maratones, partidos de fútbol, skate, lucha libre)
+4. Comedia (para stand-up, shows de magia, humor)
+5. Feria (para ferias libres, ferias de emprendedores, kermesses, convenciones)
+6. Gastronomía (para ferias costumbristas, catas, food trucks, fiestas de la vendimia)
+7. Otros (si no calza en ninguna de las anteriores: talleres, circo, eventos rurales, patronales, etc)
 
-Tipos de recintos a incluir: Estadios, arenas, medialunas, teatros, museos, universidades, colegios, hoteles, casinos, carpas, bares, discotecas, plazas, juntas de vecinos, gimnasios, playas, cerros, ferias libres.
+Tipos de recintos a incluir: Estadios, arenas, teatros, museos, universidades, colegios, hoteles, casinos, carpas, bares, discotecas, plazas, gimnasios, playas, cerros, ferias libres.
 
 RESTRICCIÓN ANTI-ALUCINACIÓN (CRÍTICO):
 Bajo ninguna circunstancia inventes eventos. Todo debe ser 100% real y verificable. Si en una comuna no hay eventos para el día de mañana, simplemente omítela.
 
 Formato de presentación (Tabla Markdown EXACTA):
-| Hora | Evento | Lugar/Comuna | Categoría | Público | Precio | Organizador | Enlace/Fuente |
+| Fecha (YYYY-MM-DD) | Hora | Evento | Lugar/Comuna | Categoría | Público | Precio | Organizador | Enlace/Fuente |
 
-Restricción temporal crítica: Solo eventos del día siguiente (mañana). Descarta fechas pasadas o futuras.
+Restricción temporal crítica: Eventos del día de mañana, y además eventos futuros importantes dentro de los próximos 6-12 meses. Descarta eventos que ya pasaron.
 
 Busca meticulosamente en las comunas y localidades de:
 • ${region.comunas.join(', ')}
@@ -125,38 +122,41 @@ const parseAndSavePanoramas = async (markdown, regionName, regionCorto) => {
     const columns = lines[i].split('|').map(c => c.trim());
     if (columns.length < 9) continue; // Formato incorrecto o línea de relleno
 
-    // | Hora | Evento | Lugar/Comuna | Categoría | Público | Precio | Organizador | Enlace/Fuente |
-    // index 0 = vacio, index 1 = Hora, 2 = Evento, 3 = Lugar, 4 = Categoría, 5 = Público, 6 = Precio, 7 = Organizador, 8 = Enlace
-    const hora = columns[1];
-    const evento = columns[2];
-    const lugar = columns[3];
-    const clasificacion = columns[4];
-    const publico = columns[5];
-    const precio = columns[6];
-    const organizador = columns[7];
-    const enlace = columns[8];
+    // | Fecha | Hora | Evento | Lugar/Comuna | Categoría | Público | Precio | Organizador | Enlace/Fuente |
+    // index 0 = vacio, index 1 = Fecha, 2 = Hora, 3 = Evento, 4 = Lugar, 5 = Categoría, 6 = Público, 7 = Precio, 8 = Organizador, 9 = Enlace
+    if (columns.length < 10) continue; // Formato incorrecto o línea de relleno
+
+    const fechaStr = columns[1];
+    const hora = columns[2];
+    const evento = columns[3];
+    const lugar = columns[4];
+    const clasificacion = columns[5];
+    const publico = columns[6];
+    const precio = columns[7];
+    const organizador = columns[8];
+    const enlace = columns[9];
 
     if (!evento || evento.includes("---")) continue;
 
-    const fecha = new Date(); // Tomorrow
-    fecha.setDate(fecha.getDate() + 1);
+    // Parse date: YYYY-MM-DD
+    let fecha = new Date();
+    fecha.setDate(fecha.getDate() + 1); // default a mañana
+    if (fechaStr && fechaStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      fecha = new Date(fechaStr + "T12:00:00Z"); // Forzar timezone neutro para evitar cambios de día
+    }
 
     const imagen = assignDefaultImage(clasificacion);
     
-    // Asignar emoji según la categoría
+    // Asignar emoji según la categoría estricta
     let emoji = '📍';
-    const norm = clasificacion.toLowerCase();
-    if (norm.includes('música') || norm.includes('musica')) emoji = '🎵';
-    else if (norm.includes('comedia')) emoji = '😂';
-    else if (norm.includes('cultura') || norm.includes('arte')) emoji = '🎭';
-    else if (norm.includes('deporte') || norm.includes('skate') || norm.includes('trekking')) emoji = '⚽';
-    else if (norm.includes('gastronom') || norm.includes('comida') || norm.includes('food')) emoji = '🍔';
-    else if (norm.includes('geek') || norm.includes('anime') || norm.includes('cosplay') || norm.includes('esports')) emoji = '👾';
-    else if (norm.includes('rural') || norm.includes('huaso') || norm.includes('rodeo')) emoji = '🐴';
-    else if (norm.includes('niños') || norm.includes('infantil') || norm.includes('circo')) emoji = '🧸';
-    else if (norm.includes('bienestar') || norm.includes('yoga') || norm.includes('lgbt') || norm.includes('rave')) emoji = '✨';
-    else if (norm.includes('feria')) emoji = '🎪';
-    else if (norm.includes('universidad') || norm.includes('educación')) emoji = '🎓';
+    const norm = clasificacion.toLowerCase().trim();
+    if (norm === 'música' || norm === 'musica') emoji = '🎵';
+    else if (norm === 'comedia') emoji = '😂';
+    else if (norm === 'cultura') emoji = '🎨';
+    else if (norm === 'deporte') emoji = '⚽';
+    else if (norm === 'gastronomía' || norm === 'gastronomia') emoji = '🍔';
+    else if (norm === 'feria') emoji = '🎪';
+    else emoji = '✨'; // Otros
 
     let enlaceFormateado = enlace;
     if (enlace && enlace.toLowerCase() !== "no disponible" && !enlace.includes("---")) {
@@ -172,25 +172,50 @@ const parseAndSavePanoramas = async (markdown, regionName, regionCorto) => {
     const descripcionExtra = `⏰ Hora: ${hora}\n🎟️ Precio: ${precio}\n👥 Público: ${publico}\n🏷️ Categoría: ${clasificacion}\n🏢 Organizador: ${organizador}\n🔗 Enlace/Fuente: ${enlaceFormateado}`;
 
     try {
-      await Panorama.create({
-        creador: systemUser._id,
+      // ANTI-DUPLICACIÓN INTELIGENTE (UPSERT):
+      // Busca si existe el evento por Título, Región y Fecha.
+      // Si existe, lo actualiza (por si cambió el precio o descripción).
+      // Si no existe, lo crea.
+      const startOfDay = new Date(fecha);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(fecha);
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      const query = {
         titulo: evento,
-        descripcion: descripcionExtra,
-        fecha: fecha,
-        lugar: lugar,
-        region: regionCorto, // Usar el nombre corto exacto que espera la App (ej: "Araucanía")
-        privacidad: "Público",
-        esOficial: true,
-        categoria: clasificacion,
-        emoji: emoji,
-        imagen: imagen,
-        externalUrl: enlaceFormateado.startsWith('http') ? enlaceFormateado : undefined,
-        participantes: [],
-        solicitudes: [],
-        mensajesGrupo: [],
-        likes: [],
-        superlikes: []
-      });
+        region: regionCorto,
+        fecha: { $gte: startOfDay, $lte: endOfDay }
+      };
+
+      const updateData = {
+        $set: {
+          descripcion: descripcionExtra,
+          lugar: lugar,
+          categoria: clasificacion,
+          emoji: emoji,
+          imagen: imagen,
+          externalUrl: enlaceFormateado.startsWith('http') ? enlaceFormateado : undefined,
+        },
+        $setOnInsert: {
+          creador: systemUser._id,
+          fecha: startOfDay, // Guardamos la fecha normalizada
+          privacidad: "Público",
+          esOficial: true,
+          participantes: [],
+          solicitudes: [],
+          mensajesGrupo: [],
+          likes: [],
+          superlikes: []
+        }
+      };
+
+      const result = await Panorama.findOneAndUpdate(query, updateData, { upsert: true, new: false });
+      
+      if (result) {
+        console.log(`[Bot] El evento "${evento}" en ${regionCorto} ya existía. Fue actualizado.`);
+      } else {
+        console.log(`[Bot] El evento "${evento}" en ${regionCorto} es NUEVO. Fue creado exitosamente.`);
+      }
     } catch (e) {
       console.error("[Bot] Error guardando panorama:", e.message);
     }
