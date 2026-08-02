@@ -36,7 +36,15 @@ const getRandomApiKey = () => {
 
 // Función para procesar una región y guardar sus resultados
 const fetchPanoramasParaRegion = async (region) => {
-  const prompt = `Actúa como un investigador experto en la agenda oficial y local de panoramas en ${region.nombre}, Chile. Tu objetivo es elaborar una guía exhaustiva, ultra detallada y verificable de absolutamente todos los eventos que se realizarán en las comunas de la ${region.nombre} durante el día de mañana, Y TAMBIÉN los eventos futuros más relevantes y masivos (conciertos, festivales, partidos de fútbol importantes, convenciones, etc.) que estén confirmados para ocurrir durante los próximos 6 a 12 meses.
+  const hoy = new Date();
+  const mañana = new Date(hoy);
+  mañana.setDate(mañana.getDate() + 1);
+  const hoyStr = hoy.toISOString().split('T')[0];
+  const mañanaStr = mañana.toISOString().split('T')[0];
+
+  const prompt = `Actúa como un investigador experto en la agenda oficial y local de panoramas en ${region.nombre}, Chile.
+ATENCIÓN: Hoy es ${hoyStr}. "Mañana" es ${mañanaStr}. Estamos en el año ${hoy.getFullYear()}.
+Tu objetivo es elaborar una guía exhaustiva, ultra detallada y verificable de absolutamente todos los eventos que se realizarán en las comunas de la ${region.nombre} durante el día de mañana (${mañanaStr}), Y TAMBIÉN los eventos futuros más relevantes y masivos (conciertos, festivales, partidos, convenciones, etc.) que estén confirmados para ocurrir durante los próximos 6 a 12 meses a partir de hoy.
 
 Directrices de búsqueda y categorización:
 REGLA ESTRICTA DE CATEGORÍAS: Clasifica CADA evento usando ÚNICA Y EXCLUSIVAMENTE una de estas 7 categorías (usa la palabra exacta, sin agregar nada más):
@@ -71,7 +79,7 @@ IMPORTANTE: Responde ÚNICAMENTE con la tabla Markdown. No incluyas texto antes 
       const currentApiKey = getRandomApiKey();
       if (!currentApiKey) throw new Error("GEMINI_API_KEY no configurada");
       const genAI = new GoogleGenerativeAI(currentApiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+      const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
       const result = await model.generateContent(prompt);
       const text = result.response.text();
